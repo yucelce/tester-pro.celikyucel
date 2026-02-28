@@ -28,7 +28,7 @@ export interface CostItem {
   'calc_kitchen_counter_length' | "calc_haritaci" | "calc_ekb" | 'calc_utilities_subscription' | 'calc_land_tax' | 'calc_garden_wall' |
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
-  'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite"
+  'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor'
 
   ;
 

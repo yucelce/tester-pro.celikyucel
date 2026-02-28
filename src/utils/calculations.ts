@@ -1299,6 +1299,15 @@ export const calculateComplexGlobalQuantity = (
             return 0;
         }
 
+        case 'calc_vrf_outdoor': {
+            if (buildingStats.heatingSystem === 'vrf') {
+                 // Villalarda/Dairelerde genellikle 1 adet VRF ana dış ünite (Mini-VRF veya Maxi-VRF) kabul edilir.
+                 const totalUnits = aggregatedUnitStats['calc_unit_count'] || 1;
+                 return totalUnits;
+            }
+            return 0;
+        }
+
         case 'calc_tower_crane_duration': {
             // 1. Gerekli Değişkenleri Hazırla
             const groundArea = buildingStats.groundFloorArea || 0;
