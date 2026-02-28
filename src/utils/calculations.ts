@@ -1798,12 +1798,17 @@ export const calculateComplexGlobalQuantity = (
             if (buildingStats.buildingType === 'villa') {
                 // Villalarda zemin kat ve normal kat cephe alanlarını ayrı toplayın
                 const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
-                const groundFacade = groundPerim * buildingStats.groundFloorHeight;
+                // Villalarda subasman kotu (yaklaşık 0.60m - 1.00m) cepheye dahildir
+                const groundFacade = groundPerim * (buildingStats.groundFloorHeight + 0.80);
 
-                const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
-                const normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+                let normalFacade = 0;
+                if (buildingStats.normalFloorCount > 0) {
+                    const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+                    normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+                }
 
-                const facadeWaste = calculateWasteFactor([], buildingStats.groundFloorArea, groundPerim);
+                // Villalarda mimari girinti çıkıntı (cumba vs) çok olduğu için fire/artış oranı daha yüksektir.
+                const facadeWaste = 1.15;
 
                 return (groundFacade + normalFacade) * facadeWaste;
             } else {
@@ -2155,14 +2160,23 @@ export const calculateComplexGlobalQuantity = (
 /**
  * Toplam inşaat alanına göre yapım süresini (ay) hesaplar.
  */
-export const calculateConstructionDuration = (totalArea: number): number => {
+export const calculateConstructionDuration = (totalArea: number, buildingType: string = 'apartment'): number => {
     let duration = 0;
-    if (totalArea <= 1000) {
-        duration = 12;
-    } else if (totalArea <= 3000) {
-        duration = (0.006 * totalArea) + 6;
+
+    // Villalar hızlı biter (Genellikle 6-9 ay)
+    if (buildingType === 'villa') {
+        if (totalArea <= 250) duration = 6;
+        else if (totalArea <= 500) duration = 8;
+        else duration = 10;
     } else {
-        duration = Math.sqrt(totalArea) / 2.28;
+        // Apartman/Ticari mantığı
+        if (totalArea <= 1000) {
+            duration = 10; // 12'den 10'a çekmek rekabetçi piyasa için daha gerçekçi
+        } else if (totalArea <= 3000) {
+            duration = (0.005 * totalArea) + 5;
+        } else {
+            duration = Math.sqrt(totalArea) / 2.28;
+        }
     }
     const finalDuration = Math.min(duration, 36);
     return Math.round(finalDuration * 100) / 100;
@@ -2455,20 +2469,32 @@ export const calculateDynamicUnitPrice = (
     }
 
     if (buildingStats?.buildingType === 'villa') {
-        const premiumItems = [
+        // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
+        const structuralPremium = [
+            "Mantolama (Malz.+İşçilik)", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)", "Pencere Söveleri"
+        ];
+
+        // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler (Yüksek çarpan)
+        const decorativePremium = [
             "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
-            "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo", 
-            "Portmanto / Vestiyer", "İç Merdiven (Dubleks)",
-            "PVC Pencere (Doğrama)", "Mantolama (Malz.+İşçilik)", "Çatı Konstrüksiyon ve Kaplama",
-            "Balkon Korkulukları (Alüminyum)", "Cam Balkon Sistemleri", "Pencere Söveleri",
-            "Laminat Parke (Anahtar Teslim)", "Seramik Kaplama",
+            "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
+            "Portmanto / Vestiyer", "İç Merdiven (Dubleks)", "Balkon Korkulukları (Alüminyum)",
+            "Cam Balkon Sistemleri", "Laminat Parke (Anahtar Teslim)", "Seramik Kaplama"
+        ];
+
+        // Mekanik ve Vitrifiye (Çok lüks armatürler seçileceği için en yüksek çarpan)
+        const mepPremium = [
             "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
             "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
             "Cephe Aydınlatma (Wallwasher)"
         ];
 
-        if (premiumItems.includes(item.name)) {
-            return item.unit_price * 1.5;
+        if (structuralPremium.includes(item.name)) {
+            return Math.round(item.unit_price * 1.20); // %20 lüks/detay farkı
+        } else if (decorativePremium.includes(item.name)) {
+            return Math.round(item.unit_price * 1.45); // %45 lüks malzeme farkı
+        } else if (mepPremium.includes(item.name)) {
+            return Math.round(item.unit_price * 1.70); // %70 premium marka farkı (ECA/Artema vs. Grohe/Vitra lüks seri farkı)
         }
     }
 
