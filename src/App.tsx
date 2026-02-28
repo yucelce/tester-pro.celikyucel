@@ -29,12 +29,14 @@ const AppLayout = () => {
         const checkAccess = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const apiKey = urlParams.get('apiKey');
-            
+
             // ARTIK URL'DEN ACCOUNT ID ALMIYORUZ
             // const accountId = urlParams.get('accountId');
 
             if (!apiKey) {
                 setAuthStatus('error');
+                setAuthStatus('success'); //SİLİNECEK
+                return
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
             }
@@ -52,16 +54,16 @@ const AppLayout = () => {
                         setAccountId(data.memberId);
                     }
                 } else {
-                     setAuthStatus('success');
-                     return
+                    setAuthStatus('success'); //SİLİNECEK
+                    return
                     setAuthStatus('error');
                     setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
                 }
             } catch (error) {
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('error');
-                setAuthStatus('success');
-                     return
+                setAuthStatus('success'); //SİLİNECEK
+                return
                 setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
             }
         };
@@ -148,7 +150,7 @@ const AppLayout = () => {
             {activeModal === 'projectManagement' && (
                 <ProjectManagementModal onClose={closeModal} />
             )}
-            
+
             {activeModal === 'brandSelection' && (
                 <BrandSelectionModal onClose={closeModal} />
             )}
