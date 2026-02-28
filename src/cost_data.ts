@@ -27,7 +27,8 @@ export interface CostItem {
   'calc_well_foundation_concrete' | 'calc_well_foundation_iron' | 'calc_well_foundation_formwork' | 'calc_well_foundation_excavation' |
   'calc_kitchen_counter_length' | "calc_haritaci" | "calc_ekb" | 'calc_utilities_subscription' | 'calc_land_tax' | 'calc_garden_wall' |
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
-  "calc_breaker_machine" | 'net_wet_area'
+  "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' | 
+  'calc_villa_veranda'
 
   ;
 
@@ -321,7 +322,12 @@ export const COST_DATA: CostCategory[] = [
     items: [
       { name: "Bahçe / Çevre Duvarı", unit: "mt", unit_price: 3500, auto_source: "calc_garden_wall", multiplier: 1, scope: 'global' },
       { name: "Ağaç Dikimi (Yönetmelik)", unit: "Adet", unit_price: 1500, auto_source: "calc_tree_count", multiplier: 1, wixId: "agacmal", scope: 'global' },
-      { name: "Sert Zemin / Yürüyüş Yolu", unit: "m2", unit_price: 600, auto_source: "calc_hard_ground", multiplier: 1, scope: 'global' }
+      { name: "Sert Zemin / Yürüyüş Yolu", unit: "m2", unit_price: 600, auto_source: "calc_hard_ground", multiplier: 1, scope: 'global' },
+
+      { name: "Özel Havuz (Hafriyat, İzolasyon ve Beton)", unit: "m2", unit_price: 18500, auto_source: "calc_pool_concrete", multiplier: 1, scope: 'global' },
+      { name: "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)", unit: "Paket", unit_price: 150000, auto_source: "calc_pool_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Açık Otopark (Pergole ve Zemin Kaplama)", unit: "m2", unit_price: 7500, auto_source: "calc_villa_parking", multiplier: 1, scope: 'global' },
+      { name: "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)", unit: "m2", unit_price: 11000, auto_source: "calc_villa_veranda", multiplier: 1, scope: 'global' }
     ]
   }
 ];

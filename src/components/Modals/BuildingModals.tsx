@@ -22,9 +22,8 @@ interface BuildingModalProps {
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits } = useProjectStore();
-    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special'>('general');
-    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
-    
+    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general'); const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+
     const handleBuildingTypeChange = (newType: 'apartment' | 'villa') => {
         if (newType !== buildingStats.buildingType) {
             const isConfirmed = window.confirm(
@@ -34,8 +33,8 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
             );
 
             if (isConfirmed) {
-                setBuildingStats({ 
-                    ...buildingStats, 
+                setBuildingStats({
+                    ...buildingStats,
                     buildingType: newType,
                     normalFloorCount: newType === 'villa' ? 1 : buildingStats.normalFloorCount,
                     basementFloorCount: newType === 'villa' ? 0 : buildingStats.basementFloorCount,
@@ -199,6 +198,11 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     <button onClick={() => setActiveTab('special')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'special' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
                         <i className="fas fa-tools"></i> Tesisat & Altyapı
                     </button>
+                    {buildingStats.buildingType === 'villa' && (
+                        <button onClick={() => setActiveTab('villa_outdoor')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'villa_outdoor' ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
+                            <i className="fas fa-tree"></i> Villa Dış Mekan
+                        </button>
+                    )}
                 </div>
 
                 {/* Tab Content */}
@@ -207,16 +211,16 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {/* TAB 1: GENEL BİLGİLER */}
                     {activeTab === 'general' && (
                         <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-                        <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
+                            <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
                                 <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
                                 <div className="flex gap-2 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
-                                    <button 
+                                    <button
                                         onClick={() => handleBuildingTypeChange('apartment')}
                                         className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType !== 'villa' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                                     >
                                         <i className="fas fa-building mr-2"></i>Apartman / Çok Katlı
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleBuildingTypeChange('villa')}
                                         className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType === 'villa' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                                     >
@@ -648,6 +652,71 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                 )}
                             </div>
 
+                        </div>
+                    )}
+
+                    {activeTab === 'villa_outdoor' && buildingStats.buildingType === 'villa' && (
+                        <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                            <div className="bg-orange-900/20 border border-orange-500/30 p-4 rounded-xl">
+                                <h4 className="font-bold text-orange-400 flex items-center gap-2 mb-2">
+                                    <i className="fas fa-swimming-pool"></i> Havuz ve Su Donatıları
+                                </h4>
+                                <p className="text-xs text-orange-200/70 mb-4">Açık yüzme havuzu imalatı (hafriyat, yalıtım, betonarme ve mekanik tesisat sistemi) metrajını belirleyin.</p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Havuz Yüzey Alanı (m²)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.poolArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, poolArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-orange-500 transition outline-none"
+                                            placeholder="Örn: 30"
+                                        />
+                                        <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">m²</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                                <h4 className="font-bold text-white flex items-center gap-2 mb-2">
+                                    <i className="fas fa-car-side text-blue-400"></i> Açık Otopark & Yürüyüş Yolları
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-4">Üstü pergole ile kapalı otopark alanları ve sert zemin kaplamalarını girin.</p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Otopark ve Zemin Alanı (m²)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.parkingArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, parkingArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-blue-500 transition outline-none"
+                                            placeholder="Örn: 40"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                                <h4 className="font-bold text-white flex items-center gap-2 mb-2">
+                                    <i className="fas fa-campground text-green-400"></i> Kış Bahçesi / Veranda
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-4">Ahşap/çelik konstrüksiyonlu ekstra kapalı veya yarı açık yaşam alanları.</p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Veranda Alanı (m²)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.verandaArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, verandaArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-green-500 transition outline-none"
+                                            placeholder="Örn: 25"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 

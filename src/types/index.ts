@@ -132,11 +132,16 @@ export interface UnitType {
     structuralWallSource: 'global_calculated' | 'detailed_unit';
     structuralConcreteSource: 'global_calculated' | 'detailed_unit';
 }
+export type HeatingSystem = 'radiator' | 'underfloor' | 'heat_pump' | 'vrf';
 
 export interface BuildingStats {
 
     buildingType?: 'apartment' | 'villa';
-    
+
+    poolArea?: number;       // Havuz alanı (m2)
+    parkingArea?: number;    // Açık otopark alanı (m2)
+    verandaArea?: number;    // Veranda / Kış bahçesi alanı (m2)
+
     province: string;
     district: string;
     landArea: number;
@@ -159,6 +164,9 @@ export interface BuildingStats {
 
     soilType?: 'soft' | 'medium' | 'hard';
 
+    totalArea: number; // Metrekare üzerinden hesaplama yapmak için
+    heatingSystem: HeatingSystem;
+
     normalFloorPerimeter?: number;
     groundFloorPerimeter?: number;
     basementFloorPerimeter?: number;
@@ -176,7 +184,6 @@ export interface BuildingStats {
 
     constructionDuration?: number; // Manuel girilen süre
     isDurationManual?: boolean;    // Manuel mod aktif mi?
-    heatingSystem: 'radiator' | 'underfloor';
 
     projectStartDate?: string;
 

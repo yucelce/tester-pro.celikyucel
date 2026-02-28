@@ -1193,6 +1193,29 @@ export const calculateComplexGlobalQuantity = (
             const totalConcrete = vTemel + vBodrumPerde + vKatlar;
             return totalConcrete * (item.multiplier || 1);
         }
+        
+        case 'calc_pool_concrete': {
+            // Sadece kullanıcı havuz alanı girdiyse m2 olarak döndür
+            return buildingStats.poolArea || 0;
+        }
+
+        case 'calc_pool_system': {
+            // Alan 0'dan büyükse 1 paket (sistem) yaz, yoksa 0 yaz
+            if (buildingStats.poolArea && buildingStats.poolArea > 0) {
+                return 1;
+            }
+            return 0;
+        }
+
+        case 'calc_villa_parking': {
+            // Otopark alanı m2
+            return buildingStats.parkingArea || 0;
+        }
+
+        case 'calc_villa_veranda': {
+            // Veranda/Kış bahçesi alanı m2
+            return buildingStats.verandaArea || 0;
+        }
 
         case 'calc_haritaci': {
             // Wix'ten gelen 1000 m2 altı baz fiyat (Referans: 7471 TL)
