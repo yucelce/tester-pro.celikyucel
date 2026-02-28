@@ -203,12 +203,12 @@ export const calculateUnitCost = (
             const heatingSystem = buildingStats.heatingSystem || 'radiator';
             // Duvar malzemesine göre yalıtım/ısı kaybı çarpanı (Tuğla referans alınarak = 1.0)
             let materialHeatFactor = 1.0;
-            if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85; 
-            else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92; 
+            if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
+            else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
 
             // Villalarda 4 cephe, taban ve çatı maruziyeti olduğu için ısı kaybı %25 daha fazladır
             if (buildingStats.buildingType === 'villa') {
-                materialHeatFactor *= 1.25; 
+                materialHeatFactor *= 1.25;
             }
 
             // Çarpanı formüle dahil edin
@@ -288,7 +288,7 @@ export const calculateUnitCost = (
 
                     stats.calc_underfloor_collector += collectorCount;
                 }
-            }else if (heatingSystem === 'vrf') {
+            } else if (heatingSystem === 'vrf') {
                 if (heatedArea > 0) {
                     // 1. Altyapı metrajı: Isıtılacak/Soğutulacak alan üzerinden bakır borulama hesaplanır
                     stats.calc_vrf_infrastructure += heatedArea;
@@ -1163,7 +1163,7 @@ export const calculateComplexGlobalQuantity = (
         case 'calc_fence': {
             if (buildingStats.buildingType === 'villa' && buildingStats.landArea > 0) {
                 // Villalarda sınır duvarı yapılana kadar tüm arsa çevresi tel çit ile kapatılır
-                return Math.sqrt(buildingStats.landArea) * 4; 
+                return Math.sqrt(buildingStats.landArea) * 4;
             }
             // Mevcut apartman mantığı (Sadece temel etrafı)
             const side = Math.sqrt(buildingStats.groundFloorArea);
@@ -1295,7 +1295,7 @@ export const calculateComplexGlobalQuantity = (
                 // Örn: Sadece Zemin katlı tek katlı bir villada 0 döner. Zemin + 1 Katta 1 döner.
                 return buildingStats.normalFloorCount + buildingStats.basementFloorCount;
             }
-            return 0; 
+            return 0;
         }
 
         case 'calc_facade_composite': {
@@ -1320,9 +1320,9 @@ export const calculateComplexGlobalQuantity = (
 
         case 'calc_vrf_outdoor': {
             if (buildingStats.heatingSystem === 'vrf') {
-                 // Villalarda/Dairelerde genellikle 1 adet VRF ana dış ünite (Mini-VRF veya Maxi-VRF) kabul edilir.
-                 const totalUnits = aggregatedUnitStats['calc_unit_count'] || 1;
-                 return totalUnits;
+                // Villalarda/Dairelerde genellikle 1 adet VRF ana dış ünite (Mini-VRF veya Maxi-VRF) kabul edilir.
+                const totalUnits = aggregatedUnitStats['calc_unit_count'] || 1;
+                return totalUnits;
             }
             return 0;
         }
@@ -1409,7 +1409,7 @@ export const calculateComplexGlobalQuantity = (
             return Math.round(finalEkbCost);
         }
 
-        
+
 
         case 'calc_utilities_subscription': {
             // A. Fiyatları currentCosts (Wix'ten gelen liste) içinden bul
@@ -1704,7 +1704,7 @@ export const calculateComplexGlobalQuantity = (
             return 1
         }
 
-       case 'calc_garden_wall': {
+        case 'calc_garden_wall': {
             const landArea = buildingStats.landArea || 0;
             if (landArea <= 0) return 0;
 
@@ -1782,8 +1782,9 @@ export const calculateComplexGlobalQuantity = (
         case 'calc_roof':
             if (buildingStats.buildingType === 'villa') {
                 // Villalarda zemine veya normal kata oturan en geniş alanı al ve %55 saçak/eğim payı ekle
-                const maxArea = Math.max(buildingStats.normalFloorArea, buildingStats.groundFloorArea);
-                return maxArea * 1.55; 
+                const nArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : 0;
+                const maxArea = Math.max(nArea, buildingStats.groundFloorArea);
+                return maxArea * 1.55;
             }
             // Apartmanlarda standart normal kat iz düşümü %45 pay
             return (buildingStats.normalFloorArea) * 1.45;
@@ -1801,17 +1802,17 @@ export const calculateComplexGlobalQuantity = (
 
                 const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
                 const normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
-                
+
                 const facadeWaste = calculateWasteFactor([], buildingStats.groundFloorArea, groundPerim);
-                
+
                 return (groundFacade + normalFacade) * facadeWaste;
             } else {
                 // Mevcut Apartman Mantığı
                 const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
                     buildingStats.groundFloorHeight;
                 const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
-                const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim); 
-                return perim * facadeHeight * facadeWaste; 
+                const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim);
+                return perim * facadeHeight * facadeWaste;
             }
         }
         // src/utils/calculations.ts içindeki calculateComplexGlobalQuantity switch bloğuna ekleyin:
