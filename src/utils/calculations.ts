@@ -1854,7 +1854,7 @@ export const calculateComplexGlobalQuantity = (
         // --- 8. MEKANİK ---
         case 'calc_elevator': {
             if (buildingStats.buildingType === 'villa') {
-                return 0
+                return totalFloors > 2 ? 1 : 0;
             }
             // 1. Kullanıcı elle asansör adeti girdiyse onu baz al
             if (item.manualQuantity !== undefined && item.manualQuantity > 0) {

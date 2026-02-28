@@ -29,7 +29,8 @@ export interface CostItem {
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
-  "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system"
+  "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
+  "calc_grass_and_irrigation"
 
   ;
 
@@ -343,6 +344,7 @@ export const COST_DATA: CostCategory[] = [
     items: [
       { name: "Bahçe / Çevre Duvarı", unit: "mt", unit_price: 3500, auto_source: "calc_garden_wall", multiplier: 1, scope: 'global' },
       { name: "Ağaç Dikimi (Yönetmelik)", unit: "Adet", unit_price: 1500, auto_source: "calc_tree_count", multiplier: 1, wixId: "agacmal", scope: 'global' },
+      { name: "Çim Ekimi ve Otomatik Sulama Sistemi", unit: "m2", unit_price: 350, auto_source: "calc_grass_and_irrigation", multiplier: 1, scope: 'global' },
       { name: "Sert Zemin / Yürüyüş Yolu", unit: "m2", unit_price: 600, auto_source: "calc_hard_ground", multiplier: 1, scope: 'global' },
 
       { name: "Özel Havuz (Hafriyat, İzolasyon ve Beton)", unit: "m2", unit_price: 18500, auto_source: "calc_pool_concrete", multiplier: 1, scope: 'global' },
