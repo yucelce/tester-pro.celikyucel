@@ -29,7 +29,7 @@ export interface CostItem {
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
-  "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs"
+  "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system"
 
   ;
 
@@ -322,8 +322,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Daire Sigorta Panosu ve Şalt Malz.", unit: "Adet", unit_price: 6500, auto_source: "calc_sub_panel_count", multiplier: 1, wixId: "dairesigortasalterpaket", scope: 'unit' },
       { name: "Merkezi Uydu Sistemi", unit: "Paket", unit_price: 12000, auto_source: "calc_satellite_system", multiplier: 1, scope: 'global', inputType: 'manual_total', wixId: "uydusistemi" },
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", unit_price: 4500, auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
-      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' }      { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Jeneratör (Ortak Alan)", unit: "Toplam", unit_price: 150000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       {
         name: "Akıllı Ev Altyapı ve Donanım Paketi",

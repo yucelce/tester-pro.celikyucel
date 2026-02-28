@@ -203,8 +203,13 @@ export const calculateUnitCost = (
             const heatingSystem = buildingStats.heatingSystem || 'radiator';
             // Duvar malzemesine göre yalıtım/ısı kaybı çarpanı (Tuğla referans alınarak = 1.0)
             let materialHeatFactor = 1.0;
-            if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85; // ~%15 daha az ısı kaybı
-            else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92; // ~%8 daha az ısı kaybı
+            if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85; 
+            else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92; 
+
+            // Villalarda 4 cephe, taban ve çatı maruziyeti olduğu için ısı kaybı %25 daha fazladır
+            if (buildingStats.buildingType === 'villa') {
+                materialHeatFactor *= 1.25; 
+            }
 
             // Çarpanı formüle dahil edin
             const heatLossFactor = (30 + (buildingStats.heatZone * 5)) * materialHeatFactor;
@@ -1155,10 +1160,15 @@ export const calculateComplexGlobalQuantity = (
         }
 
         // --- 2. ŞANTİYE & HAFRİYAT ---
-        case 'calc_fence':
-            // (sqrt(GroundArea) + 8)*2 + (sqrt(GroundArea) + 6)*2
+        case 'calc_fence': {
+            if (buildingStats.buildingType === 'villa' && buildingStats.landArea > 0) {
+                // Villalarda sınır duvarı yapılana kadar tüm arsa çevresi tel çit ile kapatılır
+                return Math.sqrt(buildingStats.landArea) * 4; 
+            }
+            // Mevcut apartman mantığı (Sadece temel etrafı)
             const side = Math.sqrt(buildingStats.groundFloorArea);
             return ((side + 8) * 2) + ((side + 6) * 2);
+        }
 
         case 'calc_soil_investigation': {
             // currentCosts içinden ilgili fiyatları çek
@@ -1525,6 +1535,15 @@ export const calculateComplexGlobalQuantity = (
                 // item.unit_price API'den çekilen "yikimruhsatim2fiyatpaket" m2 bedelidir.
                 // Paket fiyat (Toplam) göstermek için Alan x m2Fiyat döndürüyoruz.
                 return existingArea * item.unit_price;
+            }
+            return 0;
+        }
+
+        case 'calc_cctv_system': {
+            // Villalarda standart donanım, apartmanlarda ise site konsepti (örn: >10 daire) ise 1 paket yansıtılır.
+            let totalUnits = aggregatedUnitStats['calc_unit_count'] || 0;
+            if (buildingStats.buildingType === 'villa' || totalUnits > 10) {
+                return 1;
             }
             return 0;
         }
@@ -2045,6 +2064,9 @@ export const calculateComplexGlobalQuantity = (
 
         // --- YENİ EKLENEN SAHANLIK/HOL ALANI HESABI ---
         case 'calc_hall_area': {
+            if (buildingStats.buildingType === 'villa') {
+                return 0; // Villada ortak alan / kat holü mermeri olmaz, zemin kaplamalarına dahildir.
+            }
             const normalHall = buildingStats.normalFloorCount * Math.max(0, buildingStats.normalFloorHallArea || 0);
             const groundHall = Math.max(0, buildingStats.groundFloorHallArea || 0);
             const basementHall = buildingStats.basementFloorCount * Math.max(0, buildingStats.basementFloorHallArea || 0);
