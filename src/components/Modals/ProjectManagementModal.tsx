@@ -9,12 +9,23 @@ interface ProjectManagementModalProps {
 }
 
 export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ onClose }) => {
-    const { fetchProjects, saveProject, loadProject, deleteProject } = useProjectStore();
+    const { fetchProjects, saveProject, loadProject, deleteProject, startNewProject } = useProjectStore();
     const { accountId } = useUIStore();
     const [projects, setProjects] = useState<SavedProject[]>([]);
     const [newProjectName, setNewProjectName] = useState('');
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [showNewProjectPanel, setShowNewProjectPanel] = useState(false);
+    const [newProjectType, setNewProjectType] = useState<'apartment' | 'villa'>('apartment');
+
+    const handleStartNew = () => {
+        if (window.confirm(`Yeni bir ${newProjectType === 'villa' ? 'Villa' : 'Apartman'} projesi başlatılacak. Devam edilsin mi?`)) {
+            startNewProject(newProjectType);
+            setShowNewProjectPanel(false);
+            onClose();
+        }
+    };
 
     useEffect(() => {
         loadList();
@@ -70,7 +81,45 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fas fa-times text-lg"></i></button>
                 </div>
+                <div className="p-4 border-b border-slate-700 bg-slate-800/20">
+                    <button
+                        onClick={() => setShowNewProjectPanel(v => !v)}
+                        className="w-full flex items-center justify-between text-sm font-bold text-green-400 hover:text-green-300 transition"
+                    >
+                        <span><i className="fas fa-plus-circle mr-2"></i>Yeni Proje Başlat</span>
+                        <i className={`fas fa-chevron-${showNewProjectPanel ? 'up' : 'down'} text-xs`}></i>
+                    </button>
 
+                    {showNewProjectPanel && (
+                        <div className="mt-3 space-y-3 animate-fadeIn">
+                            <p className="text-xs text-slate-400">Proje tipini seçin.</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setNewProjectType('apartment')}
+                                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition
+                        ${newProjectType === 'apartment' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700'}`}
+                                >
+                                    <i className="fas fa-building text-2xl text-blue-400"></i>
+                                    <span className="text-xs font-bold text-white">Apartman / Site</span>
+                                </button>
+                                <button
+                                    onClick={() => setNewProjectType('villa')}
+                                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition
+                        ${newProjectType === 'villa' ? 'border-orange-500 bg-orange-900/20' : 'border-slate-700'}`}
+                                >
+                                    <i className="fas fa-home text-2xl text-orange-400"></i>
+                                    <span className="text-xs font-bold text-white">Villa / Müstakil</span>
+                                </button>
+                            </div>
+                            <button
+                                onClick={handleStartNew}
+                                className="w-full bg-green-700 hover:bg-green-600 text-white py-2 rounded-lg font-bold text-sm transition"
+                            >
+                                {newProjectType === 'villa' ? 'Villa Projesi' : 'Apartman Projesi'} Oluştur
+                            </button>
+                        </div>
+                    )}
+                </div>
                 <div className="p-4 border-b border-slate-700 bg-slate-800/30">
                     <label className="text-xs text-slate-400 font-bold block mb-1">Mevcut Projeyi Kaydet</label>
                     <div className="flex gap-2">

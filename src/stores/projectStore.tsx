@@ -165,6 +165,7 @@ interface ProjectContextType {
     updateFinancialSettings: (settings: Partial<import('../types').FinancialSettings>) => void;
     addSale: (sale: import('../types').SalePlan) => void;
     removeSale: (id: string) => void;
+    startNewProject: (type: 'apartment' | 'villa') => void; 
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);

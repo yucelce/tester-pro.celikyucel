@@ -75,11 +75,50 @@ export const calculateConstructionSchedule = (
     const durPaint = Math.ceil(totalFloors * 1 * areaFactor);
     const durJoinery = Math.ceil(totalFloors * 1 * areaFactor);
     const durMEP_Finish = Math.ceil(totalFloors * 0.8 * areaFactor);
+
+
+    const isVilla = buildingStats.buildingType === 'villa';
+
     const durLandscape = Math.ceil(3 * Math.max(1, totalArea / 1000));
     const durHandover = 2;
 
-    // Varsayılan Görev Listesi
-    let defaultTasks: Partial<ScheduleItem>[] = [
+    // Villa'ya özel süre katsayıları
+    const durStructureVilla = Math.ceil(totalFloors * 3.0 * areaFactor); // 2.5 yerine 3.0
+    const durRoofVilla = Math.max(3, Math.ceil(5 * (averageFloorArea / 200)));  // 3 yerine 5
+    const durFacadeVilla = Math.ceil(totalFloors * 2 * areaFactor);             // 1.5 yerine 2
+    const durLandscapeVilla = Math.ceil(4 * Math.max(1, (buildingStats.landArea || 500) / 400));
+
+    // Havuz varsa hesapla
+    const durPoolVilla = (buildingStats.poolArea && buildingStats.poolArea > 0)
+        ? Math.max(4, Math.ceil(buildingStats.poolArea / 15))
+        : 0;
+    const durSmartHomeVilla = 3;
+
+    let defaultTasks: Partial<ScheduleItem>[] = isVilla ? [
+        // ===== VİLLA PROGRAMI =====
+        { id: 'official', name: 'Projelendirme ve Ruhsat', durationWeeks: durOfficial, color: 'bg-slate-500', dependencies: [] },
+        { id: 'site_prep', name: 'Şantiye Kurulumu', durationWeeks: durSitePrep, color: 'bg-slate-600', dependencies: ['official'], dependencyType: 'start_to_start', lagWeeks: 2 },
+        { id: 'excavation', name: 'Hafriyat ve Temel Kazısı', durationWeeks: durExcavation, color: 'bg-amber-700', dependencies: ['official'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'structure', name: 'Kaba Yapı (Betonarme)', durationWeeks: durStructureVilla, color: 'bg-yellow-600', dependencies: ['excavation'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'roof', name: 'Çatı Konstrüksiyonu (Kırma/Beşik)', durationWeeks: durRoofVilla, color: 'bg-rose-700', dependencies: ['structure'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'walls', name: 'Duvar Örümü ve Bölmeler', durationWeeks: durWalls, color: 'bg-blue-600', dependencies: ['structure'], dependencyType: 'start_to_start', lagWeeks: 3 },
+        { id: 'mep_rough', name: 'Mekanik & Elektrik Altyapı', durationWeeks: durMEP_Rough, color: 'bg-cyan-600', dependencies: ['walls'], dependencyType: 'start_to_start', lagWeeks: 2 },
+        { id: 'facade', name: 'Dış Cephe (Doğal Taş / Sıva)', durationWeeks: durFacadeVilla, color: 'bg-indigo-500', dependencies: ['walls', 'roof'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'plaster', name: 'Sıva ve Alçı İşleri', durationWeeks: durPlaster, color: 'bg-stone-400', dependencies: ['mep_rough', 'roof'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'screed', name: 'Zemin Şapı ve Isıtma Altyapısı', durationWeeks: durScreed, color: 'bg-stone-600', dependencies: ['plaster'], dependencyType: 'start_to_start', lagWeeks: 2 },
+        { id: 'flooring', name: 'Zemin Kaplamaları (Parke / Taş)', durationWeeks: durCoatings, color: 'bg-purple-600', dependencies: ['screed'], dependencyType: 'finish_to_start', lagWeeks: 2 },
+        { id: 'paint', name: 'Boya ve Dekorasyon İşleri', durationWeeks: durPaint, color: 'bg-pink-500', dependencies: ['plaster'], dependencyType: 'finish_to_start', lagWeeks: 3 },
+        { id: 'joinery', name: 'Kapı, Mutfak ve Özel Doğrama', durationWeeks: durJoinery, color: 'bg-amber-800', dependencies: ['flooring', 'paint'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'mep_finish', name: 'Mekanik & Elektrik Montaj', durationWeeks: durMEP_Finish, color: 'bg-teal-500', dependencies: ['paint'], dependencyType: 'finish_to_start', lagWeeks: 1 },
+        // Havuz — sadece poolArea > 0 ise ekleniyor
+        ...(durPoolVilla > 0 ? [
+            { id: 'pool', name: 'Havuz İnşaatı ve Mekanik', durationWeeks: durPoolVilla, color: 'bg-sky-500', dependencies: ['structure'], dependencyType: 'finish_to_start' as const, lagWeeks: 2 }
+        ] : []),
+        { id: 'smart_home', name: 'Akıllı Ev Sistemi Kurulumu', durationWeeks: durSmartHomeVilla, color: 'bg-violet-500', dependencies: ['mep_rough'], dependencyType: 'finish_to_start', lagWeeks: 2 },
+        { id: 'landscape', name: 'Peyzaj, Bahçe ve Çevre Düzenleme', durationWeeks: durLandscapeVilla, color: 'bg-lime-600', dependencies: ['facade'], dependencyType: 'finish_to_start', lagWeeks: 0 },
+        { id: 'handover', name: 'Temizlik ve Teslim', durationWeeks: durHandover, color: 'bg-emerald-600', dependencies: ['joinery', 'mep_finish', 'landscape', 'smart_home', ...(durPoolVilla > 0 ? ['pool'] : [])], dependencyType: 'finish_to_start', lagWeeks: 0 }
+    ] : [
+        // ===== APARTMAN PROGRAMI (değişmedi) =====
         { id: 'official', name: 'Projelendirme ve Ruhsat', durationWeeks: durOfficial, color: 'bg-slate-500', dependencies: [] },
         { id: 'site_prep', name: 'Şantiye Kurulumu', durationWeeks: durSitePrep, color: 'bg-slate-600', dependencies: ['official'], dependencyType: 'start_to_start', lagWeeks: 2 },
         { id: 'excavation', name: 'Hafriyat ve İksa', durationWeeks: durExcavation, color: 'bg-amber-700', dependencies: ['official'], dependencyType: 'finish_to_start', lagWeeks: 0 },
@@ -87,11 +126,8 @@ export const calculateConstructionSchedule = (
         { id: 'roof', name: 'Çatı Konstrüksiyon ve Kaplama', durationWeeks: durRoof, color: 'bg-rose-700', dependencies: ['structure'], dependencyType: 'finish_to_start', lagWeeks: 0 },
         { id: 'walls', name: 'Duvar Örümü', durationWeeks: durWalls, color: 'bg-blue-600', dependencies: ['structure'], dependencyType: 'start_to_start', lagWeeks: 4 },
         { id: 'mep_rough', name: 'Mekanik & Elektrik Altyapı', durationWeeks: durMEP_Rough, color: 'bg-cyan-600', dependencies: ['walls'], dependencyType: 'start_to_start', lagWeeks: 2 },
-
-        // DÜZELTME 1: Dış cephe ve İç Sıva/Alçı işleri Çatı kapandıktan sonra (veya çatıyla bağlantılı olarak) başlasın.
         { id: 'facade', name: 'Dış Cephe ve Pencereler', durationWeeks: durFacade, color: 'bg-indigo-500', dependencies: ['walls', 'roof'], dependencyType: 'finish_to_start', lagWeeks: 0 },
         { id: 'plaster', name: 'Sıva ve Alçı İşleri', durationWeeks: durPlaster, color: 'bg-stone-400', dependencies: ['mep_rough', 'roof'], dependencyType: 'finish_to_start', lagWeeks: 0 },
-
         { id: 'screed', name: 'Zemin Şapı', durationWeeks: durScreed, color: 'bg-stone-600', dependencies: ['plaster'], dependencyType: 'start_to_start', lagWeeks: 2 },
         { id: 'flooring', name: 'Seramik ve Parke', durationWeeks: durCoatings, color: 'bg-purple-600', dependencies: ['screed'], dependencyType: 'finish_to_start', lagWeeks: 2 },
         { id: 'paint', name: 'Boya İşleri', durationWeeks: durPaint, color: 'bg-pink-500', dependencies: ['plaster'], dependencyType: 'finish_to_start', lagWeeks: 3 },
@@ -100,7 +136,6 @@ export const calculateConstructionSchedule = (
         { id: 'landscape', name: 'Çevre Düzenleme ve Peyzaj', durationWeeks: durLandscape, color: 'bg-lime-600', dependencies: ['facade'], dependencyType: 'finish_to_start', lagWeeks: 0 },
         { id: 'handover', name: 'Temizlik ve Teslim', durationWeeks: durHandover, color: 'bg-emerald-600', dependencies: ['joinery', 'mep_finish', 'landscape', 'roof'], dependencyType: 'finish_to_start', lagWeeks: 0 }
     ];
-
     const scheduleMap = new Map<string, ScheduleItem>();
 
     // Override'ları Uygula (Süre ve Bağımlılıklar)

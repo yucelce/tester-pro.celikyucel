@@ -317,6 +317,15 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {/* TAB 2: KAT BİLGİLERİ */}
                     {activeTab === 'floors' && (
                         <div className="max-w-4xl mx-auto space-y-4 animate-fadeIn">
+                            {buildingStats.buildingType === 'villa' && (
+                                <div className="bg-orange-900/20 border border-orange-500/40 p-3 rounded-lg flex items-start gap-3">
+                                    <i className="fas fa-home text-orange-400 mt-0.5 shrink-0"></i>
+                                    <div>
+                                        <p className="text-orange-300 font-bold text-xs">Villa Modu Aktif</p>
+                                        <p className="text-orange-200/70 text-[11px] mt-0.5">Normal kat sayısı en fazla 3 ile sınırlıdır.</p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center bg-slate-800 p-3 rounded-lg border border-slate-700">
                                 <span className="text-xs text-slate-400 flex items-center gap-2">
                                     <i className="fas fa-info-circle text-blue-400"></i>
@@ -348,8 +357,21 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
-                                            <input type="number" min="1" value={buildingStats.normalFloorCount} onChange={(e) => setBuildingStats({ ...buildingStats, normalFloorCount: parseInt(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm" />
-                                        </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={buildingStats.buildingType === 'villa' ? 3 : undefined}
+                                                value={buildingStats.normalFloorCount}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 1;
+                                                    const maxVal = buildingStats.buildingType === 'villa' ? Math.min(val, 3) : val;
+                                                    setBuildingStats({ ...buildingStats, normalFloorCount: maxVal });
+                                                }}
+                                                className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
+                                            />
+                                            {buildingStats.buildingType === 'villa' && (
+                                                <p className="text-[10px] text-orange-400 mt-1">Maks. 3 kat</p>
+                                            )}                                        </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Yük. (m)</label>
                                             <input type="number" step="0.1" value={buildingStats.normalFloorHeight} onChange={(e) => setBuildingStats({ ...buildingStats, normalFloorHeight: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm" />

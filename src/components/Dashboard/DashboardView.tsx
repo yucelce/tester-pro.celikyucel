@@ -381,7 +381,14 @@ export const DashboardView: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700/50">
                             <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Konum</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white truncate">{buildingStats.province}, {buildingStats.district}</div>
+                            <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                                {buildingStats.province}, {buildingStats.district}
+                            </div>
+                            {buildingStats.buildingType === 'villa' && (
+                                <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[10px] font-bold px-2 py-1 rounded-full">
+                                    <i className="fas fa-home text-[9px]"></i> VİLLA MODU
+                                </div>
+                            )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-0 rounded-lg border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between overflow-hidden group">
 

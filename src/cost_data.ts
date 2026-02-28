@@ -28,7 +28,8 @@ export interface CostItem {
   'calc_kitchen_counter_length' | "calc_haritaci" | "calc_ekb" | 'calc_utilities_subscription' | 'calc_land_tax' | 'calc_garden_wall' |
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
-  'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor'
+  'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
+  "calc_vrf_indoor" | "calc_vrf_infrastructure"
 
   ;
 
@@ -202,7 +203,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "İskele Kirası (Aylık)", unit: "Ay", unit_price: 35, auto_source: "calc_scaffolding_duration", multiplier: 1, scope: 'global' },
       { name: "İskele Kurulum/Söküm", unit: "m2", unit_price: 150, auto_source: "calc_scaffolding_area", multiplier: 1, scope: 'global' },
       { name: "Cam Balkon Sistemleri", unit: "m2", unit_price: 3500, auto_source: "manual", multiplier: 1, scope: 'global' },
-{ name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", unit_price: 2800, auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' }      { name: "Pencere Söveleri", unit: "mt", unit_price: 120, auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
+{ name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", unit_price: 2800, auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },     
+ { name: "Pencere Söveleri", unit: "mt", unit_price: 120, auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
       { name: "Yangın Merdiveni (Çelik)", unit: "Kat", unit_price: 1, auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }, // <- Zeminden taşındı
       { name: "Yangın Kapısı (Adet)", unit: "Adet", unit_price: 18000, auto_source: "manual", multiplier: 0, scope: 'hidden' },
     ]
