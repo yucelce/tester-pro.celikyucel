@@ -29,15 +29,11 @@ const AppLayout = () => {
         const checkAccess = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const apiKey = urlParams.get('apiKey');
-            const accountId = urlParams.get('accountId');
-
-            if (accountId) {
-                setAccountId(accountId);
-            }
+            
+            // ARTIK URL'DEN ACCOUNT ID ALMIYORUZ
+            // const accountId = urlParams.get('accountId');
 
             if (!apiKey) {
-                setAuthStatus('success'); // SİLİNECEK
-                return
                 setAuthStatus('error');
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
@@ -51,8 +47,11 @@ const AppLayout = () => {
 
                 if (data.valid === true) {
                     setAuthStatus('success');
+                    // WIX'ten gelen üye ID'sini güvenli bir şekilde sisteme kaydediyoruz
+                    if (data.memberId) {
+                        setAccountId(data.memberId);
+                    }
                 } else {
-                    setAuthStatus('success'); // SİLİNECEK
                     setAuthStatus('error');
                     setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
                 }

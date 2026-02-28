@@ -366,8 +366,7 @@ export const DashboardView: React.FC = () => {
                             <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <i className="fas fa-building text-blue-500"></i> Yapı Genel Bilgileri
                             </h2>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Arsa, Konum ve Kat Bilgileri {accountId && <span className="ml-2 text-green-500 font-bold">(Üye: {accountId})</span>}</p>
-                        </div>
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Arsa, Konum ve Kat Bilgileri {accountId && <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>}</p>                        </div>
 
                         <div className="flex gap-2 w-full md:w-auto">
                             <button onClick={() => openModal('brandSelection')} className="flex-1 md:flex-none bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold transition border border-indigo-200 dark:border-indigo-700/50 flex justify-center items-center gap-2">

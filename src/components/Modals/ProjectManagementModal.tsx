@@ -13,7 +13,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
     const { accountId } = useUIStore();
     const [projects, setProjects] = useState<SavedProject[]>([]);
     const [newProjectName, setNewProjectName] = useState('');
-    const [message, setMessage] = useState<{type: 'success'|'error', text: string} | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -63,8 +63,8 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                 <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50 rounded-t-xl">
                     <div>
                         <h3 className="text-white font-bold text-lg"><i className="fas fa-folder-open mr-2 text-blue-500"></i>Proje Yönetimi</h3>
-                        {accountId ? 
-                            <p className="text-xs text-green-400">Üye Hesabı: {accountId} (Bulut Kayıt)</p> : 
+                        {accountId ?
+                            <p className="text-xs text-green-400">Pro Üye Modu (Bulut Kayıt Aktif)</p> :
                             <p className="text-xs text-yellow-500">Misafir Modu (Veriler tarayıcıda saklanır)</p>
                         }
                     </div>
@@ -74,14 +74,14 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                 <div className="p-4 border-b border-slate-700 bg-slate-800/30">
                     <label className="text-xs text-slate-400 font-bold block mb-1">Mevcut Projeyi Kaydet</label>
                     <div className="flex gap-2">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             value={newProjectName}
                             onChange={(e) => setNewProjectName(e.target.value)}
                             placeholder="Proje Adı Giriniz..."
                             className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none"
                         />
-                        <button 
+                        <button
                             onClick={handleSave}
                             disabled={!newProjectName.trim() || isLoading}
                             className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-bold text-sm transition flex items-center gap-2"
@@ -102,7 +102,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                         <span className="text-sm font-bold text-white">Kayıtlı Projeler</span>
                         <span className="text-xs text-slate-500">{projects.length} / {accountId ? '10' : '5'}</span>
                     </div>
-                    
+
                     {isLoading && projects.length === 0 ? (
                         <div className="text-center py-8 text-blue-400 text-sm">
                             <i className="fas fa-spinner fa-spin mr-2"></i> Yükleniyor...
