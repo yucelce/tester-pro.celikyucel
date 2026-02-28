@@ -1193,10 +1193,27 @@ export const calculateComplexGlobalQuantity = (
             const totalConcrete = vTemel + vBodrumPerde + vKatlar;
             return totalConcrete * (item.multiplier || 1);
         }
-        
+
         case 'calc_pool_concrete': {
             // Sadece kullanıcı havuz alanı girdiyse m2 olarak döndür
             return buildingStats.poolArea || 0;
+        }
+
+        case 'calc_smart_home': {
+            // Sadece villalarda standart olarak hesaplansın isteniyorsa:
+            if (buildingStats.buildingType === 'villa') {
+                // Wix'ten gelen bir baz fiyat varsa o çekilebilir (Örn: 150.000 TL baz fiyat)
+                const baseSmartHomePrice = item.unit_price > 1 ? item.unit_price : 150000;
+
+                // 150 m²'yi standart kabul edip, üzerindeki her m² için donanım/modül farkı ekleyebiliriz
+                let areaMultiplier = 1.0;
+                if (totalConstructionArea > 150) {
+                    areaMultiplier = 1.0 + ((totalConstructionArea - 150) * 0.005); // Her m²'de binde 5 artış
+                }
+
+                return Math.round(baseSmartHomePrice * areaMultiplier);
+            }
+            return 0; // Villa değilse maliyet yansıtma (veya istenirse apartmanlar için de eklenebilir)
         }
 
         case 'calc_pool_system': {
@@ -1245,6 +1262,26 @@ export const calculateComplexGlobalQuantity = (
             const totalCost = aplikasyonBedeli + roperliFarki + planOrnegiBedeli;
 
             return totalCost;
+        }
+
+        case 'calc_facade_composite': {
+            if (buildingStats.buildingType === 'villa') {
+                // 1. Zemin katın dış cephe alanı (Zemin kat çevre uzunluğu * Zemin kat yüksekliği)
+                const groundFloorFacadeArea = (buildingStats.groundFloorPerimeter || 0) * buildingStats.groundFloorHeight;
+                
+                // 2. Normal katların dış cephe alanı (Normal kat çevre uzunluğu * Normal kat yüksekliği * Normal kat sayısı)
+                const normalFloorsFacadeArea = (buildingStats.normalFloorPerimeter || 0) * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+                
+                // 3. Toplam brüt toprak üstü cephe alanı
+                const grossFacadeArea = groundFloorFacadeArea + normalFloorsFacadeArea;
+                
+                // 4. Pencere ve kapı boşluklarını düş (Genelde %20 boşluk varsayılır)
+                const netFacadeArea = grossFacadeArea * 0.80;
+
+                // Cephenin yüzde kaçının (multiplier = 0.25) kaplanacağını hesapla
+                return Math.round(netFacadeArea * (item.multiplier || 0.25));
+            }
+            return 0;
         }
 
         case 'calc_tower_crane_duration': {
