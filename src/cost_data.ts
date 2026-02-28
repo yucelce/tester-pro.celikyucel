@@ -218,7 +218,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, wixId: "parkepaket", scope: 'unit' },
       { name: "Seramik Kaplama", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, wixId: "seramikmal", scope: 'unit' }, // Sadece Kaplama Fireli Kalıyor
       { name: "Seramik Yapıştırıcısı", unit: "kg", unit_price: 10, auto_source: "net_wet_area", multiplier: 5, wixId: "seramikyapistirici", scope: 'unit' },
-      { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, wixId: "seramikderz", scope: 'unit' }, { name: "Sahanlık ve Kat Holü Mermer", unit: "m2", unit_price: 1500, auto_source: "calc_hall_area", multiplier: 1, wixId: "sahanlikmalisc", scope: 'global' },
+      { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, wixId: "seramikderz", scope: 'unit' }, 
+      { name: "Sahanlık ve Kat Holü Mermer", unit: "m2", unit_price: 1500, auto_source: "calc_hall_area", multiplier: 1, wixId: "sahanlikmalisc", scope: 'global' },
       { name: "Merdiven Mermer Kaplama", unit: "Basamak", unit_price: 1500, auto_source: "calc_stairs", multiplier: 1, wixId: "merdivenmermer", scope: 'global' },
       { name: "Merdiven Korkuluğu", unit: "mt", unit_price: 1800, auto_source: "calc_stairs_railing", multiplier: 1, wixId: "merdivenkorkuluk", scope: 'global' },
       { name: "Süpürgelik", unit: "mt", unit_price: 150, auto_source: "dry_perimeter", multiplier: 1, wixId: "supurgelik", scope: 'unit' },
