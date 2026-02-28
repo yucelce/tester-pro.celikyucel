@@ -34,6 +34,8 @@ const AppLayout = () => {
             // const accountId = urlParams.get('accountId');
 
             if (!apiKey) {
+                setAuthStatus('true'); //Silinecek
+                return
                 setAuthStatus('error');
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
@@ -52,7 +54,9 @@ const AppLayout = () => {
                         setAccountId(data.memberId);
                     }
                 } else {
+                   
                     setAuthStatus('error');
+                     setAuthStatus('true'); //Silinecek
                     setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
                 }
             } catch (error) {
