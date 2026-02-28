@@ -971,6 +971,37 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
     // --- ACTIONS ---
+    const startNewProject = (type: 'apartment' | 'villa') => {
+        const isVilla = type === 'villa';
+        
+        // Yapı İstatistiklerini Güncelle
+        setBuildingStatsState(prev => ({
+            ...prev,
+            buildingType: type,
+            normalFloorCount: isVilla ? 1 : 5,
+            basementFloorCount: isVilla ? 0 : 1,
+            groundFloorHeight: isVilla ? 3.2 : 3.0,
+            normalFloorHeight: isVilla ? 3.0 : 2.8,
+        }));
+        
+        // Daire/Villa Tiplerini Sıfırla
+        setUnits([
+            {
+                id: Date.now().toString(),
+                name: isVilla ? 'Villa Planı' : 'Tip A (2+1)',
+                count: 1,
+                rooms: [], walls: [], columns: [], beams: [], slabs: [],
+                floorType: isVilla ? 'ground' : 'normal', imageData: null, scale: 0, lastEdited: Date.now(),
+                structuralWallSource: 'global_calculated', structuralConcreteSource: 'global_calculated'
+            }
+        ]);
+        
+        // Diğer verileri sıfırla
+        setStructuralUnits([]);
+        setCustomCosts([]);
+        setIsDataDirty(true);
+        recalculateCosts('both');
+    };
 
     const setBuildingStats = (value: React.SetStateAction<BuildingStats>) => {
         setBuildingStatsState(value);
@@ -1340,7 +1371,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale
+            removeSale,startNewProject
         }}>
             {children}
         </ProjectContext.Provider>

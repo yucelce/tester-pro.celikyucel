@@ -134,6 +134,9 @@ export interface UnitType {
 }
 
 export interface BuildingStats {
+
+    buildingType?: 'apartment' | 'villa';
+    
     province: string;
     district: string;
     landArea: number;
