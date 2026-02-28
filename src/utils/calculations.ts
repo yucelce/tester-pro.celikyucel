@@ -1279,6 +1279,15 @@ export const calculateComplexGlobalQuantity = (
             return totalCost;
         }
 
+        case 'calc_villa_stairs': {
+            if (buildingStats.buildingType === 'villa') {
+                // Bodrumdan zemine ve zeminden normal katlara çıkan merdivenleri sayar.
+                // Örn: Sadece Zemin katlı tek katlı bir villada 0 döner. Zemin + 1 Katta 1 döner.
+                return buildingStats.normalFloorCount + buildingStats.basementFloorCount;
+            }
+            return 0; 
+        }
+
         case 'calc_facade_composite': {
             if (buildingStats.buildingType === 'villa') {
                 // 1. Zemin katın dış cephe alanı (Zemin kat çevre uzunluğu * Zemin kat yüksekliği)
@@ -1676,11 +1685,13 @@ export const calculateComplexGlobalQuantity = (
             return 1
         }
 
-        case 'calc_garden_wall': {
+       case 'calc_garden_wall': {
             const landArea = buildingStats.landArea || 0;
             if (landArea <= 0) return 0;
 
-            const landPerimeter = Math.sqrt(landArea) * 3;
+            // Villa ise tam müstakil kabul edilip 4 kenar çevrilir. Diğerlerinde 3 kenar ortalaması alınır.
+            const multiplier = buildingStats.buildingType === 'villa' ? 4 : 3;
+            const landPerimeter = Math.sqrt(landArea) * multiplier;
 
             return landPerimeter * (item.multiplier || 1);
         }
@@ -1750,7 +1761,12 @@ export const calculateComplexGlobalQuantity = (
         }
 
         case 'calc_roof':
-            // 45% slope -> Area / cos(alpha) or Area * 1.45 approx for surface
+            if (buildingStats.buildingType === 'villa') {
+                // Villalarda zemine veya normal kata oturan en geniş alanı al ve %55 saçak/eğim payı ekle
+                const maxArea = Math.max(buildingStats.normalFloorArea, buildingStats.groundFloorArea);
+                return maxArea * 1.55; 
+            }
+            // Apartmanlarda standart normal kat iz düşümü %45 pay
             return (buildingStats.normalFloorArea) * 1.45;
 
         // --- 4. DUVAR & CEPHE ---
@@ -1759,15 +1775,25 @@ export const calculateComplexGlobalQuantity = (
             return (totalConstructionArea * buildingStats.normalFloorHeight) / 3.0;
 
         case 'calc_facade': {
-            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
-                buildingStats.groundFloorHeight;
-            const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+            if (buildingStats.buildingType === 'villa') {
+                // Villalarda zemin kat ve normal kat cephe alanlarını ayrı toplayın
+                const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
+                const groundFacade = groundPerim * buildingStats.groundFloorHeight;
 
-            // Bina genel formu için zayiat faktörü hesapla
-            const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim); //
-
-            // Toplam mantolama alanına zayiatı uygula
-            return perim * facadeHeight * facadeWaste; //
+                const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+                const normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+                
+                const facadeWaste = calculateWasteFactor([], buildingStats.groundFloorArea, groundPerim);
+                
+                return (groundFacade + normalFacade) * facadeWaste;
+            } else {
+                // Mevcut Apartman Mantığı
+                const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
+                    buildingStats.groundFloorHeight;
+                const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+                const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim); 
+                return perim * facadeHeight * facadeWaste; 
+            }
         }
         // src/utils/calculations.ts içindeki calculateComplexGlobalQuantity switch bloğuna ekleyin:
 

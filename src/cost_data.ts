@@ -29,7 +29,7 @@ export interface CostItem {
   'calc_gas_infrastructure' | "calc_gas_subscription" | "calc_demolition_supervisor" | "calc_demolition_area" |
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
-  "calc_vrf_indoor" | "calc_vrf_infrastructure"
+  "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs"
 
   ;
 
@@ -203,8 +203,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "İskele Kirası (Aylık)", unit: "Ay", unit_price: 35, auto_source: "calc_scaffolding_duration", multiplier: 1, scope: 'global' },
       { name: "İskele Kurulum/Söküm", unit: "m2", unit_price: 150, auto_source: "calc_scaffolding_area", multiplier: 1, scope: 'global' },
       { name: "Cam Balkon Sistemleri", unit: "m2", unit_price: 3500, auto_source: "manual", multiplier: 1, scope: 'global' },
-{ name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", unit_price: 2800, auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },     
- { name: "Pencere Söveleri", unit: "mt", unit_price: 120, auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
+      { name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", unit_price: 2800, auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },
+      { name: "Pencere Söveleri", unit: "mt", unit_price: 120, auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
       { name: "Yangın Merdiveni (Çelik)", unit: "Kat", unit_price: 1, auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }, // <- Zeminden taşındı
       { name: "Yangın Kapısı (Adet)", unit: "Adet", unit_price: 18000, auto_source: "manual", multiplier: 0, scope: 'hidden' },
     ]
@@ -220,7 +220,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, wixId: "parkepaket", scope: 'unit' },
       { name: "Seramik Kaplama", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, wixId: "seramikmal", scope: 'unit' }, // Sadece Kaplama Fireli Kalıyor
       { name: "Seramik Yapıştırıcısı", unit: "kg", unit_price: 10, auto_source: "net_wet_area", multiplier: 5, wixId: "seramikyapistirici", scope: 'unit' },
-      { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, wixId: "seramikderz", scope: 'unit' }, 
+      { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, wixId: "seramikderz", scope: 'unit' },
       { name: "Sahanlık ve Kat Holü Mermer", unit: "m2", unit_price: 1500, auto_source: "calc_hall_area", multiplier: 1, wixId: "sahanlikmalisc", scope: 'global' },
       { name: "Merdiven Mermer Kaplama", unit: "Basamak", unit_price: 1500, auto_source: "calc_stairs", multiplier: 1, wixId: "merdivenmermer", scope: 'global' },
       { name: "Merdiven Korkuluğu", unit: "mt", unit_price: 1800, auto_source: "calc_stairs_railing", multiplier: 1, wixId: "merdivenkorkuluk", scope: 'global' },
@@ -242,8 +242,15 @@ export const COST_DATA: CostCategory[] = [
       { name: "Mutfak Dolabı (Standart)", unit: "m2", unit_price: 6985, auto_source: "calc_kitchen_cabinet", multiplier: 1, wixId: "mutfakdolabipaket", scope: 'unit' },
       { name: "Banyo Dolabı & Lavabo", unit: "Adet", unit_price: 6210, auto_source: "calc_bathroom_cabinet", multiplier: 1, wixId: "banyodolabisetpaket", scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", unit_price: 17340, auto_source: "calc_unit_count", multiplier: 1, wixId: "portmantomal", scope: 'unit' },
-      { name: "İç Merdiven (Dubleks)", unit: "Adet", unit_price: 72460, auto_source: "manual", multiplier: 0, wixId: "dubleksmerdivenipaket", scope: 'unit' }
-    ]
+      {
+        name: "İç Merdiven (Dubleks)",
+        unit: "Adet",
+        unit_price: 72460,
+        auto_source: "calc_villa_stairs", // manual yerine otomatik formüle bağlandı
+        multiplier: 1,
+        wixId: "dubleksmerdivenipaket",
+        scope: 'global' // unit yerine global yapıldı
+      }]
   },
 
   // 8. YENİ BÖLÜNMÜŞ KATEGORİ: VİTRİFİYE VE ANKASTRE
@@ -318,7 +325,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Jeneratör (Ortak Alan)", unit: "Toplam", unit_price: 150000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-    {
+      {
         name: "Akıllı Ev Altyapı ve Donanım Paketi",
         unit: "Paket",
         unit_price: 1, // Fiyatı calculations'tan dinamik döneceğiz

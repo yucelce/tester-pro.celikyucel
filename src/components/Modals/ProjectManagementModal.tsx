@@ -169,6 +169,11 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                                         <div className="text-[10px] text-slate-500">
                                             {new Date(p.lastModified).toLocaleDateString()} {new Date(p.lastModified).toLocaleTimeString()}
                                         </div>
+                                        {p.data?.buildingStats?.buildingType === 'villa' && (
+                                            <span className="inline-flex items-center gap-1 mt-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                                                <i className="fas fa-home text-[8px]"></i> VİLLA
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={() => handleLoad(p)} disabled={isLoading} className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-3 py-1.5 rounded text-xs font-bold">Yükle</button>
