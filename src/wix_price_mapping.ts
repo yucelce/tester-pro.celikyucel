@@ -146,7 +146,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Batarya Grubu (Mutfak/Banyo)": "lavabobataryasimal", // Fiyat: 1.605 TL (En yakın eşleşme)
   "Bina Giriş Kapısı (Ana)": "binakapisimal",         // Fiyat: 60.876 TL
   "Portmanto / Vestiyer": "portmantomal",                        // Fiyat: 17.340 TL
-  "İç Merdiven (Dubleks)": "dubleksmerdivenipaket",   // Fiyat: 72.460 TL
+  "Daire İç Merdiven": "dubleksmerdivenipaket",   // Fiyat: 72.460 TL
   "Davlumbaz / Aspiratör": "davlumbazmal",              // Fiyat: 4.915 TL
   // Fiyat: 3.880 TL
   "Lavabo Bataryası": "lavabobataryasimal", // Banyo/Lavabo için

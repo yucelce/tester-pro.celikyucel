@@ -1268,13 +1268,13 @@ export const calculateComplexGlobalQuantity = (
             if (buildingStats.buildingType === 'villa') {
                 // 1. Zemin katın dış cephe alanı (Zemin kat çevre uzunluğu * Zemin kat yüksekliği)
                 const groundFloorFacadeArea = (buildingStats.groundFloorPerimeter || 0) * buildingStats.groundFloorHeight;
-                
+
                 // 2. Normal katların dış cephe alanı (Normal kat çevre uzunluğu * Normal kat yüksekliği * Normal kat sayısı)
                 const normalFloorsFacadeArea = (buildingStats.normalFloorPerimeter || 0) * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
-                
+
                 // 3. Toplam brüt toprak üstü cephe alanı
                 const grossFacadeArea = groundFloorFacadeArea + normalFloorsFacadeArea;
-                
+
                 // 4. Pencere ve kapı boşluklarını düş (Genelde %20 boşluk varsayılır)
                 const netFacadeArea = grossFacadeArea * 0.80;
 
@@ -1765,6 +1765,9 @@ export const calculateComplexGlobalQuantity = (
         }
         // --- 8. MEKANİK ---
         case 'calc_elevator': {
+            if (buildingStats.buildingType === 'villa') {
+                return 0
+            }
             // 1. Kullanıcı elle asansör adeti girdiyse onu baz al
             if (item.manualQuantity !== undefined && item.manualQuantity > 0) {
                 return item.manualQuantity;
@@ -1851,6 +1854,9 @@ export const calculateComplexGlobalQuantity = (
 
         // --- 6. ZEMİN ---
         case 'calc_stairs':
+            if (buildingStats.buildingType === 'villa') {
+                return 0
+            }
             // Steps = Height / 0.17
             return totalBuildingHeight / 0.17;
 
@@ -1953,6 +1959,9 @@ export const calculateComplexGlobalQuantity = (
 
 
         case 'calc_stairs_railing': {
+            if (buildingStats.buildingType === 'villa') {
+                return 0
+            }
             // Railing = Steps * Hypotenuse(0.17, 0.28)
             const stepCount = totalBuildingHeight / 0.17;
             const stepHypot = Math.hypot(0.17, 0.28); // Approx 0.327m
@@ -1961,6 +1970,9 @@ export const calculateComplexGlobalQuantity = (
 
         // --- MERMER HARCI VE KUMU HESABI ---
         case 'calc_marble_mortar': {
+            if (buildingStats.buildingType === 'villa') {
+                return 0
+            }
             // 1. Basamakların Alanı: (Adet x Ortalama 0.45 m2/basamak)
             const stepCount = totalBuildingHeight / 0.17;
             const stairsArea = stepCount * 0.45;
