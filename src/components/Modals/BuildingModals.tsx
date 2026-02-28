@@ -24,6 +24,25 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
     const { updateHallArea, structuralUnits } = useProjectStore();
     const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special'>('general');
     const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+    
+    const handleBuildingTypeChange = (newType: 'apartment' | 'villa') => {
+        if (newType !== buildingStats.buildingType) {
+            const isConfirmed = window.confirm(
+                "DİKKAT: Yapı tipini değiştirmek üzeresiniz!\n\n" +
+                "Bu işlem; kat holleri, asansör, merdiven ve çatı/cephe gibi birçok otomatik metrajı ve projenizin toplam fiyatını YENİ SEÇİMİNİZE GÖRE REVİZE EDECEKTİR. Mevcut bağımsız bölüm yapılarınız da etkilenebilir.\n\n" +
+                "Devam etmek istiyor musunuz?"
+            );
+
+            if (isConfirmed) {
+                setBuildingStats({ 
+                    ...buildingStats, 
+                    buildingType: newType,
+                    normalFloorCount: newType === 'villa' ? 1 : buildingStats.normalFloorCount,
+                    basementFloorCount: newType === 'villa' ? 0 : buildingStats.basementFloorCount,
+                });
+            }
+        }
+    };
 
     const handleFetchFromDrawing = (floorType: 'normal' | 'ground' | 'basement') => {
         const targetUnit = structuralUnits.find(u => u.floorType === floorType);
@@ -188,6 +207,23 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {/* TAB 1: GENEL BİLGİLER */}
                     {activeTab === 'general' && (
                         <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+                        <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
+                                <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
+                                <div className="flex gap-2 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
+                                    <button 
+                                        onClick={() => handleBuildingTypeChange('apartment')}
+                                        className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType !== 'villa' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                                    >
+                                        <i className="fas fa-building mr-2"></i>Apartman / Çok Katlı
+                                    </button>
+                                    <button 
+                                        onClick={() => handleBuildingTypeChange('villa')}
+                                        className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType === 'villa' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                                    >
+                                        <i className="fas fa-home mr-2"></i>Müstakil Villa
+                                    </button>
+                                </div>
+                            </div>
                             <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
                                 <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Konum Bilgileri</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
