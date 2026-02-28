@@ -2454,6 +2454,24 @@ export const calculateDynamicUnitPrice = (
         return basePrice + (extraStops * costPerExtraStop);
     }
 
+    if (buildingStats?.buildingType === 'villa') {
+        const premiumItems = [
+            "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
+            "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo", 
+            "Portmanto / Vestiyer", "İç Merdiven (Dubleks)",
+            "PVC Pencere (Doğrama)", "Mantolama (Malz.+İşçilik)", "Çatı Konstrüksiyon ve Kaplama",
+            "Balkon Korkulukları (Alüminyum)", "Cam Balkon Sistemleri", "Pencere Söveleri",
+            "Laminat Parke (Anahtar Teslim)", "Seramik Kaplama",
+            "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
+            "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
+            "Cephe Aydınlatma (Wallwasher)"
+        ];
+
+        if (premiumItems.includes(item.name)) {
+            return item.unit_price * 1.5;
+        }
+    }
+
     // Diğer tüm kalemler için orijinal fiyatı döndür
     return item.unit_price;
 };
