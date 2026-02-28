@@ -163,7 +163,13 @@ export const calculateUnitCost = (
         stats.calc_steel_door = 1;
         stats.calc_sub_panel_count = 1;
 
-        stats.calc_combi_count = 1;
+        // YENİ MANTIK: Sadece Kombi seçiliyse kombi yaz, Isı Pompasıysa ısı pompası yaz
+        const heatingSystem = buildingStats.heatingSystem || 'radiator';
+        if (heatingSystem === 'radiator' || heatingSystem === 'underfloor') {
+            stats.calc_combi_count = 1;
+        } else if (heatingSystem === 'heat_pump') {
+            stats.calc_heat_pump = 1;
+        }
 
 
     }
@@ -241,7 +247,7 @@ export const calculateUnitCost = (
                     stats.calc_radiator_count += count;
                 }
                 // --- YENİ HASSAS RADYATÖR MANTIĞI BİTİŞİ ---
-            } else {
+            } else if (heatingSystem === 'underfloor' || heatingSystem === 'heat_pump') {
                 if (heatedArea > 0) {
                     // 1. Odanın yüksekliğini ve pencere alanını al
                     const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
@@ -276,6 +282,15 @@ export const calculateUnitCost = (
                     }
 
                     stats.calc_underfloor_collector += collectorCount;
+                }
+            }else if (heatingSystem === 'vrf') {
+                if (heatedArea > 0) {
+                    // 1. Altyapı metrajı: Isıtılacak/Soğutulacak alan üzerinden bakır borulama hesaplanır
+                    stats.calc_vrf_infrastructure += heatedArea;
+
+                    // 2. İç Ünite (Kaset/Kanallı): Her oda için minimum 1 adet. Alan 35 m²'den büyükse 2 adet say.
+                    const indoorUnits = Math.ceil(heatedArea / 35);
+                    stats.calc_vrf_indoor += indoorUnits;
                 }
             }
             // --- YENİ MANTIK: ODA BAZLI İNCE İŞ HESABI ---
@@ -1365,6 +1380,8 @@ export const calculateComplexGlobalQuantity = (
 
             return Math.round(finalEkbCost);
         }
+
+        
 
         case 'calc_utilities_subscription': {
             // A. Fiyatları currentCosts (Wix'ten gelen liste) içinden bul

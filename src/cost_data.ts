@@ -271,6 +271,10 @@ export const COST_DATA: CostCategory[] = [
       { name: "Radyatör Montaj ve Vanalar", unit: "Adet", unit_price: 650, auto_source: "calc_radiator_count", multiplier: 1, scope: 'unit', wixId: "radyatormontaj" },
       { name: "Yerden Isıtma (Strafor+Boru+İşçilik)", unit: "m2", unit_price: 850, auto_source: "calc_underfloor_area", multiplier: 1, scope: 'unit' },
       { name: "Yerden Isıtma Kollektörü ve Kutusu", unit: "Adet", unit_price: 4500, auto_source: "calc_underfloor_collector", multiplier: 1, scope: 'unit' },
+      { name: "Isı Pompası (Hava Kaynaklı Dış Ünite)", unit: "Adet", unit_price: 150000, auto_source: "calc_heat_pump", multiplier: 1, scope: 'unit' },
+      { name: "VRF Dış Ünite (Merkezi Sistem)", unit: "Adet", unit_price: 250000, auto_source: "calc_vrf_outdoor", multiplier: 1, scope: 'global' },
+      { name: "VRF İç Ünite (Kaset/Duvar Tipi)", unit: "Adet", unit_price: 22000, auto_source: "calc_vrf_indoor", multiplier: 1, scope: 'unit' },
+      { name: "VRF Bakır Borulama ve Altyapı", unit: "m2", unit_price: 850, auto_source: "calc_vrf_infrastructure", multiplier: 1, scope: 'unit' },
       {
         name: "Doğalgaz Bina Ana Altyapısı",
         unit: "Paket",

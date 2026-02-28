@@ -305,6 +305,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     useEffect(() => {
         if (buildingStats.isHallManual) return;
+        if (buildingStats.buildingType === 'villa') {
+            if (
+                buildingStats.normalFloorHallArea !== 0 ||
+                buildingStats.groundFloorHallArea !== 0 ||
+                buildingStats.basementFloorHallArea !== 0
+            ) {
+                setBuildingStatsState(prev => ({
+                    ...prev,
+                    normalFloorHallArea: 0,
+                    groundFloorHallArea: 0,
+                    basementFloorHallArea: 0
+                }));
+            }
+            return; // Aşağıdaki hesaplamaları yapmadan çık
+        }
 
         const totalNormalUnits = units
             .filter(u => u.floorType === 'normal')

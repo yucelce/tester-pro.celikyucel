@@ -371,7 +371,19 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Hol (m²)</label>
-                                            <input type="number" value={buildingStats.normalFloorHallArea || 0} onChange={(e) => updateHallArea('normal', parseFloat(e.target.value))} className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono ${buildingStats.isNormalHallManual ? 'border-yellow-500' : 'border-slate-600'}`} />
+                                            <input
+                                                type="number"
+                                                value={buildingStats.normalFloorHallArea || 0}
+                                                onChange={(e) => updateHallArea('normal', parseFloat(e.target.value))}
+                                                disabled={buildingStats.buildingType === 'villa'}
+                                                title={buildingStats.buildingType === 'villa' ? 'Müstakil villalarda ortak hol alanı hesaplanmaz.' : ''}
+                                                className={`w-full bg-slate-900 border rounded p-2 text-sm font-mono transition ${buildingStats.buildingType === 'villa'
+                                                    ? 'border-slate-800 text-slate-600 cursor-not-allowed bg-slate-900/50'
+                                                    : buildingStats.isNormalHallManual
+                                                        ? 'border-yellow-500 text-white'
+                                                        : 'border-slate-600 text-white'
+                                                    }`}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -410,7 +422,19 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Giriş/Hol (m²)</label>
-                                            <input type="number" value={buildingStats.groundFloorHallArea || 0} onChange={(e) => updateHallArea('ground', parseFloat(e.target.value))} className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono ${buildingStats.isGroundHallManual ? 'border-yellow-500' : 'border-slate-600'}`} />
+                                            <input
+                                                type="number"
+                                                value={buildingStats.groundFloorHallArea || 0}
+                                                onChange={(e) => updateHallArea('ground', parseFloat(e.target.value))}
+                                                disabled={buildingStats.buildingType === 'villa'}
+                                                title={buildingStats.buildingType === 'villa' ? 'Müstakil villalarda ortak hol alanı hesaplanmaz.' : ''}
+                                                className={`w-full bg-slate-900 border rounded p-2 text-sm font-mono transition ${buildingStats.buildingType === 'villa'
+                                                    ? 'border-slate-800 text-slate-600 cursor-not-allowed bg-slate-900/50'
+                                                    : buildingStats.isGroundHallManual
+                                                        ? 'border-yellow-500 text-white'
+                                                        : 'border-slate-600 text-white'
+                                                    }`}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -449,7 +473,19 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Hol (m²)</label>
-                                            <input type="number" value={buildingStats.basementFloorHallArea || 0} onChange={(e) => updateHallArea('basement', parseFloat(e.target.value))} className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono ${buildingStats.isBasementHallManual ? 'border-yellow-500' : 'border-slate-600'}`} />
+                                            <input
+                                                type="number"
+                                                value={buildingStats.basementFloorHallArea || 0}
+                                                onChange={(e) => updateHallArea('basement', parseFloat(e.target.value))}
+                                                disabled={buildingStats.buildingType === 'villa'}
+                                                title={buildingStats.buildingType === 'villa' ? 'Müstakil villalarda ortak hol alanı hesaplanmaz.' : ''}
+                                                className={`w-full bg-slate-900 border rounded p-2 text-sm font-mono transition ${buildingStats.buildingType === 'villa'
+                                                    ? 'border-slate-800 text-slate-600 cursor-not-allowed bg-slate-900/50'
+                                                    : buildingStats.isBasementHallManual
+                                                        ? 'border-yellow-500 text-white'
+                                                        : 'border-slate-600 text-white'
+                                                    }`}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -608,8 +644,10 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         onChange={(e) => setBuildingStats({ ...buildingStats, heatingSystem: e.target.value as any })}
                                         className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
                                     >
-                                        <option value="radiator">Panel Radyatör (Petek)</option>
-                                        <option value="underfloor">Yerden Isıtma Sistemi</option>
+                                        <option value="radiator">Panel Radyatör (Kombi + Petek)</option>
+                                        <option value="underfloor">Yerden Isıtma (Kombi + Kollektör)</option>
+                                        <option value="heat_pump">Isı Pompası (Hava Kaynaklı + Yerden Isıtma)</option>
+                                        <option value="vrf">VRF İklimlendirme (Merkezi Sistem / Kaset Tipi)</option>
                                     </select>
                                 </div>
                             </div>
