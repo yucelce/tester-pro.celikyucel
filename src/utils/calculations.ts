@@ -1508,6 +1508,17 @@ export const calculateComplexGlobalQuantity = (
             return needsTowerCrane(totalConstructionArea, groundArea, totalFloors) ? 1 : 0;
         }
 
+        case 'calc_grass_and_irrigation': {
+            if (buildingStats.buildingType === 'villa') {
+                const footprintArea = buildingStats.groundFloorArea || 0;
+                const openArea = Math.max(0, buildingStats.landArea - footprintArea);
+                
+                // Villalarda açık alanın %10'u sert zemin (yürüyüş yolu/otopark), %20'si teras/havuz, kalan %70'i çim+bitki kabul edilebilir.
+                return openArea * 0.70;
+            }
+            return 0;
+        }
+
         case 'calc_demolition_supervisor': {
             // DÜZELTME: Yıkılacak bina varsa, Kentsel Dönüşüm olsun veya olmasın 
             // Teknik Sorumlu (mühendis/mimar) atama zorunluluğu vardır.
