@@ -282,6 +282,47 @@ interface RoomModalProps {
 }
 
 export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onDelete, onClose, onSave }) => {
+
+    // YENİ EKLENEN FONKSİYON: Oda tipine göre varsayılanları belirler ve onUpdate'e gönderir
+    const handleTypeSelect = (type: RoomType) => {
+        let defaultName = '';
+        let defaultFloor: 'parke' | 'seramik' | 'beton' = 'parke';
+        let defaultWall: 'boya' | 'seramik' = 'boya';
+        let defaultCornice = true;
+        let defaultWaterproofing = false;
+        let defaultWindowArea = 2;
+
+        switch (type) {
+            case 'living':
+                defaultName = 'Salon'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2.5; break;
+            case 'bedroom':
+                defaultName = 'Yatak Odası'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2; break;
+            case 'kitchen':
+                defaultName = 'Mutfak'; defaultFloor = 'seramik'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2; break;
+            case 'bath':
+                defaultName = 'Banyo'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5; break;
+            case 'wc':
+                defaultName = 'WC'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25; break;
+            case 'hallway':
+                defaultName = 'Antre / Koridor'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 0; break;
+            case 'dressing':
+                defaultName = 'Giyinme Odası'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = false; defaultWindowArea = 0; break;
+            case 'balcony':
+                defaultName = 'Balkon'; defaultFloor = 'seramik'; defaultWall = 'boya'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0; break;
+            case 'storage':
+            case 'other':
+                defaultName = 'Depo / Kiler'; defaultFloor = 'beton'; defaultWall = 'boya'; defaultCornice = false; defaultWindowArea = 0; break;
+        }
+
+        onUpdate({
+            floorType: defaultFloor,
+            wallFinish: defaultWall,
+            hasCornice: defaultCornice,
+            hasWaterproofing: defaultWaterproofing,
+            windowArea: defaultWindowArea
+        }, type, defaultName);
+    };
+
     return (
         <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center backdrop-blur-sm p-4">
             <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
@@ -363,7 +404,7 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                                 { id: 'bedroom', label: 'Yatak Odası', icon: 'fa-bed', activeClass: 'bg-purple-900/40 border-purple-500 text-white' },
                                 { id: 'kitchen', label: 'Mutfak', icon: 'fa-utensils', activeClass: 'bg-orange-900/40 border-orange-500 text-white' },
                                 { id: 'bath', label: 'Banyo', icon: 'fa-bath', activeClass: 'bg-cyan-900/40 border-cyan-500 text-white' },
-                                { id: 'wc', label: 'WC', icon: 'fa-restroom', activeClass: 'bg-teal-900/40 border-teal-500 text-white' }, // YENİ EKLENDİ
+                                { id: 'wc', label: 'WC', icon: 'fa-restroom', activeClass: 'bg-teal-900/40 border-teal-500 text-white' },
                                 { id: 'hallway', label: 'Antre / Koridor', icon: 'fa-route', activeClass: 'bg-indigo-900/40 border-indigo-500 text-white' },
                                 { id: 'dressing', label: 'Giyinme Odası', icon: 'fa-tshirt', activeClass: 'bg-pink-900/40 border-pink-500 text-white' },
                                 { id: 'balcony', label: 'Balkon', icon: 'fa-sun', activeClass: 'bg-green-900/40 border-green-500 text-white' },
@@ -371,7 +412,7 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                             ].map(t => (
                                 <button
                                     key={t.id}
-                                    onClick={() => onUpdate({}, t.id as RoomType)}
+                                    onClick={() => handleTypeSelect(t.id as RoomType)} // GÜNCELLENEN KISIM BURASI
                                     className={`p-2 rounded border text-left flex items-center gap-2 transition ${room.type === t.id ? t.activeClass : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
                                 >
                                     <i className={`fas ${t.icon} w-5 text-center`}></i>
