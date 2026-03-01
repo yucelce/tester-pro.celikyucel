@@ -30,7 +30,7 @@ export interface CostItem {
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
-  "calc_grass_and_irrigation"
+  "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps"
 
   ;
 
@@ -141,9 +141,11 @@ export const COST_DATA: CostCategory[] = [
     title: "3. Kaba Yapı (Betonarme ve Çatı)",
     items: [
       { name: "Betonarme Betonu (C30)", unit: "m3", unit_price: 3890, auto_source: "calc_concrete_global", multiplier: 1, wixId: "betonmal", scope: 'global' },
+      { name: "Grobeton", unit: "m3", unit_price: 3300, auto_source: "calc_grobeton", multiplier: 1, scope: 'global' },
       { name: "İnşaat Demiri", unit: "ton", unit_price: 30600, auto_source: "calc_iron_global", multiplier: 1, wixId: "demirmal", scope: 'global' },
       { name: "Kalıp İşçiliği & Malzeme", unit: "m2", unit_price: 1347, auto_source: "calc_formwork_global", multiplier: 1, wixId: "kalipdemirbetonisc", scope: 'global' },
       { name: "Temel Su Yalıtımı (Bohçalama)", unit: "m2", unit_price: 450, auto_source: "calc_foundation_area", multiplier: 1.1, scope: 'global' },
+      { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", unit_price: 150, auto_source: "calc_foundation_xps", multiplier: 1.05, wixId: "temelxpsmalisc", scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", unit_price: 2200, auto_source: "calc_roof", multiplier: 1, scope: 'global' },
       { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", unit_price: 350, auto_source: "total_area", multiplier: 0.15, scope: 'global' },
       { name: "İnşaat Çivisi (kg)", unit: "kg", unit_price: 45, auto_source: "manual", multiplier: 0, scope: 'hidden' },
@@ -317,6 +319,7 @@ export const COST_DATA: CostCategory[] = [
     id: "elektrik_tesisat",
     title: "10. Elektrik Tesisatı",
     items: [
+      { name: "Temel Topraklaması (Galvaniz Şerit)", unit: "mt", unit_price: 250, auto_source: "calc_foundation_grounding", multiplier: 1, scope: 'global', wixId: "temeltopraklama" },
       { name: "Kuvvetli Akım Sorti (Priz/Aydınlatma)", unit: "Adet", unit_price: 850, auto_source: "calc_electrical_points", multiplier: 1, scope: 'unit' },
       { name: "Zayıf Akım Sorti (TV/Data/Tel)", unit: "Adet", unit_price: 950, auto_source: "calc_weak_current_points", multiplier: 1, scope: 'unit' },
       { name: "Anahtar/Priz Montajı ve Malzemesi", unit: "Adet", unit_price: 150, auto_source: "calc_switch_socket_count", multiplier: 1, scope: 'unit' },

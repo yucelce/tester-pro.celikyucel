@@ -506,6 +506,16 @@ export const calculateUnitCost = (
 
     });
 
+    if (!isStructural) {
+        // İç kapılar iki tarafı da (iç/dış) keseceği için kapı başı 1.80 mt (0.90 * 2) düşüyoruz.
+        // Çelik kapı ise dairenin sadece içinden 0.90 mt keser.
+        // (Banyo gibi ıslak hacimlere açılan kapılarda tek taraf ıslaktır ama fire/zayiat payı olarak geneli 2 yüzey kabul etmek güvenlidir)
+        const totalDoorBaseboardDeduction = (stats.calc_inner_door * 1.80) + (stats.calc_steel_door * 0.90);
+
+        // Toplam kuru alan çevresinden (dry_perimeter) kapı boşluklarını tek seferde düş
+        stats.dry_perimeter = Math.max(0, stats.dry_perimeter - totalDoorBaseboardDeduction);
+    }
+
     // --- STRUCTURAL WALLS ---
     const useDetailedWalls = globalWallMode === 'detailed';
     const useDetailedConcrete = globalConcreteMode === 'detailed';
@@ -1232,6 +1242,49 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return aplikasyonBedeli + roperliFarki + planOrnegiBedeli;
     },
 
+    'calc_grobeton': ({ buildingStats, totalFloors }) => {
+        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
+        let basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
+            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+
+        let raftHeight = 0.30;
+        if (totalFloors >= 20) raftHeight = 2.00;
+        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
+        else if (totalFloors >= 3) raftHeight = 0.40;
+
+        const ampatman = raftHeight * 1.5;
+        // Ampatmanlı izdüşüm alanını hesapla
+        const vTemelArea = foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2));
+
+        return vTemelArea * 0.10; // 10 cm grobeton kalınlığı varsayımı
+    },
+
+    'calc_foundation_xps': ({ buildingStats, totalFloors }) => {
+        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
+        let basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
+            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+
+        let raftHeight = 0.30;
+        if (totalFloors >= 20) raftHeight = 2.00;
+        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
+        else if (totalFloors >= 3) raftHeight = 0.40;
+
+        const ampatman = raftHeight * 1.5;
+        const foundationPerimeter = basePerim + (8 * ampatman);
+
+        let xpsArea = foundationPerimeter * raftHeight; // Radye Temel çevre yanları
+
+        // Varsa bodrum perdelerine de XPS hesapla
+        if (buildingStats.basementFloorCount > 0) {
+            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
+            xpsArea += basePerim * totalBasementHeight;
+        }
+
+        return xpsArea;
+    },
+
     'calc_villa_stairs': ({ buildingStats }) => {
         if (buildingStats.buildingType === 'villa') {
             return buildingStats.normalFloorCount + buildingStats.basementFloorCount;
@@ -1361,6 +1414,26 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         }
 
         return totalEscapeCost;
+    },
+
+    'calc_foundation_grounding': ({ buildingStats }) => {
+        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
+        let basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
+            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+
+        // 1. Temel Çevresi (Dış Ring)
+        const ringLength = basePerim;
+
+        // 2. İç Grid (Izgara) Sistemi
+        // Ortalama 10x10m gözler varsayılırsa, her iki eksende (Alan / 10) kadar hat atılır.
+        // Güvenli tarafta kalmak adına (Alan / 5) formülü ile iç metrajı yaklaşık olarak bulabiliriz.
+        const gridLength = foundationArea / 5;
+
+        const totalLength = ringLength + gridLength;
+
+        // 3. Filiz Bırakma ve Eşpotansiyel Baralara Çıkış Payı (%15 Zayiat ve Çıkış Payı)
+        return totalLength * 1.15;
     },
 
     'calc_tower_crane_setup': ({ buildingStats, totalConstructionArea, totalFloors }) => {
@@ -1594,19 +1667,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const nArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : 0;
             // Binanın en geniş oturduğu alanı bul
             const maxArea = Math.max(nArea, buildingStats.groundFloorArea);
-            
+
             // Mimari saçak payı eklemesi:
             // Binanın kareye yakın olduğunu varsayarsak bir kenar uzunluğu:
             const sideLength = Math.sqrt(maxArea);
             const eaveOverhang = 0.80; // 80 cm saçak payı
             // Saçaklı yeni kenar uzunluğu ve izdüşüm alanı
             const footprintWithEaves = Math.pow(sideLength + (eaveOverhang * 2), 2);
-            
+
             // Çatı eğim katsayısı: 30 derece eğim için 1 / cos(30) ≈ 1.154
             // Zayiat payı: Mahya, dere, eğik kesimler için %10 (1.10)
             const pitchFactor = 1.154;
             const wasteFactor = 1.10;
-            
+
             return footprintWithEaves * pitchFactor * wasteFactor;
         }
         // Apartman için mevcut mantık
@@ -1620,31 +1693,31 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_facade': ({ buildingStats, aggregatedUnitStats }) => {
         // 1. Toplam pencere alanını ünitelerden (dairelerden) çekiyoruz
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
-        
-        const deductibleWindowArea = totalWindowArea 
+
+        const deductibleWindowArea = totalWindowArea
 
         if (buildingStats.buildingType === 'villa') {
             const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
             const groundFacade = groundPerim * (buildingStats.groundFloorHeight + 0.80);
-            
+
             let normalFacade = 0;
             if (buildingStats.normalFloorCount > 0) {
                 const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
                 normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
-            
+
             const grossFacade = groundFacade + normalFacade;
             // Brüt cepheden, düşülebilir pencere alanını çıkarıp zayiat ekliyoruz
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
             return netFacade * 1.15; // %15 zayiat
-            
+
         } else {
             const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
-            
+
             const grossFacade = perim * facadeHeight;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
-            
+
             const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim);
             return netFacade * facadeWaste;
         }
@@ -1678,6 +1751,16 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const scaleFactor = totalConstructionArea / 30000;
             return item.unit_price * scaleFactor;
         }
+        return 0;
+    },
+
+    'calc_generator': ({ buildingStats }) => {
+        // 1. Sadece VİLLA senaryosunda jeneratör hesabı yapılır ve 1 adet paket eklenir
+        if (buildingStats.buildingType === 'villa') {
+            return 1;
+        }
+
+        // 2. Apartman ve diğer bina tiplerinde jeneratör maliyete eklenmez
         return 0;
     },
 
@@ -2123,6 +2206,17 @@ export const calculateDynamicUnitPrice = (
         }
     }
 
+    if (item.name === "Grobeton") {
+        if (currentCosts) {
+            const kabaInsaatCat = currentCosts.find(c => c.id === 'kaba_insaat');
+            const c30Item = kabaInsaatCat?.items.find(i => i.name === "Betonarme Betonu (C30)");
+            if (c30Item) {
+                const c30Price = c30Item.manualPrice !== undefined ? c30Item.manualPrice : c30Item.unit_price;
+                return Math.round(c30Price * 0.85); // Grobeton fiyatı C30'un %85'i olarak hesaplanıyor
+            }
+        }
+    }
+
     if (item.name === "Elektrik Tesisatı Malzeme" || item.name === "Elektrik Tesisatı İşçilik") {
         const basePrice = item.unit_price; // Bu fiyat 80 m2 için kabul edilir
 
@@ -2228,7 +2322,41 @@ export const calculateDynamicUnitPrice = (
         ];
 
         // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-        let luxuryScale = 1.0; 
+        if (item.name === "Mantolama (Malz.+İşçilik)" && buildingStats) {
+            let zoneMultiplier = 1.0;
+            const heatZone = buildingStats.heatZone || 2; // Varsayılan 2. Bölge kabulü
+
+            // İklim bölgelerine göre malzeme kalınlık ve nitelik (EPS/XPS/Taşyünü) maliyet katsayıları
+            switch (heatZone) {
+                case 1: zoneMultiplier = 0.85; break; // 1. Bölge (Örn: Antalya) -> İnce EPS (3-4 cm)
+                case 2: zoneMultiplier = 1.00; break; // 2. Bölge (Örn: İstanbul) -> Standart Karbonlu EPS (5 cm)
+                case 3: zoneMultiplier = 1.25; break; // 3. Bölge (Örn: Ankara) -> Kalın EPS veya Taşyünü (6-8 cm)
+                case 4: zoneMultiplier = 1.50; break; // 4. Bölge (Örn: Erzurum) -> Çok Kalın XPS / Taşyünü (8-10 cm)
+            }
+
+            let calculatedPrice = item.unit_price * zoneMultiplier;
+
+            // Çakışmayı önlemek için: Eğer bina tipi villa ise, aşağıdaki "structuralPremium" katsayısını 
+            // manuel olarak iklimsel fiyata da yansıtıp doğrudan döndürüyoruz.
+            if (buildingStats.buildingType === 'villa') {
+                let luxuryScale = 1.0;
+                if (totalConstructionArea <= 150) {
+                    luxuryScale = 0.60;
+                } else if (totalConstructionArea >= 1000) {
+                    luxuryScale = 1.80;
+                } else {
+                    const range = 1000 - 150;
+                    const excess = totalConstructionArea - 150;
+                    luxuryScale = 0.60 + (1.20 * (excess / range));
+                }
+
+                // Villalar için yapısal katsayı payı olan %20'yi (0.20) lüks çarpanıyla ekliyoruz
+                calculatedPrice = calculatedPrice * (1 + (0.20 * luxuryScale));
+            }
+
+            return Math.round(calculatedPrice);
+        }
+        let luxuryScale = 1.0;
 
         if (totalConstructionArea <= 150) {
             luxuryScale = 0.60; // Tiny/Kompakt Villa: Karmaşa az, lüks oranı düşük
@@ -2238,8 +2366,8 @@ export const calculateDynamicUnitPrice = (
             // 150 m² ile 1000 m² arasında lineer bir artış eğrisi kuralım
             const range = 1000 - 150;     // 850 m² metraj farkı
             const excess = totalConstructionArea - 150;
-            const progress = excess / range; 
-            
+            const progress = excess / range;
+
             // 0.60'tan 1.80'e kadar (1.20 birimlik fark) doğrusal artış
             luxuryScale = 0.60 + (1.20 * progress);
         }
@@ -2247,13 +2375,13 @@ export const calculateDynamicUnitPrice = (
         // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
         if (structuralPremium.includes(item.name)) {
             // Temel artış %20 (0.20), luxuryScale ile çarpılarak esnetiliyor
-            return Math.round(item.unit_price * (1 + (0.20 * luxuryScale))); 
+            return Math.round(item.unit_price * (1 + (0.20 * luxuryScale)));
         } else if (decorativePremium.includes(item.name)) {
             // Temel artış %45 (0.45)
-            return Math.round(item.unit_price * (1 + (0.45 * luxuryScale))); 
+            return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
         } else if (mepPremium.includes(item.name)) {
             // Temel artış %70 (0.70)
-            return Math.round(item.unit_price * (1 + (0.70 * luxuryScale))); 
+            return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
         }
     }
 
