@@ -1592,9 +1592,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_roof': ({ buildingStats }) => {
         if (buildingStats.buildingType === 'villa') {
             const nArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : 0;
+            // Binanın en geniş oturduğu alanı bul
             const maxArea = Math.max(nArea, buildingStats.groundFloorArea);
-            return maxArea * 1.55;
+            
+            // Mimari saçak payı eklemesi:
+            // Binanın kareye yakın olduğunu varsayarsak bir kenar uzunluğu:
+            const sideLength = Math.sqrt(maxArea);
+            const eaveOverhang = 0.80; // 80 cm saçak payı
+            // Saçaklı yeni kenar uzunluğu ve izdüşüm alanı
+            const footprintWithEaves = Math.pow(sideLength + (eaveOverhang * 2), 2);
+            
+            // Çatı eğim katsayısı: 30 derece eğim için 1 / cos(30) ≈ 1.154
+            // Zayiat payı: Mahya, dere, eğik kesimler için %10 (1.10)
+            const pitchFactor = 1.154;
+            const wasteFactor = 1.10;
+            
+            return footprintWithEaves * pitchFactor * wasteFactor;
         }
+        // Apartman için mevcut mantık
         return (buildingStats.normalFloorArea) * 1.45;
     },
 
@@ -1602,26 +1617,38 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return (totalConstructionArea * buildingStats.normalFloorHeight) / 3.0;
     },
 
-    'calc_facade': ({ buildingStats }) => {
+    'calc_facade': ({ buildingStats, aggregatedUnitStats }) => {
+        // 1. Toplam pencere alanını ünitelerden (dairelerden) çekiyoruz
+        const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
+        
+        const deductibleWindowArea = totalWindowArea 
+
         if (buildingStats.buildingType === 'villa') {
             const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
             const groundFacade = groundPerim * (buildingStats.groundFloorHeight + 0.80);
+            
             let normalFacade = 0;
             if (buildingStats.normalFloorCount > 0) {
                 const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
                 normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
-            const facadeWaste = 1.15;
-            return (groundFacade + normalFacade) * facadeWaste;
+            
+            const grossFacade = groundFacade + normalFacade;
+            // Brüt cepheden, düşülebilir pencere alanını çıkarıp zayiat ekliyoruz
+            const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
+            return netFacade * 1.15; // %15 zayiat
+            
         } else {
-            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
-                buildingStats.groundFloorHeight;
+            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+            
+            const grossFacade = perim * facadeHeight;
+            const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
+            
             const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim);
-            return perim * facadeHeight * facadeWaste;
+            return netFacade * facadeWaste;
         }
     },
-
     'calc_hard_ground': ({ buildingStats, item }) => {
         const landArea = buildingStats.landArea || 0;
         const footprintArea = buildingStats.groundFloorArea || 0;
@@ -2200,12 +2227,33 @@ export const calculateDynamicUnitPrice = (
             "Cephe Aydınlatma (Wallwasher)"
         ];
 
+        // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
+        let luxuryScale = 1.0; 
+
+        if (totalConstructionArea <= 150) {
+            luxuryScale = 0.60; // Tiny/Kompakt Villa: Karmaşa az, lüks oranı düşük
+        } else if (totalConstructionArea >= 1000) {
+            luxuryScale = 1.80; // Malikane: VRF, Akıllı Ev, Galeri Boşlukları, Özel Şaftlar
+        } else {
+            // 150 m² ile 1000 m² arasında lineer bir artış eğrisi kuralım
+            const range = 1000 - 150;     // 850 m² metraj farkı
+            const excess = totalConstructionArea - 150;
+            const progress = excess / range; 
+            
+            // 0.60'tan 1.80'e kadar (1.20 birimlik fark) doğrusal artış
+            luxuryScale = 0.60 + (1.20 * progress);
+        }
+
+        // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
         if (structuralPremium.includes(item.name)) {
-            return Math.round(item.unit_price * 1.20); // %20 lüks/detay farkı
+            // Temel artış %20 (0.20), luxuryScale ile çarpılarak esnetiliyor
+            return Math.round(item.unit_price * (1 + (0.20 * luxuryScale))); 
         } else if (decorativePremium.includes(item.name)) {
-            return Math.round(item.unit_price * 1.45); // %45 lüks malzeme farkı
+            // Temel artış %45 (0.45)
+            return Math.round(item.unit_price * (1 + (0.45 * luxuryScale))); 
         } else if (mepPremium.includes(item.name)) {
-            return Math.round(item.unit_price * 1.70); // %70 premium marka farkı (ECA/Artema vs. Grohe/Vitra lüks seri farkı)
+            // Temel artış %70 (0.70)
+            return Math.round(item.unit_price * (1 + (0.70 * luxuryScale))); 
         }
     }
 
