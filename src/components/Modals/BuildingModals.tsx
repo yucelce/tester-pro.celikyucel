@@ -281,7 +281,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                             </div>
                             <div>
                                 <div className="flex justify-between items-end mb-1">
-                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold">Deprem Bölgesi</label>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold">Deprem Risk Grubu</label>
                                     {/* Kullanıcı el ile değiştirdiyse "Otomatik Yap" butonu çıkar */}
                                     {buildingStats.isEarthquakeZoneManual && (
                                         <button

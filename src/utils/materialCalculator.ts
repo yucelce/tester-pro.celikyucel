@@ -109,8 +109,7 @@ export const calculateRawMaterials = (
     addMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'kg', paintArea * 3, 'plaster', prices.sivaAlcisi);
     addMaterial('saten_alci', 'Saten Perdah Alçısı', 'kg', paintArea * 1, 'plaster', prices.satenAlci);
     addMaterial('astar_boya', 'İç Cephe Astarı', 'kg', paintArea * 0.15, 'paint', prices.astarBoya);
-    addMaterial('ic_cephe_boya', 'İç Cephe Boyası', 'kg', paintArea * 0.30, 'paint', prices.icCepheBoya);
-
+    addMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'kg', paintArea * 0.45, 'paint', prices.icCepheBoya);
     const wetArea = stats.wet_area || 0;
     const netWetArea = stats.net_wet_area || wetArea; // Fallback
 
