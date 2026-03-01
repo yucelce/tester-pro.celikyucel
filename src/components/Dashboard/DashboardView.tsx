@@ -615,8 +615,10 @@ export const DashboardView: React.FC = () => {
                     <div className="flex justify-between items-center mb-4">
                         <div>
                             <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i className="fas fa-layer-group text-purple-500"></i> Bağımsız Bölüm Tipleri
-                            </h2>
+                                <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
+                                    {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
+                                </h2>                            </h2>
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
                         </div>
                         <button onClick={addUnit} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm">

@@ -323,7 +323,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "Daire Sigorta Panosu ve Şalt Malz.", unit: "Adet", unit_price: 6500, auto_source: "calc_sub_panel_count", multiplier: 1, wixId: "dairesigortasalterpaket", scope: 'unit' },
       { name: "Merkezi Uydu Sistemi", unit: "Paket", unit_price: 12000, auto_source: "calc_satellite_system", multiplier: 1, scope: 'global', inputType: 'manual_total', wixId: "uydusistemi" },
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", unit_price: 4500, auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
-      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' }      { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
+      { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", unit_price: 25000, auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", unit_price: 1200, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Jeneratör (Ortak Alan)", unit: "Toplam", unit_price: 150000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       {
         name: "Akıllı Ev Altyapı ve Donanım Paketi",
