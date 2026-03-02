@@ -30,7 +30,8 @@ export interface CostItem {
   "calc_breaker_machine" | 'net_wet_area' | 'calc_pool_concrete' | 'calc_pool_system' | 'calc_villa_parking' |
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
-  "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps"
+  "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
+  'calc_smart_home' | "calc_subasman_filling"
 
   ;
 
@@ -334,7 +335,7 @@ export const COST_DATA: CostCategory[] = [
         name: "Akıllı Ev Altyapı ve Donanım Paketi",
         unit: "Paket",
         unit_price: 1, // Fiyatı calculations'tan dinamik döneceğiz
-        auto_source: "calc_smart_home",
+        auto_source: 'calc_smart_home',
         multiplier: 1,
         scope: 'global',
         inputType: 'manual_total'

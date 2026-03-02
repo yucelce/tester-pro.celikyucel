@@ -200,7 +200,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     </button>
                     {buildingStats.buildingType === 'villa' && (
                         <button onClick={() => setActiveTab('villa_outdoor')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'villa_outdoor' ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                            <i className="fas fa-tree"></i> Villa Dış Mekan
+                            <i className="fas fa-tree"></i> Villa Detaylar
                         </button>
                     )}
                 </div>
@@ -759,6 +759,44 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">m²</span>
                                     </div>
                                 </div>
+                            </div>
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                                <label className="flex items-center gap-3 cursor-pointer mb-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={buildingStats.hasSmartHome || false}
+                                        onChange={(e) => setBuildingStats({ ...buildingStats, hasSmartHome: e.target.checked })}
+                                        className="w-5 h-5 accent-blue-500 rounded cursor-pointer"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                                            <i className="fas fa-microchip text-blue-400"></i>
+                                            Akıllı Ev ve Otomasyon Sistemi
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 mt-1 block">KNX veya muadili otomasyon altyapısı ve modül seçimleri.</span>
+                                    </div>
+                                </label>
+
+                                {buildingStats.hasSmartHome && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-700 animate-fadeIn pl-2 sm:pl-8">
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white transition">
+                                            <input type="checkbox" checked={buildingStats.smartHomeLighting || false} onChange={(e) => setBuildingStats({ ...buildingStats, smartHomeLighting: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                                            Aydınlatma Kontrolü (Aç/Kapa & Dimmer)
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white transition">
+                                            <input type="checkbox" checked={buildingStats.smartHomeHeating || false} onChange={(e) => setBuildingStats({ ...buildingStats, smartHomeHeating: e.target.checked })} className="w-4 h-4 accent-red-500" />
+                                            Isıtma & İklimlendirme Kontrolü
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white transition">
+                                            <input type="checkbox" checked={buildingStats.smartHomeSensors || false} onChange={(e) => setBuildingStats({ ...buildingStats, smartHomeSensors: e.target.checked })} className="w-4 h-4 accent-teal-500" />
+                                            Su Basma & Gaz Sensörleri (+Kesici Valf)
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-white transition">
+                                            <input type="checkbox" checked={buildingStats.smartHomeBlinds || false} onChange={(e) => setBuildingStats({ ...buildingStats, smartHomeBlinds: e.target.checked })} className="w-4 h-4 accent-yellow-500" />
+                                            Elektrikli Panjur / Perde Kontrolü
+                                        </label>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">

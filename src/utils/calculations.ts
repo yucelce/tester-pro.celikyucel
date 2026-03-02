@@ -1143,6 +1143,42 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
+    'calc_smart_home': ({ buildingStats, totalConstructionArea }) => {
+        if (buildingStats.buildingType !== 'villa' || !buildingStats.hasSmartHome) return 0;
+
+        // 1. Temel Altyapı Bedeli (Ana Merkezi Pano, KNX Güç Kaynağı, IP Router, Standart Zayıf Akım Kablolama)
+        let baseCost = 65000;
+
+        // Tahmini Bağımsız Bölge/Oda Sayısı (Her 25m2 ortalama 1 kontrol bölgesi/oda kabul edilir)
+        const estimatedZones = Math.max(1, Math.ceil(totalConstructionArea / 25));
+
+        // 2. Modül Çarpanları
+        if (buildingStats.smartHomeLighting) {
+            // Röle/Aktüatör modülleri, KNX Akıllı Anahtarlar ve kablolama (Bölge başı ort. 4500 TL maliyet)
+            baseCost += (estimatedZones * 4500);
+        }
+        if (buildingStats.smartHomeHeating) {
+            // Termostatik vanalar, VRF/Kombi gateway, KNX Oda Termostatları (Bölge başı ort. 5500 TL maliyet)
+            baseCost += (estimatedZones * 5500);
+        }
+        if (buildingStats.smartHomeSensors) {
+            // Su Basma Sensörü, Gaz Sensörü, Duman Dedektörü, Motorlu Su/Gaz Kesici Vana (Paket Set ort. 18000 TL)
+            baseCost += 18000;
+        }
+        if (buildingStats.smartHomeBlinds) {
+            // Panjur/Perde aktüatörleri, motor kablolaması (Bölge başı ort. 3500 TL maliyet)
+            baseCost += (estimatedZones * 3500);
+        }
+
+        // 3. Uzaklık/Metraj Çarpanı (Ev büyüdükçe merkez panoya giden kablo metrajı ve hat güçlendiricileri artar)
+        let areaMultiplier = 1.0;
+        if (totalConstructionArea > 200) {
+            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003); // Her ek m2 için %0.3 artış
+        }
+
+        return Math.round(baseCost * areaMultiplier);
+    },
+
     'calc_excavation': ({ buildingStats, item }) => {
         const excavationBaseArea = buildingStats.basementFloorCount > 0
             ? buildingStats.basementFloorArea

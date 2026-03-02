@@ -143,6 +143,12 @@ export interface BuildingStats {
     verandaArea?: number;    // Veranda / Kış bahçesi alanı (m2)
 subasmanHeight?: number;
 
+hasSmartHome?: boolean;
+    smartHomeLighting?: boolean;
+    smartHomeHeating?: boolean;
+    smartHomeSensors?: boolean;
+    smartHomeBlinds?: boolean;
+
     province: string;
     district: string;
     landArea: number;
