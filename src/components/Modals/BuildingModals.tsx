@@ -187,7 +187,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                 {/* Tabs Navigation */}
                 <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
                     <button onClick={() => setActiveTab('general')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'general' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-map-marked-alt"></i> Konum & Arsa
+                        <i className="fas fa-file-alt"></i> Genel Bilgiler
                     </button>
                     <button onClick={() => setActiveTab('floors')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'floors' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
                         <i className="fas fa-layer-group"></i> Kat Bilgileri
