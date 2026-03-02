@@ -147,7 +147,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Kalıp İşçiliği & Malzeme", unit: "m2", unit_price: 1347, auto_source: "calc_formwork_global", multiplier: 1, wixId: "kalipdemirbetonisc", scope: 'global' },
       { name: "Temel Su Yalıtımı (Bohçalama)", unit: "m2", unit_price: 450, auto_source: "calc_foundation_area", multiplier: 1.1, scope: 'global' },
       { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", unit_price: 150, auto_source: "calc_foundation_xps", multiplier: 1.05, wixId: "temelxpsmalisc", scope: 'global' },
-     { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", unit_price: 350, auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
+      { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", unit_price: 350, auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", unit_price: 2200, auto_source: "calc_roof", multiplier: 1, scope: 'global' },
       { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", unit_price: 350, auto_source: "total_area", multiplier: 0.15, scope: 'global' },
       { name: "İnşaat Çivisi (kg)", unit: "kg", unit_price: 45, auto_source: "manual", multiplier: 0, scope: 'hidden' },
@@ -201,8 +201,8 @@ export const COST_DATA: CostCategory[] = [
     id: "dis_cephe",
     title: "5. Dış Cephe ve Yalıtım",
     items: [
-      { name: "Mantolama (Malz.+İşçilik)", unit: "m2", unit_price: 1200, auto_source: "calc_facade", multiplier: 1, scope: 'global' },
-      { name: "PVC Pencere (Doğrama)", unit: "m2", unit_price: 4500, auto_source: "calc_window_area", multiplier: 1, scope: 'unit' },
+      { name: "Mantolama Malzemesi", unit: "m2", unit_price: 700, auto_source: "calc_facade", multiplier: 1, scope: 'global' },
+      { name: "Mantolama İşçiliği", unit: "m2", unit_price: 500, auto_source: "calc_facade", multiplier: 1, scope: 'global' }, { name: "PVC Pencere (Doğrama)", unit: "m2", unit_price: 4500, auto_source: "calc_window_area", multiplier: 1, scope: 'unit' },
       { name: "Mermer Denizlik", unit: "mt", unit_price: 750, auto_source: "calc_sill_length", multiplier: 1, scope: 'unit' },
       { name: "Balkon Korkulukları (Alüminyum)", unit: "mt", unit_price: 1800, auto_source: "calc_balcony_railing", multiplier: 1, scope: 'unit' },
       { name: "İskele Kirası (Aylık)", unit: "Ay", unit_price: 35, auto_source: "calc_scaffolding_duration", multiplier: 1, scope: 'global' },
@@ -221,8 +221,8 @@ export const COST_DATA: CostCategory[] = [
     title: "6. Zemin Kaplamaları ve Merdiven",
     items: [
       { name: "Banyo ve Islak Hacim Su Yalıtımı", unit: "m2", unit_price: 400, auto_source: "wet_area", multiplier: 1.1, scope: 'unit' }, // <- Kabadan taşındı
-      { name: "Şap Atılması (Malz.+İşçilik)", unit: "m2", unit_price: 180, auto_source: "total_area", multiplier: 1, wixId: "sappaket", scope: 'unit' },
-      { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, wixId: "parkepaket", scope: 'unit' },
+      { name: "Şap Malzemesi", unit: "m2", unit_price: 100, auto_source: "total_area", multiplier: 1, wixId: "sapmalzemesi", scope: 'unit' },
+      { name: "Şap İşçiliği", unit: "m2", unit_price: 80, auto_source: "total_area", multiplier: 1, wixId: "sapisciligi", scope: 'unit' }, { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, wixId: "parkepaket", scope: 'unit' },
       { name: "Seramik Kaplama", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, wixId: "seramikmal", scope: 'unit' }, // Sadece Kaplama Fireli Kalıyor
       { name: "Seramik Yapıştırıcısı", unit: "kg", unit_price: 10, auto_source: "net_wet_area", multiplier: 5, wixId: "seramikyapistirici", scope: 'unit' },
       { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, wixId: "seramikderz", scope: 'unit' },

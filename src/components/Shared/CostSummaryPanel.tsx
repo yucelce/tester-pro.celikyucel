@@ -170,7 +170,8 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                             
                             // 2. Sadece istenen temel kalem gruplarını göster, diğerlerini gizle
                             const allowedKeywords = [
-                                "Şap", 
+                                "Şap Malzemesi",
+                                "Şap İşçiliği", 
                                 "Sıva", 
                                 "Boya", 
                                 "Seramik", 

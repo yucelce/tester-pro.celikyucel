@@ -108,7 +108,15 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Gazbeton Yapıştırıcısı": "ytongyapistiricimal", // 
 
   // --- 5. DIŞ CEPHE VE YALITIM ---
-  "Mantolama (Malz.+İşçilik)": "mantolamamalisc",
+  // --- 5. DIŞ CEPHE VE YALITIM ---
+  // Eskisi: "Mantolama (Malz.+İşçilik)": "mantolamamalisc",
+  "Mantolama Malzemesi": "mantolamamal",
+  "Mantolama İşçiliği": "mantolamaisc",
+
+  // --- 6. ZEMİN VE MERDİVEN ---
+  // Eskisi: "Şap Atılması (Malz.+İşçilik)": "sappaket",
+ "Şap Malzemesi": "sapmalzemesi",
+  "Şap İşçiliği": "sapisciligi",
 
   "PVC Pencere (Doğrama)": "pvcpencerepaket",
   "Mermer Denizlik": "denizlikmalisc",

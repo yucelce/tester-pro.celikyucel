@@ -1966,7 +1966,7 @@ export const calculateDynamicUnitPrice = (
     if (buildingStats?.buildingType === 'villa') {
         // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
         const structuralPremium = [
-            "Mantolama (Malz.+İşçilik)", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)", "Pencere Söveleri"
+            "Mantolama Malzemesi", "Mantolama İşçiliği", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)", "Pencere Söveleri"
         ];
 
         // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler (Yüksek çarpan)
@@ -1985,7 +1985,7 @@ export const calculateDynamicUnitPrice = (
         ];
 
         // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-        if (item.name === "Mantolama (Malz.+İşçilik)" && buildingStats) {
+        if ((item.name === "Mantolama Malzemesi" || item.name === "Mantolama İşçiliği") && buildingStats) {
             let zoneMultiplier = 1.0;
             const heatZone = buildingStats.heatZone || 2; // Varsayılan 2. Bölge kabulü
 
