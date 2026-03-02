@@ -42,20 +42,38 @@ export const exportCostsToExcel = (projectCostDetails: any[]) => {
 // İÇE AKTARIM (IMPORT)
 export const importPricesFromExcel = (file: File, callback: (prices: { itemName: string, price: number }[]) => void) => {
     const reader = new FileReader();
+    
+    // readAsArrayBuffer için onload işlemi
     reader.onload = (e) => {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
         // Excel'den dönen veride sadece "İş Kalemi" ve "Birim Fiyat (TL)" sütunlarını eşleştiriyoruz
-        const newPrices = json.map(row => ({
-            itemName: row["İş Kalemi"],
-            price: parseFloat(row["Birim Fiyat (TL)"])
-        })).filter(item => !isNaN(item.price) && item.itemName);
+        const newPrices = json.map(row => {
+            let priceRaw = row["Birim Fiyat (TL)"];
+            let parsedPrice = 0;
+
+            // Eğer sayı string olarak gelmişse (örn: 1.500,25) JavaScript float formatına çevirelim
+            if (typeof priceRaw === 'string') {
+                // 1. Binlik ayırıcıları (noktaları) temizle, virgülü noktaya (ondalık ayırıcıya) çevir
+                const formattedPriceStr = priceRaw.replace(/\./g, '').replace(',', '.');
+                parsedPrice = parseFloat(formattedPriceStr);
+            } else if (typeof priceRaw === 'number') {
+                parsedPrice = priceRaw;
+            }
+
+            return {
+                itemName: row["İş Kalemi"],
+                price: parsedPrice
+            };
+        }).filter(item => !isNaN(item.price) && item.itemName);
 
         callback(newPrices);
     };
-    reader.readAsBinaryString(file);
+    
+    // Daha güvenilir okuma için BinaryString yerine ArrayBuffer kullanıyoruz
+    reader.readAsArrayBuffer(file);
 };
