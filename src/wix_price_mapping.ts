@@ -86,6 +86,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Banyo ve Islak Hacim Su Yalıtımı": "banyoyalitimpaket",
   "Sert Zemin / Yürüyüş Yolu": "kilittasmalisc",
   "Bahçe / Çevre Duvarı": "bahceduvarimtpaket",
+  "Çim Ekimi ve Otomatik Sulama Sistemi":"cim_ve_sulama_sistemi_m2paket",
 
   "Mutfak Evyesi": "evyemal",
 

@@ -319,7 +319,7 @@ export const COST_DATA: CostCategory[] = [
     id: "elektrik_tesisat",
     title: "10. Elektrik Tesisatı",
     items: [
-      { name: "Temel Topraklaması (Galvaniz Şerit)", unit: "mt", unit_price: 250, auto_source: "calc_foundation_grounding", multiplier: 1, scope: 'global', wixId: "temeltopraklama" },
+      { name: "Temel Topraklaması (Galvaniz Şerit)", unit: "mt", unit_price: 250, auto_source: "calc_foundation_grounding", multiplier: 1, scope: 'global', wixId: "galvaniz_topraklama_seritmtmal" },
       { name: "Kuvvetli Akım Sorti (Priz/Aydınlatma)", unit: "Adet", unit_price: 850, auto_source: "calc_electrical_points", multiplier: 1, scope: 'unit' },
       { name: "Zayıf Akım Sorti (TV/Data/Tel)", unit: "Adet", unit_price: 950, auto_source: "calc_weak_current_points", multiplier: 1, scope: 'unit' },
       { name: "Anahtar/Priz Montajı ve Malzemesi", unit: "Adet", unit_price: 150, auto_source: "calc_switch_socket_count", multiplier: 1, scope: 'unit' },
