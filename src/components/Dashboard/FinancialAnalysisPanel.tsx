@@ -89,6 +89,35 @@ export const FinancialAnalysisPanel: React.FC = () => {
         setNewSale({ name: '', amount: 0, saleDate: defaultSaleDate });
     };
 
+    const revenueModel = financialSettings.revenueModel || 'yap_sat';
+    const progressPayments = financialSettings.progressPayments || [];
+
+    const handleUpdateProgressPayment = (taskId: string, percentage: number) => {
+        let updated = [...progressPayments];
+        const existingIndex = updated.findIndex(p => p.taskId === taskId);
+        if (existingIndex >= 0) {
+            updated[existingIndex].percentage = percentage;
+        } else {
+            updated.push({ id: Date.now().toString(), taskId, percentage });
+        }
+        updateFinancialSettings({ progressPayments: updated });
+    };
+
+    const autoPopulateHakedis = () => {
+        // Ana iş kalemlerini bul ve %100'ü onlara eşit dağıt
+        const mainTasks = projectSchedule.filter(t => ['structure', 'walls', 'mep_rough', 'flooring', 'handover'].includes(t.id));
+        if (mainTasks.length > 0) {
+            const share = Math.floor(100 / mainTasks.length);
+            const newPps = mainTasks.map((t, i) => ({
+                id: Math.random().toString(),
+                taskId: t.id,
+                // Küsurat kalmaması için son kaleme kalanı ekle
+                percentage: i === mainTasks.length - 1 ? 100 - (share * (mainTasks.length - 1)) : share
+            }));
+            updateFinancialSettings({ progressPayments: newPps });
+        }
+    };
+
     const toggleFixedTask = (taskId: string) => {
         const fixed = financialSettings.fixedPriceTaskIds || [];
         if (fixed.includes(taskId)) {
@@ -201,19 +230,32 @@ export const FinancialAnalysisPanel: React.FC = () => {
         });
 
         const salesByMonth: Record<string, number> = {};
-        sales.forEach(sale => {
-            if (sale.saleDate) {
-                // Satışın yapılacağı tarihin başlangıca göre kaçıncı ay olduğunu bul
-                let saleDateObj = new Date(sale.saleDate + '-01');
-                let saleMonthsDiff = (saleDateObj.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (saleDateObj.getMonth() - projectStartMonthDate.getMonth());
-                saleMonthsDiff = Math.max(0, saleMonthsDiff);
+        const contractValue = projectTotalCost * (1 + targetProfitMargin / 100); // Sözleşme Bedeli
 
-                // Satış tutarını enflasyon ile artır (Bugünkü değer varsayımıyla)
-                let inflatedSaleAmount = sale.amount * Math.pow(1 + inflationRate, saleMonthsDiff);
-
-                salesByMonth[sale.saleDate] = (salesByMonth[sale.saleDate] || 0) + inflatedSaleAmount;
-            }
-        });
+        if (financialSettings.revenueModel === 'taahhut') {
+            // TAAHHÜT MODU: İş bitişlerinde yüzdelik hakediş al
+            const progressPayments = financialSettings.progressPayments || [];
+            progressPayments.forEach(pp => {
+                const task = projectSchedule.find(t => t.id === pp.taskId);
+                if (task && pp.percentage > 0) {
+                    const shiftedDate = addMonths(task.endDate, stressDelayMonths);
+                    const monthStr = formatMonth(shiftedDate);
+                    const paymentAmount = contractValue * (pp.percentage / 100);
+                    salesByMonth[monthStr] = (salesByMonth[monthStr] || 0) + paymentAmount;
+                }
+            });
+        } else {
+            // YAP-SAT MODU: Normal satışlar
+            sales.forEach(sale => {
+                if (sale.saleDate) {
+                    let saleDateObj = new Date(sale.saleDate + '-01');
+                    let saleMonthsDiff = (saleDateObj.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (saleDateObj.getMonth() - projectStartMonthDate.getMonth());
+                    saleMonthsDiff = Math.max(0, saleMonthsDiff);
+                    let inflatedSaleAmount = sale.amount * Math.pow(1 + inflationRate, saleMonthsDiff);
+                    salesByMonth[sale.saleDate] = (salesByMonth[sale.saleDate] || 0) + inflatedSaleAmount;
+                }
+            });
+        }
 
         const allMonthsSet = new Set([...Object.keys(expensesByMonth), ...Object.keys(salesByMonth)]);
         allMonthsSet.add(formatMonth(startDate));
@@ -289,7 +331,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
             let descItems = [];
             if (equityInject > 0) descItems.push('Sermaye');
             if (loanDraw > 0) descItems.push('Kredi');
-            if (sal > 0) descItems.push('Satış');
+            if (sal > 0) descItems.push(financialSettings.revenueModel === 'taahhut' ? 'Hakediş' : 'Satış');
 
             let tooltipDescription = '';
             if (exp > 0) {
@@ -351,7 +393,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 monthsCount
             }
         };
-    }, [projectTotalCost, projectSchedule, financialSettings, startDate, loanInterestRate, stressCostIncrease, stressDelayMonths, currentEquityAmount, currentLoanAmount, currentLoanDate, currentLoanRepayDate, loanDuration, useLoan, financialEndDateStr]);
+    }, [projectTotalCost, projectSchedule, financialSettings, startDate, loanInterestRate, stressCostIncrease, stressDelayMonths, currentEquityAmount, currentLoanAmount, currentLoanDate, currentLoanRepayDate, loanDuration, useLoan, financialEndDateStr, targetProfitMargin]);
 
     const tableData = cashflow?.table || [];
     const totals = cashflow?.totals || { totalInterestEarned: 0, totalInterestPaid: 0, totalExpenses: 0, totalSales: 0, finalBalance: 0, actualTotalCostWithInflation: projectTotalCost, peakEquityNeeded: 0, alternativeBalance: 0, alternativeProfit: 0, monthsCount: 0 };
@@ -776,76 +818,134 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* 3. SATIŞ GİRİŞİ */}
+                            {/* 3. GELİR MODELİ VE GİRİŞİ */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+
+                                {/* Mod Seçici (Toggle) */}
+                                <div className="flex bg-slate-200 dark:bg-slate-900 rounded-lg p-1 mb-4 border border-slate-300 dark:border-slate-700">
+                                    <button
+                                        onClick={() => updateFinancialSettings({ revenueModel: 'yap_sat' })}
+                                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'yap_sat' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                    >
+                                        Yap-Sat (Satış)
+                                    </button>
+                                    <button
+                                        onClick={() => updateFinancialSettings({ revenueModel: 'taahhut' })}
+                                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'taahhut' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                    >
+                                        Taahhüt (Hakediş)
+                                    </button>
+                                </div>
+
                                 <div className="flex justify-between items-center mb-3">
-                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">Satış Planlaması</h3>
+                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                                        {revenueModel === 'yap_sat' ? 'Satış Planlaması' : 'Hakediş Planlaması'}
+                                    </h3>
                                     <div className="flex gap-2">
                                         <div className="flex items-center bg-yellow-100 text-yellow-800 px-2 rounded text-[10px] font-bold border border-yellow-300" title="Hedef Kar Marjı">
                                             Kâr % <input type="number" value={targetProfitMargin} onChange={e => setTargetProfitMargin(parseFloat(e.target.value) || 0)} className="w-8 bg-transparent outline-none ml-1 text-center" />
                                         </div>
-                                        <button onClick={handleAutoPopulate} className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded shadow flex items-center gap-1"><i className="fas fa-magic"></i> Doldur</button>
+                                        <button onClick={revenueModel === 'yap_sat' ? handleAutoPopulate : autoPopulateHakedis} className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded shadow flex items-center gap-1">
+                                            <i className="fas fa-magic"></i> Doldur
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
-                                    <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
-                                    <div className="flex gap-2">
-                                        <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
-                                        <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none text-right" placeholder="Tutar ₺" />
-                                    </div>
-                                    <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Ekle</button>
-                                </div>
-
-                                <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                    {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
-                                        <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-100 dark:border-slate-700 text-[10px]">
-                                            <span className="truncate max-w-[100px] font-bold dark:text-white">{s.name}</span>
-                                            <div className="flex items-center gap-2">
-
-                                                {/* Orijinal Tarih (Öteleme varsa üzeri çizilir ve soluklaşır) */}
-                                                <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
-                                                    {formatMonthDisplay(s.saleDate || '')}
-                                                </span>
-
-                                                {/* Ötelenmiş Yeni Tarih (Sadece öteleme yapılmışsa turuncu olarak görünür) */}
-                                                {stressDelayMonths !== 0 && (
-                                                    <span className="text-orange-500 font-bold" title="Ötelenmiş Yeni Tarih">
-                                                        {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
-                                                    </span>
-                                                )}
-
-                                                <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
-                                                <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                {/* YAP-SAT MODU ARAYÜZÜ */}
+                                {revenueModel === 'yap_sat' && (
+                                    <>
+                                        <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                                            <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
+                                            <div className="flex gap-2">
+                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
+                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none text-right" placeholder="Tutar ₺" />
                                             </div>
+                                            <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Ekle</button>
                                         </div>
-                                    ))}
-                                </div>
 
-                                {/* 2. YENİ EKLENEN: GEÇ TESLİM / ÖTELEME KONTROL PANELİ */}
-                                {financialSettings.sales.length > 0 && (
+                                        <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+                                            {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
+                                                <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-100 dark:border-slate-700 text-[10px]">
+                                                    <span className="truncate max-w-[100px] font-bold dark:text-white">{s.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
+                                                            {formatMonthDisplay(s.saleDate || '')}
+                                                        </span>
+                                                        {stressDelayMonths !== 0 && (
+                                                            <span className="text-orange-500 font-bold">
+                                                                {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
+                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* TAAHHÜT MODU ARAYÜZÜ */}
+                                {revenueModel === 'taahhut' && (
+                                    <>
+                                        <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-2 rounded mb-3 border border-blue-100 dark:border-blue-800">
+                                            <span className="text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase">Sözleşme Bedeli:</span>
+                                            <span className="text-sm font-bold font-mono text-blue-800 dark:text-blue-400">
+                                                {(projectTotalCost * (1 + targetProfitMargin / 100)).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                            </span>
+                                        </div>
+                                        <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                                            {projectSchedule.map(task => {
+                                                const pp = progressPayments.find(p => p.taskId === task.id);
+                                                const val = pp ? pp.percentage : 0;
+                                                const contractVal = projectTotalCost * (1 + targetProfitMargin / 100);
+
+                                                return (
+                                                    <div key={task.id} className={`flex flex-col gap-1 text-xs bg-white dark:bg-slate-900 p-2 rounded border transition ${val > 0 ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30' : 'border-slate-100 dark:border-slate-700'}`}>
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold dark:text-white truncate w-32 md:w-40">{task.name}</span>
+                                                                <span className="text-[9px] text-slate-400">Bitiş: {formatMonthDisplay(formatMonth(task.endDate))}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex items-center border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-800 focus-within:border-emerald-500">
+                                                                    <NumericInput value={val} onChange={(newVal) => handleUpdateProgressPayment(task.id, newVal)} className="w-10 text-right bg-transparent outline-none p-1 font-mono text-emerald-700 dark:text-emerald-400 font-bold" />
+                                                                    <span className="px-1 text-slate-400">%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {val > 0 && (
+                                                            <div className="text-right text-[10px] font-mono text-emerald-600 font-bold border-t border-emerald-100 dark:border-emerald-800 pt-1 mt-1">
+                                                                + {((contractVal * val) / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
+                                        {/* Toplam Yüzde Kontrolü */}
+                                        <div className="mt-3 flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
+                                            <span className="text-[10px] uppercase font-bold text-slate-500">Toplam Dağıtılan:</span>
+                                            <span className={`font-bold ${progressPayments.reduce((a, b) => a + b.percentage, 0) !== 100 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                %{progressPayments.reduce((a, b) => a + b.percentage, 0)}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* ÖTELEME KONTROL PANELİ (ORTAK) */}
+                                {(financialSettings.sales.length > 0 || (financialSettings.progressPayments && financialSettings.progressPayments.length > 0)) && (
                                     <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
                                         <label className="text-[10px] uppercase font-bold text-slate-500 block mb-2">Toplu Ötele / Geç Teslim</label>
                                         <div className="flex items-center gap-2">
-
-                                            {/* 1 Ay Geri Al Butonu */}
-                                            <button onClick={() => setStressDelayMonths(prev => prev - 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">
-                                                -1
-                                            </button>
-
-                                            {/* Durum Göstergesi */}
+                                            <button onClick={() => setStressDelayMonths(prev => prev - 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">-1</button>
                                             <div className="flex-1 text-center bg-slate-100 dark:bg-slate-900/50 rounded py-1 border border-slate-200 dark:border-slate-700">
                                                 <span className={`font-bold text-xs ${stressDelayMonths > 0 ? 'text-orange-600 dark:text-orange-400' : stressDelayMonths < 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                                     {stressDelayMonths > 0 ? `+${stressDelayMonths} Ay Ötelendi` : stressDelayMonths < 0 ? `${Math.abs(stressDelayMonths)} Ay Erken` : `Değişiklik Yok`}
                                                 </span>
                                             </div>
-
-                                            {/* 1 Ay İleri Al (Geç Teslim) Butonu */}
-                                            <button onClick={() => setStressDelayMonths(prev => prev + 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">
-                                                +1
-                                            </button>
-
-                                            {/* Sıfırla (Geri Getir) Butonu - Sadece öteleme varsa görünür */}
+                                            <button onClick={() => setStressDelayMonths(prev => prev + 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">+1</button>
                                             {stressDelayMonths !== 0 && (
                                                 <button onClick={() => setStressDelayMonths(0)} className="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded font-bold transition shadow-sm" title="Orijinal tarihlere dön">
                                                     <i className="fas fa-undo"></i>

@@ -188,10 +188,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [financialSettings, setFinancialSettings] = useState<FinancialSettings>({
         monthlyInterestRate: 3.6,
         monthlyInflationRate: 0.11,
-        systemMonthlyInterestRate: 3.6, // EKLENDİ
-        systemMonthlyInflationRate: 0.11, // EKLENDİ
+        systemMonthlyInterestRate: 3.6,
+        systemMonthlyInflationRate: 0.11,
         fixedPriceTaskIds: [],
-        sales: []
+        sales: [],
+        revenueModel: 'yap_sat', // YENİ
+        progressPayments: []     // YENİ
     });
 
     const updateFinancialSettings = (settings: Partial<FinancialSettings>) => {
@@ -1328,7 +1330,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     // EKSİK OLAN 2 ALAN BURAYA DA EKLENMELİ
                     systemMonthlyInterestRate: project.data.financialSettings.systemMonthlyInterestRate || 3.6,
                     systemMonthlyInflationRate: project.data.financialSettings.systemMonthlyInflationRate || 0.11,
-                    fixedPriceTaskIds: project.data.financialSettings.fixedPriceTaskIds || []
+                    fixedPriceTaskIds: project.data.financialSettings.fixedPriceTaskIds || [],
+                    revenueModel: project.data.financialSettings.revenueModel || 'yap_sat',
+                    progressPayments: project.data.financialSettings.progressPayments || []
                 });
             } else {
                 // UYARIDA BELİRTİLEN ELSE BLOĞU

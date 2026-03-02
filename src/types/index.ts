@@ -32,6 +32,12 @@ export interface SalePlan {
     saleDate?: string; // YENİ EKLENEN SATIR (Örn: "2025-03")
 }
 
+export interface ProgressPayment {
+    id: string;
+    taskId: string; // projectSchedule içindeki task.id ile eşleşecek
+    percentage: number; // Toplam sözleşme bedelinin yüzde kaçı? (Örn: 20)
+}
+
 export interface FinancialSettings {
     monthlyInterestRate: number; // Aylık enflasyon veya faiz oranı (%)
     monthlyInflationRate?: number; // YENİ: Aylık İnşaat Maliyet Artış Endeksi (%)
@@ -39,6 +45,9 @@ export interface FinancialSettings {
     systemMonthlyInflationRate?: number; // YENİ: Sistemden gelen orijinal enflasyon oranı
     fixedPriceTaskIds?: string[]; // YENİ: Fiyatı baştan anlaşılan (sabitlenen) iş kalemlerinin ID'leri
     sales: SalePlan[];
+
+    revenueModel?: 'yap_sat' | 'taahhut'; // Gelir modeli seçimi
+    progressPayments?: ProgressPayment[]; // Hakediş planlaması
 }
 
 export interface CustomCostItem {
