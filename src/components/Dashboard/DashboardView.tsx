@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react';
 import { FinancialAnalysisPanel } from './FinancialAnalysisPanel';
 import { ProcurementModal } from '../Modals/ProcurementModal';
 import { TutorialOverlay } from '../Shared/TutorialOverlay';
+import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -54,7 +55,7 @@ export const DashboardView: React.FC = () => {
         addUnit, addStructuralUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial, updateCostItem,
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs
+        globalStats, costs, bulkUpdatePrices
     } = useProjectStore();
 
     // YENİ: Alan hatası detayını göstermek için state
@@ -730,23 +731,73 @@ export const DashboardView: React.FC = () => {
                         const isAllExpanded = costCategoryIds.length > 0 && costCategoryIds.every(id => expandedCategories[id]);
 
                         return (
-                            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-2">
-                                <div>
+                            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                {/* SOL TARAF: BAŞLIK VE AÇIKLAMA */}
+                                <div className="flex-1">
                                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                                         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                             <i className="fas fa-file-invoice-dollar text-green-500"></i> Proje Maliyet Detayları
                                         </h2>
                                     </div>
-                                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-2">Tüm bağımsız bölümler ve genel yapı maliyetlerinin toplam dökümü. Metraj ve birim fiyatları buradan düzenleyebilirsiniz.</p>
+                                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-2">
+                                        Tüm bağımsız bölümler ve genel yapı maliyetlerinin toplam dökümü. Metraj ve birim fiyatları buradan düzenleyebilirsiniz.
+                                    </p>
                                 </div>
 
-                                <button
-                                    onClick={() => toggleAllCategories(!isAllExpanded, costCategoryIds)}
-                                    className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 mt-3 md:mt-0"
-                                >
-                                    <i className={`fas ${isAllExpanded ? 'fa-compress-arrows-alt' : 'fa-expand-arrows-alt'}`}></i>
-                                    {isAllExpanded ? 'Tümünü Kapat' : 'Tümünü Aç'}
-                                </button>
+                                {/* SAĞ TARAF: EXCEL BUTONLARI VE TÜMÜNÜ AÇ/KAPAT */}
+                                <div className="flex flex-wrap items-center justify-start md:justify-end gap-2 w-full md:w-auto mt-2 md:mt-0">
+
+                                    {/* Excel İndir Butonu */}
+                                    <button
+                                        onClick={() => exportCostsToExcel(projectCostDetails)}
+                                        className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-green-200 dark:border-green-800/50 shadow-sm"
+                                        title="Tüm keşfi Excel'e indir"
+                                    >
+                                        <i className="fas fa-file-excel"></i>
+                                        <span className="hidden sm:inline">Excel İndir</span>
+                                        <span className="sm:hidden">İndir</span>
+                                    </button>
+
+                                    {/* Excel Yükle Butonu */}
+                                    <label
+                                        className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-blue-200 dark:border-blue-800/50 shadow-sm cursor-pointer mb-0"
+                                        title="Excel'de düzenlediğin fiyatları geri yükle"
+                                    >
+                                        <i className="fas fa-upload"></i>
+                                        <span className="hidden sm:inline">Fiyat Yükle</span>
+                                        <span className="sm:hidden">Yükle</span>
+                                        <input
+                                            type="file"
+                                            accept=".xlsx, .xls"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    importPricesFromExcel(e.target.files[0], (newPrices) => {
+                                                        if (newPrices.length > 0) {
+                                                            bulkUpdatePrices(newPrices);
+                                                            alert(`${newPrices.length} adet kalemin birim fiyatı Excel'den başarıyla güncellendi!`);
+                                                        } else {
+                                                            alert('Excel dosyasında geçerli fiyat verisi bulunamadı. Lütfen dosya formatını değiştirmeyin.');
+                                                        }
+                                                        e.target.value = ''; // Aynı dosyayı peş peşe seçebilmek için
+                                                    });
+                                                }
+                                            }}
+                                        />
+                                    </label>
+
+                                    {/* Dikey Ayırıcı Çizgi (Sadece masaüstünde görünür) */}
+                                    <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                                    {/* Tümünü Aç / Kapat Butonu (Mevcut buton) */}
+                                    <button
+                                        onClick={() => toggleAllCategories(!isAllExpanded, costCategoryIds)}
+                                        className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                                    >
+                                        <i className={`fas ${isAllExpanded ? 'fa-compress-arrows-alt' : 'fa-expand-arrows-alt'}`}></i>
+                                        {isAllExpanded ? 'Tümünü Kapat' : 'Tümünü Aç'}
+                                    </button>
+                                </div>
                             </div>
                         );
                     })()}
