@@ -799,7 +799,29 @@ export const calculateUnitCost = (
     // YENİ EKLENEN: Hesaplanan hacimleri statslara aktar ki cost_data eşleşebilsin
     stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
     stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-    stats.calc_iron_unit = stats.calc_concrete_unit * ironCoeff; // 1 m3 betona ortalama 100kg (0.1 ton) demir
+    stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
+    stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
+
+    // --- GÜNCELLENEN KISIM: DEMİR METRAJI AYRIŞTIRMASI ---
+    if (useDetailedConcrete) {
+        // getIronCoefficient() fonksiyonundan gelen (ortalama 0.125 olan) değeri
+        // deprem/açıklık dinamik çarpanı olarak kullanıyoruz: (ironCoeff / 0.125)
+        const dynamicMultiplier = ironCoeff / 0.125;
+
+        // Referans Donatı Yoğunlukları (Ton/m³)
+        const densityColumn = 0.135; // Kolon/Perde: ~135 kg/m³
+        const densityBeam = 0.105; // Kiriş: ~105 kg/m³
+        const densitySlab = 0.085; // Döşeme: ~85 kg/m³
+
+        const ironFromColumns = stats.column_concrete_volume * densityColumn * dynamicMultiplier;
+        const ironFromBeams = stats.beam_concrete_volume * densityBeam * dynamicMultiplier;
+        const ironFromSlabs = stats.slab_concrete_volume * densitySlab * dynamicMultiplier;
+
+        stats.calc_iron_unit = ironFromColumns + ironFromBeams + ironFromSlabs;
+    } else {
+        // Otomatik Mod: Toplam beton üzerinden ortalama katsayı ile devam
+        stats.calc_iron_unit = stats.calc_concrete_unit * ironCoeff;
+    }
     // --- ÇİFTE HESAPLAMAYI ÖNLEME VE OTOMATİK İNCE İŞLER (FALLBACK) ---
     if (isStructural) {
         // STATİK PLAN: İnce işler hesaplamadan dışlanır
@@ -886,11 +908,11 @@ export const calculateUnitCost = (
 
                             if (isConcrete) qty = totalVol;
                             else if (isFormwork) qty = totalForm;
-                            else if (isIron) qty = totalVol * ironCoeff;
+                           else if (isIron) qty = stats.calc_iron_unit;
                         } else {
                             if (isConcrete) qty = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
                             else if (isFormwork) qty = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-                            else if (isIron) qty = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * 0.100;
+                            else if (isIron) qty = stats.calc_iron_unit;
                         }
                     }
                     else {
