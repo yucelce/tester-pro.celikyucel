@@ -360,13 +360,29 @@ export class QuantityTakeoffService {
                 const bottomFormworkArea = (widthM * lengthM) * 0.85;
                 stats.beam_formwork_area += (sideFormworkArea + bottomFormworkArea);
             });
+            let totalSlabIronBase = 0;
             (unit.slabs || []).forEach(slab => {
                 let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
-                stats.slab_concrete_volume += area * (slab.properties.thickness / 100);
+                let thicknessM = slab.properties.thickness / 100;
+                let concreteVolume = area * thicknessM;
+                let ironDensity = 0.085; // Plak döşeme için varsayılan donatı yoğunluğu (ton/m3)
+
+                // Döşeme tipine göre beton hacmi ve demir yoğunluğu ayarı
+                if (slab.properties.type === 'asmolen') {
+                    concreteVolume = concreteVolume * 0.65; // Asmolen dolgusu nedeniyle beton hacmi azalır
+                    ironDensity = 0.115; // Nervür donatıları arttığı için demir yoğunluğu yüksektir
+                } else if (slab.properties.type === 'mantar') {
+                    ironDensity = 0.125; // Zımbalama ve ilave eğilme donatıları yoğundur
+                }
+
+                stats.slab_concrete_volume += concreteVolume;
                 stats.slab_formwork_area += area;
+                totalSlabIronBase += concreteVolume * ironDensity;
             });
             const dynamicMultiplier = ironCoeff / 0.125;
-            stats.calc_iron_unit = (stats.column_concrete_volume * 0.135 * dynamicMultiplier) + (stats.beam_concrete_volume * 0.105 * dynamicMultiplier) + (stats.slab_concrete_volume * 0.085 * dynamicMultiplier);
+            stats.calc_iron_unit = (stats.column_concrete_volume * 0.135 * dynamicMultiplier) +
+                (stats.beam_concrete_volume * 0.105 * dynamicMultiplier) +
+                (totalSlabIronBase * dynamicMultiplier);
         } else {
             const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
             const heightRatio = metrics.defaultFloorHeight / 3.0;
@@ -491,7 +507,7 @@ export const calculateUnitCost = (
         defaultFloorArea: rawMetrics.defaultFloorArea, projectTotalArea: rawMetrics.projectTotalArea,
         buildingStats, globalWallMaterial, useDetailedConcrete: globalConcreteMode === 'detailed'
     };
-    
+
     const { quantities, totalCost } = PricingService.calculateCosts(stats, currentCosts, pricingContext);
 
     return { quantities, totalCost, stats };
