@@ -166,6 +166,8 @@ interface ProjectContextType {
     addSale: (sale: import('../types').SalePlan) => void;
     removeSale: (id: string) => void;
     startNewProject: (type: 'apartment' | 'villa') => void; 
+
+    bulkUpdatePrices: (newPrices: { itemName: string, price: number }[]) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -1122,6 +1124,31 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDataDirty(false);
     };
 
+    const bulkUpdatePrices = (newPrices: { itemName: string, price: number }[]) => {
+        // 1. Standart maliyet kalemlerini (cost_data.ts'den gelen) güncelle
+        setCosts(prevCosts => prevCosts.map(cat => ({
+            ...cat,
+            items: cat.items.map(item => {
+                const importedItem = newPrices.find(p => p.itemName === item.name);
+                if (importedItem) {
+                    return { ...item, manualPrice: importedItem.price };
+                }
+                return item;
+            })
+        })));
+
+        // 2. Kullanıcının sonradan girdiği "Özel Kalemleri" de kontrol et ve güncelle
+        setCustomCosts(prev => prev.map(c => {
+            const importedItem = newPrices.find(p => p.itemName === c.name);
+            if (importedItem) {
+                return { ...c, price: importedItem.price };
+            }
+            return c;
+        }));
+
+        setIsDataDirty(true); // Sistemi kaydedilebilir hale getir ve maliyetleri yeniden hesaplat
+    };
+
     const dismissDataDirty = () => setIsDataDirty(false);
 
     const recalculateCosts = (mode: 'quantities' | 'prices' | 'both') => {
@@ -1387,7 +1414,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale,startNewProject
+            removeSale,startNewProject, bulkUpdatePrices
         }}>
             {children}
         </ProjectContext.Provider>
