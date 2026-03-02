@@ -780,6 +780,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const netPerimeter = basePerim + 1;
             const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
             vBodrumPerde = netPerimeter * totalBasementHeight * 0.3;
+        } else {
+            // YENİ: Bodrum yoksa Subasman Perdesi (Varsayılan 50cm yükseklik, 25cm kalınlık)
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            if (subasmanH > 0) {
+                vBodrumPerde = basePerim * subasmanH * 0.25; 
+            }
         }
 
         const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined
@@ -1105,6 +1111,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const netPerimeter = basePerim + 1;
             const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
             vBodrumPerde = netPerimeter * totalBasementHeight * 0.3;
+        } else {
+            // YENİ: Bodrum yoksa Subasman Perdesi Demiri
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            if (subasmanH > 0) {
+                vBodrumPerde = basePerim * subasmanH * 0.25;
+            }
         }
 
         const ironTemelPerde = (vTemel + vBodrumPerde) * ironCoeff;
@@ -1116,6 +1128,17 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const roofArea = buildingStats.normalFloorArea;
             const systemMultiplier = Math.max(1, roofArea / 500);
             return item.unit_price * systemMultiplier;
+        }
+        return 0;
+    },
+
+    'calc_subasman_filling': ({ buildingStats }) => {
+        // Sadece bodrum olmayan yapılarda subasman dolgusu yapılır
+        if (buildingStats.basementFloorCount === 0) {
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            if (subasmanH > 0) {
+                return (buildingStats.groundFloorArea || 0) * subasmanH;
+            }
         }
         return 0;
     },
@@ -1246,6 +1269,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const netPerimeter = basePerim + 1;
             const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
             formBodrumPerde = netPerimeter * totalBasementHeight * 2;
+        } else {
+            // YENİ: Bodrum yoksa Subasman Kalıbı (İç ve dış yüzey)
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            if (subasmanH > 0) {
+                formBodrumPerde = basePerim * subasmanH * 2;
+            }
         }
 
         return (formKatlar + formTemel + formBodrumPerde) * (item.multiplier || 1);

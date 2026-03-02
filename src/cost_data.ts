@@ -146,6 +146,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Kalıp İşçiliği & Malzeme", unit: "m2", unit_price: 1347, auto_source: "calc_formwork_global", multiplier: 1, wixId: "kalipdemirbetonisc", scope: 'global' },
       { name: "Temel Su Yalıtımı (Bohçalama)", unit: "m2", unit_price: 450, auto_source: "calc_foundation_area", multiplier: 1.1, scope: 'global' },
       { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", unit_price: 150, auto_source: "calc_foundation_xps", multiplier: 1.05, wixId: "temelxpsmalisc", scope: 'global' },
+     { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", unit_price: 350, auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", unit_price: 2200, auto_source: "calc_roof", multiplier: 1, scope: 'global' },
       { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", unit_price: 350, auto_source: "total_area", multiplier: 0.15, scope: 'global' },
       { name: "İnşaat Çivisi (kg)", unit: "kg", unit_price: 45, auto_source: "manual", multiplier: 0, scope: 'hidden' },

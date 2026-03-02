@@ -141,6 +141,7 @@ export interface BuildingStats {
     poolArea?: number;       // Havuz alanı (m2)
     parkingArea?: number;    // Açık otopark alanı (m2)
     verandaArea?: number;    // Veranda / Kış bahçesi alanı (m2)
+subasmanHeight?: number;
 
     province: string;
     district: string;

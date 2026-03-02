@@ -717,6 +717,29 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
 
                     {activeTab === 'villa_outdoor' && buildingStats.buildingType === 'villa' && (
                         <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                                <h4 className="font-bold text-white flex items-center gap-2 mb-2">
+                                    <i className="fas fa-layer-group text-yellow-500"></i> Subasman Yüksekliği
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-4">Bodrumsuz yapılarda evi topraktan koparmak için yapılacak çevre perdesi ve zemin dolgusu yüksekliği (Varsayılan: 50 cm).</p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Yükseklik (cm)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight * 100 : 50}
+                                            onChange={(e) => {
+                                                const valCm = parseFloat(e.target.value) || 0;
+                                                setBuildingStats({ ...buildingStats, subasmanHeight: valCm / 100 });
+                                            }}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-yellow-500 transition outline-none"
+                                            placeholder="Örn: 50"
+                                        />
+                                        <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">cm</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="bg-orange-900/20 border border-orange-500/30 p-4 rounded-xl">
                                 <h4 className="font-bold text-orange-400 flex items-center gap-2 mb-2">
                                     <i className="fas fa-swimming-pool"></i> Havuz ve Su Donatıları
