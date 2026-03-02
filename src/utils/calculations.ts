@@ -798,18 +798,6 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_pool_concrete': ({ buildingStats }) => buildingStats.poolArea || 0,
 
-    'calc_smart_home': ({ buildingStats, item, totalConstructionArea }) => {
-        if (buildingStats.buildingType === 'villa') {
-            const baseSmartHomePrice = item.unit_price > 1 ? item.unit_price : 150000;
-            let areaMultiplier = 1.0;
-            if (totalConstructionArea > 150) {
-                areaMultiplier = 1.0 + ((totalConstructionArea - 150) * 0.005);
-            }
-            return Math.round(baseSmartHomePrice * areaMultiplier);
-        }
-        return 0;
-    },
-
     'calc_pool_system': ({ buildingStats }) => {
         if (buildingStats.poolArea && buildingStats.poolArea > 0) return 1;
         return 0;
@@ -1143,37 +1131,58 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
-    'calc_smart_home': ({ buildingStats, totalConstructionArea }) => {
+
+    'calc_smart_home': ({ buildingStats, totalConstructionArea, aggregatedUnitStats }) => {
         if (buildingStats.buildingType !== 'villa' || !buildingStats.hasSmartHome) return 0;
 
         // 1. Temel Altyapı Bedeli (Ana Merkezi Pano, KNX Güç Kaynağı, IP Router, Standart Zayıf Akım Kablolama)
         let baseCost = 65000;
 
-        // Tahmini Bağımsız Bölge/Oda Sayısı (Her 25m2 ortalama 1 kontrol bölgesi/oda kabul edilir)
-        const estimatedZones = Math.max(1, Math.ceil(totalConstructionArea / 25));
+        // 2. Hassas Bölge/Oda Sayısı Tahmini (Çizim veya manuel veriye göre)
+        // Eğer detaylı çizim yapıldıysa/verildiyse (iç kapı sayısı > 0), oda sayısını kapı sayısından türetiriz (+1 salon/açık alan payı)
+        let estimatedZones = Math.max(1, Math.ceil(totalConstructionArea / 25));
+        if (aggregatedUnitStats && aggregatedUnitStats['calc_inner_door'] > 0) {
+            estimatedZones = aggregatedUnitStats['calc_inner_door'] + 1;
+        }
 
-        // 2. Modül Çarpanları
+        // 3. Modül Çarpanları
         if (buildingStats.smartHomeLighting) {
-            // Röle/Aktüatör modülleri, KNX Akıllı Anahtarlar ve kablolama (Bölge başı ort. 4500 TL maliyet)
+            // Aydınlatma kontrolü: Bölge (Oda) sayısına göre röle ve anahtar maliyeti
             baseCost += (estimatedZones * 4500);
         }
+        
         if (buildingStats.smartHomeHeating) {
-            // Termostatik vanalar, VRF/Kombi gateway, KNX Oda Termostatları (Bölge başı ort. 5500 TL maliyet)
+            // İklimlendirme (Termostat) kontrolü: Bölge (Oda) sayısına göre vana ve termostat maliyeti
             baseCost += (estimatedZones * 5500);
         }
+        
         if (buildingStats.smartHomeSensors) {
-            // Su Basma Sensörü, Gaz Sensörü, Duman Dedektörü, Motorlu Su/Gaz Kesici Vana (Paket Set ort. 18000 TL)
-            baseCost += 18000;
+            // Islak hacim (Banyo, Mutfak, WC) ve Gaz noktalarına göre dinamik sensör adedi hesabı
+            let wetAreaZones = 2; // Varsayılan: 1 mutfak + 1 banyo
+            if (aggregatedUnitStats && (aggregatedUnitStats['calc_toilet'] > 0 || aggregatedUnitStats['calc_kitchen_sink'] > 0)) {
+                wetAreaZones = (aggregatedUnitStats['calc_toilet'] || 1) + (aggregatedUnitStats['calc_kitchen_sink'] || 1);
+            }
+            const floors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1; // Villa kat sayısı
+            
+            // Su basma sensörü (Banyo/Mutfak başı 2500TL), Gaz Sensörü (Mutfak başı 3500TL), 
+            // Duman Dedektörü (Her kata 1500TL) ve Ana Kesici Valfler (Sabit 8000TL)
+            baseCost += (wetAreaZones * 2500) + (1 * 3500) + (floors * 1500) + 8000;
         }
+        
         if (buildingStats.smartHomeBlinds) {
-            // Panjur/Perde aktüatörleri, motor kablolaması (Bölge başı ort. 3500 TL maliyet)
-            baseCost += (estimatedZones * 3500);
+            // Panjur/Perde motor kontrolü: Pencere alanına göre gerçekçi adet hesabı
+            let windowCount = estimatedZones; // Varsayılan: Her odaya ortalama 1 pencere
+            if (aggregatedUnitStats && aggregatedUnitStats['calc_window_area'] > 0) {
+                // Ortalama bir pencerenin 2.5 m² olduğunu varsayarak hassas pencere adedini buluyoruz
+                windowCount = Math.max(estimatedZones, Math.ceil(aggregatedUnitStats['calc_window_area'] / 2.5));
+            }
+            baseCost += (windowCount * 3500);
         }
 
-        // 3. Uzaklık/Metraj Çarpanı (Ev büyüdükçe merkez panoya giden kablo metrajı ve hat güçlendiricileri artar)
+        // 4. Uzaklık/Metraj Çarpanı (Ev büyüdükçe merkez panoya giden kablo metrajı ve hat güçlendiricileri artar)
         let areaMultiplier = 1.0;
         if (totalConstructionArea > 200) {
-            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003); // Her ek m2 için %0.3 artış
+            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003); // Her ek m² için %0.3 artış
         }
 
         return Math.round(baseCost * areaMultiplier);
