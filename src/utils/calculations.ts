@@ -33,6 +33,436 @@ export const getIronCoefficient = (
     return baseCoeff * spanMultiplier * softStoryMultiplier;
 };
 
+// ============================================================================
+// 1. GEOMETRİ SERVİSİ (Sadece alan, çevre ve fiziksel büyüklükleri bulur)
+// ============================================================================
+export class GeometryAnalyzer {
+    static extractRawMetrics(unit: UnitType, buildingStats: BuildingStats) {
+        let defaultFloorHeight = buildingStats.normalFloorHeight;
+        let defaultFloorArea = buildingStats.normalFloorArea;
+
+        if (unit.floorType === 'ground') {
+            defaultFloorHeight = buildingStats.groundFloorHeight;
+            defaultFloorArea = buildingStats.groundFloorArea;
+        } else if (unit.floorType === 'basement') {
+            defaultFloorHeight = buildingStats.basementFloorHeight;
+            defaultFloorArea = buildingStats.basementFloorArea;
+        }
+
+        let totalSlabArea = 0;
+        let sumSlabVolume = 0;
+        (unit.slabs || []).forEach(slab => {
+            let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
+            totalSlabArea += area;
+            sumSlabVolume += area * slab.properties.thickness;
+        });
+
+        const avgSlabThicknessCm = totalSlabArea > 0 ? (sumSlabVolume / totalSlabArea) : 15;
+        const avgSlabThicknessM = avgSlabThicknessCm / 100;
+
+        const rooms = (unit.rooms || []).map(room => {
+            let areaM2 = 0;
+            let perimeterM = 0;
+
+            if (room.manualAreaM2 !== undefined && room.manualAreaM2 > 0) {
+                areaM2 = room.manualAreaM2;
+                perimeterM = room.manualPerimeterM || (Math.sqrt(areaM2) * 4);
+            } else if (unit.scale > 0) {
+                areaM2 = room.area_px / (unit.scale * unit.scale);
+                perimeterM = room.perimeter_px / unit.scale;
+            }
+
+            const roomWaste = calculateWasteFactor(room.points, room.manualAreaM2, room.manualPerimeterM);
+            const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
+
+            return { ...room, areaM2, perimeterM, roomWaste, roomHeight };
+        });
+
+        const totalArea = rooms.reduce((sum, r) => sum + r.areaM2, 0);
+        const totalPerimeter = rooms.reduce((sum, r) => sum + r.perimeterM, 0);
+
+        const projectTotalArea = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
+            buildingStats.groundFloorArea +
+            (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
+
+        return { defaultFloorHeight, defaultFloorArea, avgSlabThicknessM, rooms, totalArea, totalPerimeter, projectTotalArea };
+    }
+}
+
+// ============================================================================
+// 2. METRAJ VE KEŞİF SERVİSİ (Mühendislik kurallarını ve zayiatları işletir)
+// ============================================================================
+export class QuantityTakeoffService {
+    static calculateStats(rawMetrics: any, unit: UnitType, buildingStats: BuildingStats, settings: any) {
+        let stats: Record<string, number> = {
+            total_area: rawMetrics.totalArea, total_perimeter: rawMetrics.totalPerimeter,
+            wet_area: 0, net_wet_area: 0, dry_area: 0, dry_perimeter: 0, net_wall_area: 0, cornice_length: 0,
+            mortar_volume: 0, adhesive_weight: 0, calc_plumbing_unit: 0, calc_combi_count: 0,
+            calc_radiator_infrastructure: 0, calc_radiator_len: 0, calc_radiator_count: 0,
+            calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0, mortar_amount: 0,
+            calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0, calc_plaster_area: 0,
+            calc_window_area: 0, calc_sill_length: 0, calc_window_perimeter: 0, calc_balcony_railing: 0,
+            wall_10_area: 0, wall_13_5_area: 0, wall_15_area: 0, wall_20_area: 0, wall_25_area: 0,
+            column_concrete_volume: 0, column_formwork_area: 0, beam_concrete_volume: 0, beam_formwork_area: 0,
+            slab_concrete_volume: 0, slab_formwork_area: 0, calc_concrete_unit: 0, calc_iron_unit: 0, calc_formwork_unit: 0,
+            radiator_length: 0, kitchen_cabinet_length: 0, calc_steel_door: 0, calc_inner_door: 0,
+            calc_kitchen_cabinet: 0, calc_kitchen_counter_length: 0, calc_bathroom_cabinet: 0, calc_kitchen_sink: 0,
+            calc_toilet: 0, calc_shower_cabin: 0, calc_shower_set: 0, calc_basin_mixer: 0, calc_sink_mixer: 0,
+            calc_electrical_points: 0, calc_weak_current_points: 0, calc_switch_socket_count: 0, calc_sub_panel_count: 0,
+            calc_heat_pump: 0, calc_vrf_infrastructure: 0, calc_vrf_indoor: 0
+        };
+
+        const windowDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
+        const wallOpeningDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
+
+        if (!settings.isStructural) {
+            stats.calc_unit_count = 1; stats.calc_steel_door = 1; stats.calc_sub_panel_count = 1;
+            const heatingSystem = buildingStats.heatingSystem || 'radiator';
+            if (heatingSystem === 'radiator' || heatingSystem === 'underfloor') stats.calc_combi_count = 1;
+            else if (heatingSystem === 'heat_pump') stats.calc_heat_pump = 1;
+        }
+
+        // 1. ODA DÖNGÜSÜ
+        rawMetrics.rooms.forEach((room: any) => {
+            if (!settings.isStructural) {
+                this.applyHeating(stats, room, buildingStats, settings.globalWallMaterial);
+                this.applyFinishesAndOpenings(stats, room, windowDeductions, wallOpeningDeductions, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM);
+                this.applySpecificRooms(stats, room);
+                this.applyElectricalPoints(stats, room);
+            }
+        });
+
+        if (!settings.isStructural) {
+            const totalDoorBaseboardDeduction = (stats.calc_inner_door * 1.80) + (stats.calc_steel_door * 0.90);
+            stats.dry_perimeter = Math.max(0, stats.dry_perimeter - totalDoorBaseboardDeduction);
+        }
+
+        // 2. KABA YAPI (Duvar, Beton, Demir)
+        this.applyStructure(stats, unit, rawMetrics, buildingStats, settings, windowDeductions, wallOpeningDeductions);
+
+        // 3. STATİK & MİMARİ ÇAKIŞMA ÖNLEME (Fallbacks)
+        this.applyFallbacks(stats, unit, rawMetrics, buildingStats, settings);
+
+        return stats;
+    }
+
+    private static applyHeating(stats: any, room: any, buildingStats: BuildingStats, material: WallMaterial) {
+        let materialHeatFactor = 1.0;
+        if (material === 'gazbeton') materialHeatFactor = 0.85;
+        else if (material === 'bims') materialHeatFactor = 0.92;
+        if (buildingStats.buildingType === 'villa') materialHeatFactor *= 1.25;
+
+        const heatLossFactor = (30 + (buildingStats.heatZone * 5)) * materialHeatFactor;
+        const heatedArea = (room.type !== 'balcony' && room.type !== 'other' && room.type !== 'storage') ? room.areaM2 : 0;
+
+        if (heatedArea > 0) {
+            const windowRatio = (room.properties.windowArea || 0) / heatedArea;
+            const windowFactor = 1 + (windowRatio * 0.5);
+            const roomHeatLoad = heatedArea * room.roomHeight * heatLossFactor * windowFactor;
+            const heatingSystem = buildingStats.heatingSystem || 'radiator';
+
+            if (heatingSystem === 'radiator') {
+                const radLen = roomHeatLoad / 1455;
+                stats.calc_radiator_len += radLen; stats.radiator_length += radLen;
+                stats.calc_radiator_infrastructure += (heatedArea * windowFactor);
+                stats.calc_radiator_count += Math.max(1, Math.ceil(radLen / 1.6));
+            } else if (heatingSystem === 'underfloor' || heatingSystem === 'heat_pump') {
+                const standardHeatLoad = 2.9 * 40 * 1.05;
+                const densityFactor = roomHeatLoad / standardHeatLoad;
+                stats.calc_underfloor_area += (heatedArea * densityFactor);
+                const portsNeeded = Math.ceil((heatedArea * densityFactor) / 12);
+                stats.calc_underfloor_collector += portsNeeded > 12 ? Math.ceil(portsNeeded / 10) : 1;
+            } else if (heatingSystem === 'vrf') {
+                stats.calc_vrf_infrastructure += heatedArea;
+                stats.calc_vrf_indoor += Math.ceil(heatedArea / 35);
+            }
+        }
+    }
+
+    private static applyFinishesAndOpenings(stats: any, room: any, wDed: any, dDed: any, dHeight: number, avgThick: number) {
+        const doorDeduction = (room.properties.doorCount || 0) * 1.89;
+        const windowDeduction = room.properties.windowArea || 0;
+        const grossWallArea = Math.max(0, (room.perimeterM * room.roomHeight) - (doorDeduction + windowDeduction));
+
+        stats.calc_ceiling_paint_area += room.areaM2;
+        stats.calc_rough_plaster_area += grossWallArea;
+
+        if (room.properties.wallFinish === 'boya') {
+            stats.calc_paint_wall_area += grossWallArea;
+            stats.calc_plaster_area += (grossWallArea + room.areaM2);
+        } else {
+            stats.calc_plaster_area += room.areaM2;
+            stats.wet_area += grossWallArea;
+        }
+
+        if (room.properties.hasCornice) stats.cornice_length += room.perimeterM;
+        if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
+            stats.wet_area += room.areaM2 * room.roomWaste;
+            stats.net_wet_area += room.areaM2;
+        }
+        if (room.properties.floorType === 'parke') {
+            stats.dry_area += room.areaM2 * room.roomWaste;
+            stats.dry_perimeter += room.perimeterM * room.roomWaste;
+        }
+
+        stats.calc_inner_door += (room.properties.doorCount || 0);
+
+        // Windows Deductions
+        const wArea = room.properties.windowArea || 0;
+        if (wArea > 0) {
+            stats.calc_window_area += wArea;
+            const wThick = room.properties.windowWallThickness || 20;
+            let tKey = wThick <= 10 ? '10' : wThick <= 13.5 ? '13_5' : wThick <= 15 ? '15' : wThick <= 20 ? '20' : '25';
+            wDed[tKey] += wArea;
+
+            const wWidth = Math.sqrt(wArea * (4 / 3));
+            const wHeight = Math.sqrt(wArea * (3 / 4));
+            stats.calc_sill_length += (wWidth + 0.05);
+            stats.calc_window_perimeter += 2 * (wWidth + wHeight);
+        }
+
+        // Doors Deductions
+        const dArea = (room.properties.doorCount || 0) * 1.89;
+        if (dArea > 0) {
+            const dThick = room.properties.doorWallThickness || 13.5;
+            let tKey = dThick <= 10 ? '10' : dThick <= 13.5 ? '13_5' : dThick <= 15 ? '15' : dThick <= 20 ? '20' : '25';
+            dDed[tKey] += dArea;
+        }
+    }
+
+    private static applySpecificRooms(stats: any, room: any) {
+        const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
+        if (isKitchen) {
+            stats.calc_plumbing_unit += 0.5;
+            const cabinetLength = Math.sqrt(room.areaM2 / 12) * 4;
+            const cabinetArea = cabinetLength * Math.max(0, room.roomHeight - 0.90);
+            stats.calc_kitchen_cabinet += cabinetArea;
+            stats.kitchen_cabinet_length += cabinetArea;
+            stats.calc_kitchen_counter_length += cabinetLength;
+            stats.calc_kitchen_sink += 1; stats.calc_sink_mixer += 1;
+        }
+        if (room.type === 'bath') {
+            stats.calc_plumbing_unit += 0.5; stats.calc_bathroom_cabinet += 1; stats.calc_toilet += 1;
+            stats.calc_basin_mixer += 1; stats.calc_shower_cabin += 1; stats.calc_shower_set += 1;
+        }
+        if (room.type === 'wc') {
+            stats.calc_plumbing_unit += 0.25; stats.calc_toilet += 1; stats.calc_basin_mixer += 1;
+        }
+        if (room.type === 'balcony') {
+            stats.calc_balcony_railing += (room.perimeterM / 2);
+        }
+    }
+
+    private static applyElectricalPoints(stats: any, room: any) {
+        let sp = 0, wp = 0;
+        switch (room.type) {
+            case 'living': sp = 6; wp = 3; break;
+            case 'bedroom': sp = 4; wp = 1; break;
+            case 'kitchen': sp = 8; wp = 1; break;
+            case 'bath': sp = 3; wp = 0; break;
+            case 'wc': sp = 1; wp = 0; break;
+            case 'hallway': sp = 2; wp = 0; break;
+            case 'dressing': sp = 3; wp = 0; break;
+            case 'balcony': sp = 2; wp = 0; break;
+            case 'storage': case 'other': sp = 1; wp = 0; break;
+            default: sp = 4; wp = 1; break;
+        }
+        stats.calc_electrical_points += sp;
+        stats.calc_weak_current_points += wp;
+        stats.calc_switch_socket_count += (sp + wp);
+    }
+
+    private static applyStructure(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any, wDed: any, dDed: any) {
+        const { globalWallMaterial, globalWallMode, globalConcreteMode, ironCoeff } = settings;
+        const useDetailedWalls = globalWallMode === 'detailed';
+        const useDetailedConcrete = globalConcreteMode === 'detailed';
+
+        // WALLS
+        if (useDetailedWalls) {
+            if (unit.walls && unit.walls.length > 0) {
+                unit.walls.forEach(wall => {
+                    let lengthM = wall.manualLengthM !== undefined && wall.manualLengthM > 0 ? wall.manualLengthM : (unit.scale > 0 ? wall.length_px / unit.scale : 0);
+                    let wallHeight = wall.properties.height && wall.properties.height > 0 ? wall.properties.height : metrics.defaultFloorHeight;
+                    if (!(wall.properties.height && wall.properties.height > 0)) {
+                        wallHeight -= wall.properties.isUnderBeam && wall.properties.beamHeight > 0 ? (wall.properties.beamHeight / 100) : metrics.avgSlabThicknessM;
+                    }
+                    const wallArea = lengthM * wallHeight;
+                    const thick = wall.properties.thickness;
+                    let tKey = thick <= 10 ? "wall_10_area" : thick <= 13.5 ? "wall_13_5_area" : thick <= 15 ? "wall_15_area" : thick <= 20 ? "wall_20_area" : "wall_25_area";
+                    stats[tKey] += wallArea;
+
+                    if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += wallArea * (0.25 * thick);
+                    else stats.mortar_volume += wallArea * (0.002 * thick);
+                });
+            }
+            if (unit.rooms.length > 0) {
+                let totalRoomWallArea = 0;
+                unit.rooms.forEach(r => {
+                    const h = r.properties.ceilingHeight || (metrics.defaultFloorHeight - metrics.avgSlabThicknessM - 0.04);
+                    const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
+                    totalRoomWallArea += (p * h * (r.type === 'balcony' ? 0.5 : 1.0));
+                });
+                stats.net_wall_area = totalRoomWallArea * 0.85;
+            } else {
+                let totalWallArea = 0;
+                Object.keys(stats).forEach(k => { if (k.startsWith('wall_') && k.endsWith('_area')) totalWallArea += stats[k]; });
+                stats.net_wall_area = totalWallArea * 2;
+            }
+        } else {
+            const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
+            let floorPerimeter = Math.sqrt(refArea) * 4;
+            if (unit.floorType === 'normal' && buildingStats.normalFloorPerimeter) floorPerimeter = buildingStats.normalFloorPerimeter;
+            else if (unit.floorType === 'ground' && buildingStats.groundFloorPerimeter) floorPerimeter = buildingStats.groundFloorPerimeter;
+            else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) floorPerimeter = buildingStats.basementFloorPerimeter;
+
+            const heightFactor = Math.max(1, (metrics.defaultFloorHeight / 3.0));
+            const estimatedWallSurface = refArea * 2.2 * heightFactor;
+            const outerWallSurface = floorPerimeter * metrics.defaultFloorHeight;
+            const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
+
+            stats["wall_20_area"] += outerWallSurface;
+            stats["wall_13_5_area"] += innerWallSurface;
+            stats.net_wall_area = estimatedWallSurface * 2;
+
+            if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += (outerWallSurface * 20 * 0.25) + (innerWallSurface * 13.5 * 0.25);
+            else stats.mortar_volume += (outerWallSurface * 20 * 0.002) + (innerWallSurface * 13.5 * 0.002);
+        }
+
+        // Apply Deductions to Walls
+        ['wDed', 'dDed'].forEach((type, idx) => {
+            const deductions = idx === 0 ? wDed : dDed;
+            Object.keys(deductions).forEach(thickStr => {
+                const deductionArea = deductions[thickStr];
+                if (deductionArea > 0) {
+                    const tKey = `wall_${thickStr}_area`;
+                    const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
+                    stats[tKey] -= deductionArea;
+                    if (globalWallMaterial === 'gazbeton') stats.adhesive_weight -= (deductionArea * (0.25 * thickVal));
+                    else stats.mortar_volume -= (deductionArea * (0.002 * thickVal));
+                }
+            });
+        });
+
+        // CONCRETE & IRON
+        if (useDetailedConcrete) {
+            (unit.columns || []).forEach(col => {
+                let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
+                let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
+                const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
+                stats.column_concrete_volume += areaM2 * height;
+                stats.column_formwork_area += perimeterM * height;
+            });
+            (unit.beams || []).forEach(beam => {
+                let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
+                const widthM = beam.properties.width / 100, heightM = beam.properties.height / 100, slabThickM = beam.properties.slabThickness / 100;
+                stats.beam_concrete_volume += widthM * heightM * lengthM;
+                const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
+                const bottomFormworkArea = (widthM * lengthM) * 0.85;
+                stats.beam_formwork_area += (sideFormworkArea + bottomFormworkArea);
+            });
+            (unit.slabs || []).forEach(slab => {
+                let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
+                stats.slab_concrete_volume += area * (slab.properties.thickness / 100);
+                stats.slab_formwork_area += area;
+            });
+            const dynamicMultiplier = ironCoeff / 0.125;
+            stats.calc_iron_unit = (stats.column_concrete_volume * 0.135 * dynamicMultiplier) + (stats.beam_concrete_volume * 0.105 * dynamicMultiplier) + (stats.slab_concrete_volume * 0.085 * dynamicMultiplier);
+        } else {
+            const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
+            const heightRatio = metrics.defaultFloorHeight / 3.0;
+            const totalConcrete = refArea * 0.38 * heightRatio;
+            stats.slab_concrete_volume = totalConcrete * 0.65; stats.column_concrete_volume = totalConcrete * 0.20; stats.beam_concrete_volume = totalConcrete * 0.15;
+            const totalForm = refArea * 2.8 * heightRatio;
+            stats.slab_formwork_area = totalForm * 0.5; stats.column_formwork_area = totalForm * 0.25; stats.beam_formwork_area = totalForm * 0.25;
+            stats.calc_iron_unit = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * ironCoeff;
+        }
+
+        stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
+        stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
+    }
+
+    private static applyFallbacks(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any) {
+        if (settings.isStructural) {
+            stats.cornice_length = 0; stats.wet_area = 0; stats.dry_area = 0; stats.radiator_length = 0; stats.kitchen_cabinet_length = 0;
+            stats.calc_rough_plaster_area = 0; stats.calc_paint_wall_area = 0; stats.calc_ceiling_paint_area = 0; stats.calc_plaster_area = 0;
+        } else {
+            ['10', '13_5', '15', '20', '25'].forEach(t => stats[`wall_${t}_area`] = Math.min(0, stats[`wall_${t}_area`] || 0));
+            stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0); stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
+            stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
+
+            if (stats.calc_rough_plaster_area === 0) {
+                let fallbackArea = metrics.defaultFloorArea;
+                if (unit.count > 0) {
+                    let floorCount = unit.floorType === 'normal' ? Math.max(1, buildingStats.normalFloorCount) : unit.floorType === 'basement' ? Math.max(1, buildingStats.basementFloorCount) : 1;
+                    fallbackArea = metrics.defaultFloorArea / Math.max(1, unit.count / floorCount);
+                }
+                const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
+                stats.calc_rough_plaster_area = fArea * 2.8; stats.calc_paint_wall_area = fArea * 2.5; stats.calc_ceiling_paint_area = fArea;
+                stats.calc_plaster_area = fArea * 3.5; stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
+                if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
+                if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
+            }
+        }
+    }
+}
+
+// ============================================================================
+// 3. FİYATLANDIRMA SERVİSİ (Sadece cost_data ile stats'ı birleştirir)
+// ============================================================================
+export class PricingService {
+    static calculateCosts(stats: Record<string, number>, currentCosts: CostCategory[], context: any) {
+        let quantities: Record<string, number> = {};
+        let totalCost = 0;
+        const { defaultFloorArea, projectTotalArea, buildingStats, globalWallMaterial, useDetailedConcrete } = context;
+
+        currentCosts.forEach(cat => {
+            cat.items.forEach(item => {
+                if (item.auto_source !== 'manual') {
+                    let qty = 0;
+                    if (item.auto_source === 'calc_window_area') qty = stats.calc_window_area;
+                    else if (item.auto_source === 'calc_sill_length') qty = stats.calc_sill_length;
+                    else if (item.auto_source === 'calc_window_perimeter') qty = stats.calc_window_perimeter;
+                    else if (item.auto_source === 'calc_balcony_railing') qty = stats.calc_balcony_railing;
+                    else if (item.auto_source === 'calc_radiator') qty = stats.radiator_length;
+                    else if (item.auto_source === 'calc_kitchen_cabinet') qty = stats.kitchen_cabinet_length;
+                    else {
+                        const isConcrete = item.name === 'Betonarme Betonu (C30)';
+                        const isIron = item.name === 'İnşaat Demiri';
+                        const isFormwork = item.name === 'Kalıp İşçiliği & Malzeme';
+
+                        if (isConcrete || isIron || isFormwork) {
+                            if (isConcrete) qty = stats.calc_concrete_unit;
+                            else if (isFormwork) qty = stats.calc_formwork_unit;
+                            else if (isIron) qty = stats.calc_iron_unit;
+                        } else {
+                            let sourceKey = item.auto_source;
+                            if (sourceKey.startsWith('calc_') && stats[sourceKey] === undefined) {
+                                sourceKey = sourceKey.replace('calc_', '') as any;
+                            }
+                            const rawVal = stats[sourceKey] || 0;
+                            qty = parseFloat((rawVal * item.multiplier).toFixed(2));
+                        }
+                    }
+
+                    const unitArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
+                    const dynamicPrice = calculateDynamicUnitPrice(
+                        item, unitArea, projectTotalArea, buildingStats.province,
+                        buildingStats.isUrbanTransformation, buildingStats, currentCosts, globalWallMaterial
+                    );
+
+                    quantities[item.name] = qty;
+                    totalCost += qty * dynamicPrice;
+                }
+            });
+        });
+
+        return { quantities, totalCost };
+    }
+}
+
+// ============================================================================
+// 4. ANA ORKESTRATÖR (Sildiğiniz fonksiyonun yerine geçen yeni ve temiz hali)
+// ============================================================================
 export const calculateUnitCost = (
     unit: UnitType,
     currentCosts: CostCategory[],
@@ -41,911 +471,32 @@ export const calculateUnitCost = (
     globalWallMode: 'auto' | 'detailed' = 'auto',
     globalConcreteMode: 'auto' | 'detailed' = 'auto',
     globalWallThickness: number = 15,
-    isStructural: boolean = false // YENİ EKLENEN PARAMETRE
+    isStructural: boolean = false
 ) => {
     const isGroundFloor = unit.floorType === 'ground';
-    const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
-
-    // Kat alanını belirle
     const currentFloorArea = isGroundFloor ? buildingStats.groundFloorArea : buildingStats.normalFloorArea;
-
-    // ironCoeff'i hesaplarken bu kata özel isSoftStory ve kat alanı bilgisini fonksiyona gönder
+    const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
     const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, isSoftStory);
-    let quantities: Record<string, number> = {};
-    let totalCost = 0;
 
-    let stats: Record<string, number> = {
-        total_area: 0,
-        total_perimeter: 0,
-        wet_area: 0,
-        net_wet_area: 0,
-        dry_area: 0,
-        dry_perimeter: 0,
-        net_wall_area: 0,
-        cornice_length: 0,
+    const settings = { globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, isStructural, ironCoeff };
 
-        mortar_volume: 0,   // Tuğla/ m3
-        adhesive_weight: 0, // Gazbeton için kg
+    // 1. Geometriyi Ayrıştır
+    const rawMetrics = GeometryAnalyzer.extractRawMetrics(unit, buildingStats);
 
-        // --- YENİ MEKANİK HESAP STATS ---
-        calc_plumbing_unit: 0,
-        calc_combi_count: 0,
+    // 2. Metrajları (Quantities) Hesapla
+    const stats = QuantityTakeoffService.calculateStats(rawMetrics, unit, buildingStats, settings);
 
-        // Radyatör Grubu
-        calc_radiator_infrastructure: 0,
-        calc_radiator_len: 0,
-        calc_radiator_count: 0,
-
-        // Yerden Isıtma Grubu
-        calc_underfloor_area: 0,
-        calc_underfloor_collector: 0,
-
-        calc_unit_count: 0,
-        mortar_amount: 0, // <--- BU SATIRI EKLEYİN (Yeni Harç Sayacı)
-
-        calc_rough_plaster_area: 0, // Kara Sıva (Seramik altı + Boya altı tüm duvarlar)
-        calc_paint_wall_area: 0,    // Alçı Sıva + Boya (Sadece boyalı duvarlar)
-        calc_ceiling_paint_area: 0, // Tavan Boyası (Oda alanları toplamı)
-        calc_plaster_area: 0,
-
-        calc_window_area: 0,      // Toplam Pencere Alanı
-        calc_sill_length: 0,      // Mermer Denizlik (Pencere genişliği)
-        calc_window_perimeter: 0, // Pencere Söve (Pencere Çevresi)
-        calc_balcony_railing: 0,  // Balkon Korkuluğu
-
-        // Generic Wall Stats by Thickness (Independent of Material)
-        wall_10_area: 0,
-        wall_13_5_area: 0,
-        wall_15_area: 0,
-        wall_20_area: 0,
-        wall_25_area: 0,
-
-        // Structure Stats
-        column_concrete_volume: 0,
-        column_formwork_area: 0,
-        beam_concrete_volume: 0,
-        beam_formwork_area: 0,
-        slab_concrete_volume: 0,
-        slab_formwork_area: 0,
-
-        // YENİ EKLENENLER: Kaba inşaat metrajları için genel sayaçlar
-        calc_concrete_unit: 0,
-        calc_iron_unit: 0,
-        calc_formwork_unit: 0,
-
-        // Complex Unit Stats
-        radiator_length: 0,
-        kitchen_cabinet_length: 0,
-
-        // YENİ EKLENEN İNCE İŞLER & VİTRİFİYE SAYAÇLARI
-        calc_steel_door: 0,
-        calc_inner_door: 0,
-        calc_kitchen_cabinet: 0,
-        calc_kitchen_counter_length: 0, // <--- BU SATIRI EKLEYİN
-        calc_bathroom_cabinet: 0,
-        calc_kitchen_sink: 0,
-        calc_toilet: 0,
-        calc_shower_cabin: 0,
-        calc_shower_set: 0,
-        // EKLENECEK:
-        calc_basin_mixer: 0,
-        calc_sink_mixer: 0,
-
-        calc_electrical_points: 0,    // Toplam Elektrik Sortisi (Priz + Aydınlatma)
-        calc_weak_current_points: 0,    // Zayıf Akım (TV, Tel, Data)
-        calc_switch_socket_count: 0,    // Anahtar ve Priz Montaj Adeti (İşçilik ve anahtar kasası için)
-        calc_sub_panel_count: 0         // Tali Pano (Daire Sigorta Kutusu)
+    // 3. Fiyatlandır ve Sonuçlandır
+    const pricingContext = {
+        defaultFloorArea: rawMetrics.defaultFloorArea, projectTotalArea: rawMetrics.projectTotalArea,
+        buildingStats, globalWallMaterial, useDetailedConcrete: globalConcreteMode === 'detailed'
     };
-
-    let defaultFloorHeight = buildingStats.normalFloorHeight;
-    let defaultFloorArea = buildingStats.normalFloorArea;
-
-    // Dynamic Height Selection based on Floor Type
-    if (unit.floorType === 'ground') {
-        defaultFloorHeight = buildingStats.groundFloorHeight;
-        defaultFloorArea = buildingStats.groundFloorArea;
-    }
-    if (unit.floorType === 'basement') {
-        defaultFloorHeight = buildingStats.basementFloorHeight;
-        defaultFloorArea = buildingStats.basementFloorArea;
-    }
-    // --- YENİ EKLENEN: AĞIRLIKLI DÖŞEME KALINLIĞI HESABI ---
-    let totalSlabArea = 0;
-    let sumSlabVolume = 0;
-    (unit.slabs || []).forEach(slab => {
-        let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
-        totalSlabArea += area;
-        sumSlabVolume += area * slab.properties.thickness;
-    });
-
-    const avgSlabThicknessCm = totalSlabArea > 0 ? (sumSlabVolume / totalSlabArea) : 15;
-    const avgSlabThicknessM = avgSlabThicknessCm / 100; // Metre cinsinden
-    // Toplam İnşaat Alanını Hesapla (Dinamik Fiyatlandırma için Gerekli)
-    const projectTotalArea = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
-        buildingStats.groundFloorArea +
-        (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
-
-    if (!isStructural) {
-        stats.calc_unit_count = 1;
-        stats.calc_steel_door = 1;
-        stats.calc_sub_panel_count = 1;
-
-        // YENİ MANTIK: Sadece Kombi seçiliyse kombi yaz, Isı Pompasıysa ısı pompası yaz
-        const heatingSystem = buildingStats.heatingSystem || 'radiator';
-        if (heatingSystem === 'radiator' || heatingSystem === 'underfloor') {
-            stats.calc_combi_count = 1;
-        } else if (heatingSystem === 'heat_pump') {
-            stats.calc_heat_pump = 1;
-        }
-
-
-    }
-    const windowDeductions: Record<string, number> = {
-        '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0
-    };
-    const wallOpeningDeductions: Record<string, number> = {
-        '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0
-    };
-    // 1. Rooms (Always calculated for Flooring & Base Area)
-    (unit.rooms || []).forEach(room => {
-        let areaM2 = 0;
-        let perimeterM = 0;
-
-        if (room.manualAreaM2 !== undefined && room.manualAreaM2 > 0) {
-            areaM2 = room.manualAreaM2;
-            perimeterM = room.manualPerimeterM || (Math.sqrt(areaM2) * 4);
-        } else if (unit.scale > 0) {
-            areaM2 = room.area_px / (unit.scale * unit.scale);
-            perimeterM = room.perimeter_px / unit.scale;
-        }
-
-        const roomWaste = calculateWasteFactor(room.points, room.manualAreaM2, room.manualPerimeterM);
-        stats.total_area += areaM2;
-        stats.total_perimeter += perimeterM;
-
-
-
-        if (!isStructural) {
-            // 2. ISITMA SİSTEMİ HESAPLARI
-            const heatingSystem = buildingStats.heatingSystem || 'radiator';
-            // Duvar malzemesine göre yalıtım/ısı kaybı çarpanı (Tuğla referans alınarak = 1.0)
-            let materialHeatFactor = 1.0;
-            if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
-            else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
-
-            // Villalarda 4 cephe, taban ve çatı maruziyeti olduğu için ısı kaybı %25 daha fazladır
-            if (buildingStats.buildingType === 'villa') {
-                materialHeatFactor *= 1.25;
-            }
-
-            // Çarpanı formüle dahil edin
-            const heatLossFactor = (30 + (buildingStats.heatZone * 5)) * materialHeatFactor;
-
-            // Net Isıtılan Alan (Balkon hariç, banyo dahil)
-            let heatedArea = 0;
-            if (room.type !== 'balcony' && room.type !== 'other' && room.type !== 'storage') {
-                heatedArea = areaM2;
-            }
-
-            if (heatingSystem === 'radiator') {
-                // --- YENİ HASSAS RADYATÖR MANTIĞI ---
-                if (heatedArea > 0) {
-                    // 1. Yükseklik ve Cam Alanı
-                    const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
-                    const windowArea = room.properties.windowArea || 0;
-
-                    // 2. Cam Çarpanı (Camın alana oranı arttıkça ısı kaybı artar)
-                    const windowRatio = heatedArea > 0 ? windowArea / heatedArea : 0;
-                    const windowFactor = 1 + (windowRatio * 0.5);
-
-                    // 3. Odanın Hacmi ve Gerçek Isı Yükü
-                    const volume = heatedArea * roomHeight;
-                    const roomHeatLoad = volume * heatLossFactor * windowFactor;
-
-                    // 4. Petek Metrajı (Ortalama 1455 kcal/h - 600/22 PKKP verimi)
-                    const radLen = roomHeatLoad / 1455;
-
-                    // Her iki sayaç da güncellenir (cost_data.ts'teki farklı kalemler için)
-                    stats.calc_radiator_len += radLen;
-                    stats.radiator_length += radLen;
-
-                    // 5. Altyapı Metrajı (Boru) - Cam alanı büyük odalarda hat daha çok uzar
-                    stats.calc_radiator_infrastructure += (heatedArea * windowFactor);
-
-                    // 6. Petek Adedi (Montaj ve Vana Maliyeti İçin)
-                    // Uzun petekler tek parça takılamaz. Her 1.6 metrede bir radyatör bölünür varsayılır.
-                    // Min 1 petek, metraj 2.4 mt çıkarsa 2 adet (örn: 1.2m + 1.2m) petek ve montaj yazılır.
-                    const count = Math.max(1, Math.ceil(radLen / 1.6));
-                    stats.calc_radiator_count += count;
-                }
-                // --- YENİ HASSAS RADYATÖR MANTIĞI BİTİŞİ ---
-            } else if (heatingSystem === 'underfloor' || heatingSystem === 'heat_pump') {
-                if (heatedArea > 0) {
-                    // 1. Odanın yüksekliğini ve pencere alanını al
-                    const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
-                    const windowArea = room.properties.windowArea || 0;
-
-                    // 2. Pencere Isı Kaybı Çarpanı (Cam Oranı)
-                    // Odanın alanına göre ne kadar cam var? (Her %10'luk cam oranı ısı yükünü %5 artırır kabulü)
-                    const windowRatio = heatedArea > 0 ? windowArea / heatedArea : 0;
-                    const windowFactor = 1 + (windowRatio * 0.5);
-
-                    // 3. Standart Kabul (Referans): 2.9m tavan, 2. Isı Bölgesi, %10 standart cam oranı
-                    const standardHeatLoad = 2.9 * 40 * 1.05; // ~121.8 kcal/m² referans yük
-
-                    // 4. Odanın Gerçek Isı Yükü (Hacim x Bölge Faktörü x Cam Faktörü)
-                    const roomHeatLoad = roomHeight * heatLossFactor * windowFactor;
-
-                    // 5. Yoğunluk Katsayısı: Tavan yüksekse, bölge soğuksa VEYA CAM ALANI FAZLAYSA boru sıklaşır
-                    const densityFactor = roomHeatLoad / standardHeatLoad;
-
-                    // 6. Efektif Metraj: Alan x Yoğunluk (Maliyeti artırır)
-                    stats.calc_underfloor_area += (heatedArea * densityFactor);
-
-                    // 7. Kollektör Hesabı (Ağız/Loop Sayısı)
-                    // Borular sıklaştıkça metraj artar, bu da loop uzunluklarını sınırlar ve ekstra ağız gerektirir
-                    const portsNeeded = Math.ceil((heatedArea * densityFactor) / 12); // Gerekli toplam loop (ağız) sayısı
-
-                    // Her daireye en az 1 kollektör kutusu atanır.
-                    // Eğer ağız sayısı 12'yi (piyasa sınırı) geçerse, 2. bir kollektör eklenir.
-                    let collectorCount = 1;
-                    if (portsNeeded > 12) {
-                        collectorCount = Math.ceil(portsNeeded / 10); // Büyük dairelerde 10'arlı gruplara böl
-                    }
-
-                    stats.calc_underfloor_collector += collectorCount;
-                }
-            } else if (heatingSystem === 'vrf') {
-                if (heatedArea > 0) {
-                    // 1. Altyapı metrajı: Isıtılacak/Soğutulacak alan üzerinden bakır borulama hesaplanır
-                    stats.calc_vrf_infrastructure += heatedArea;
-
-                    // 2. İç Ünite (Kaset/Kanallı): Her oda için minimum 1 adet. Alan 35 m²'den büyükse 2 adet say.
-                    const indoorUnits = Math.ceil(heatedArea / 35);
-                    stats.calc_vrf_indoor += indoorUnits;
-                }
-            }
-            // --- YENİ MANTIK: ODA BAZLI İNCE İŞ HESABI ---
-
-            // 1. Tavan Yüksekliğini Belirle
-            const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
-
-            // 2. Açıklıkları (Kapı/Pencere) Hesapla
-            // Kapı varsayılan 90x210 cm = ~1.89 m2
-            const doorDeduction = (room.properties.doorCount || 0) * 1.89;
-            const windowDeduction = room.properties.windowArea || 0;
-            const totalDeduction = doorDeduction + windowDeduction;
-
-            // 3. Brüt Duvar Alanı (Çevre x Yükseklik)
-            const grossWallArea = Math.max(0, (perimeterM * roomHeight) - totalDeduction);
-
-            // 4. Tavan Boyası
-            stats.calc_ceiling_paint_area += areaM2;
-
-            // 5. Duvar Malzemesine Göre Dağılım (Boya vs Seramik)
-            stats.calc_rough_plaster_area += grossWallArea;
-
-            if (room.properties.wallFinish === 'boya') {
-                // Duvar boyalı ise: Duvar Boyası metrajına sadece duvarı ekle
-                stats.calc_paint_wall_area += grossWallArea;
-
-                // Alçı Sıva metrajına: Duvar + Tavan alanını ekle
-                stats.calc_plaster_area += (grossWallArea + areaM2);
-            } else {
-                // Duvar seramik ise: Duvarlara alçı yapılmaz, ama tavana alçı yapılır.
-                stats.calc_plaster_area += areaM2;
-
-                stats.wet_area += grossWallArea;
-            }
-            // Eğer 'seramik' ise paint_wall_area'ya eklemiyoruz, sadece kara sıvaya ekledik.
-
-            // 6. Kartonpiyer
-            if (room.properties.hasCornice) {
-                stats.cornice_length += perimeterM;
-            }
-
-            // --- MEVCUT MANTIKLAR (Islak Hacim, Radyatör vb.) ---
-            if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
-                stats.wet_area += areaM2 * roomWaste; // Fireli (Sadece Seramik Kaplama İçin)
-                stats.net_wet_area = (stats.net_wet_area || 0) + areaM2; // Firesiz (Net Alan)
-            }
-
-            // Kuru hacim ve Parke hesabı (Zayiatlı)
-            if (room.properties.floorType === 'parke') {
-                stats.dry_area += areaM2 * roomWaste; //
-                stats.dry_perimeter += perimeterM * roomWaste; //
-            }
-
-            // İç Kapılar (Oda kapı sayısı kadar artır)
-            // Not: Daire girişi hariçtir, o yüzden oda kapılarını topluyoruz.
-            stats.calc_inner_door += (room.properties.doorCount || 0);
-
-            // --- MUTFAK HESABI ---
-            const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
-            if (isKitchen) {
-                stats.calc_plumbing_unit += 0.5;
-                // Dolap uzunluğu (mt) hesabı
-                const cabinetLength = Math.sqrt(areaM2 / 12) * 4;
-
-                // Dolap Yüksekliği: Tavan yüksekliğinden 10cm alt baza, 60cm tezgah arası, 20cm üst boşluk (toplam 90cm = 0.90m) düşülür
-                const effectiveCabinetHeight = Math.max(0, roomHeight - 0.90);
-
-                // M²'ye çevirme: Uzunluk * Efektif Dolap Yüksekliği
-                const cabinetArea = cabinetLength * effectiveCabinetHeight;
-
-                stats.calc_kitchen_cabinet += cabinetArea;
-                stats.kitchen_cabinet_length += cabinetArea; // Değişken adı length kalsa da artık m² tutuyor
-                stats.calc_kitchen_counter_length += cabinetLength;
-                stats.calc_kitchen_sink += 1;
-                stats.calc_sink_mixer += 1;
-            }
-
-            // --- BANYO MANTIĞI ---
-            if (room.type === 'bath') {
-                stats.calc_plumbing_unit += 0.5; // Sıhhi tesisat payı
-                stats.calc_bathroom_cabinet += 1; // Banyo dolabı
-                stats.calc_toilet += 1; // Klozet
-                stats.calc_basin_mixer += 1; // Lavabo bataryası
-                stats.calc_shower_cabin += 1; // Duşakabin
-                stats.calc_shower_set += 1; // Duş seti
-            }
-
-            // --- WC MANTIĞI ---
-            if (room.type === 'wc') {
-                stats.calc_plumbing_unit += 0.25; // Sadece tuvalet ve el lavabosu için daha az tesisat yükü
-                stats.calc_toilet += 1; // Klozet (veya Alaturka taşı - maliyet karşılığı klozet sayılır)
-                stats.calc_basin_mixer += 1; // Lavabo bataryası
-                // WC'lerde genelde duşakabin, duş seti ve büyük banyo dolabı olmaz, bu yüzden eklenmedi.
-            }
-
-            // Pencere Alanı & Denizlik
-
-            const wArea = room.properties.windowArea || 0;
-            if (wArea > 0) {
-                stats.calc_window_area += wArea;
-
-                // YENİ EKLENEN: Seçili duvar kalınlığına göre düşülecek alanı havuzda biriktir (Yapısal düşüm için)
-                const wThick = room.properties.windowWallThickness || 20; // 15 yerine 20
-                let tKey = "15";
-                if (wThick <= 10) tKey = "10";
-                else if (wThick <= 13.5) tKey = "13_5";
-                else if (wThick <= 15) tKey = "15";
-                else if (wThick <= 20) tKey = "20";
-                else tKey = "25";
-
-                windowDeductions[tKey] += wArea;
-
-                // Gerçekçi dikdörtgen kabulü (Genişlik / Yükseklik = 4 / 3 veya yatay pencere)
-
-                const windowWidth = Math.sqrt(wArea * (4 / 3));
-                const windowHeight = Math.sqrt(wArea * (3 / 4));
-
-                // Denizlik (sadece alt kenar) + 5 cm taşma/montaj payı
-                stats.calc_sill_length += (windowWidth + 0.05);
-
-                // Söve (Pencerenin 4 kenarı, dikdörtgen çevresi)
-                stats.calc_window_perimeter += 2 * (windowWidth + windowHeight);
-            }
-
-            const dCount = room.properties.doorCount || 0;
-            const dArea = dCount * 1.89; // Standart iç kapı alanı kabulü (0.90 x 2.10)
-            if (dArea > 0) {
-                const dThick = room.properties.doorWallThickness || 13.5; // 15 yerine 13.5
-                let tKey = "15";
-                if (dThick <= 10) tKey = "10";
-                else if (dThick <= 13.5) tKey = "13_5";
-                else if (dThick <= 15) tKey = "15";
-                else if (dThick <= 20) tKey = "20";
-                else tKey = "25";
-
-                wallOpeningDeductions[tKey] += dArea;
-            }
-
-            // Balkon Korkuluğu
-            if (room.type === 'balcony') {
-                stats.calc_balcony_railing += (perimeterM / 2);
-            }
-
-
-        }
-
-        // --- EKLENECEK KOD BAŞLANGICI: ELEKTRİK TESİSATI HESABI ---
-        let roomStrongPoints = 0; // Kuvvetli Akım (Aydınlatma + Priz)
-        let roomWeakPoints = 0;   // Zayıf Akım (TV, Data, Telefon)
-
-        switch (room.type) {
-            case 'living':
-                roomStrongPoints = 6; // 1 Aydınlatma + 5 Priz
-                roomWeakPoints = 3;   // TV, İnternet(Data), Telefon
-                break;
-            case 'bedroom':
-                roomStrongPoints = 4; // 1 Aydınlatma + 3 Priz
-                roomWeakPoints = 1;   // TV veya Data
-                break;
-            case 'kitchen':
-                roomStrongPoints = 8; // Mutfak çok priz ister (Fırın, Bulaşık Mak. vb.)
-                roomWeakPoints = 1;
-                break;
-            case 'bath':
-                roomStrongPoints = 3; // 1 Aydınlatma + 1 Çamaşır Mak. + 1 Ayna Yanı Priz
-                roomWeakPoints = 0;
-                break;
-            case 'wc':
-                roomStrongPoints = 1; // Sadece 1 Aydınlatma (veya 1 ekstra ayna prizi kabulüyle 2 yapılabilir, biz 1 kabul ediyoruz)
-                roomWeakPoints = 0;
-                break;
-            case 'hallway':
-                roomStrongPoints = 2; // 1 Aydınlatma + 1 Priz (Elektrik Süpürgesi vb.)
-                roomWeakPoints = 0;
-                break;
-            case 'dressing':
-                roomStrongPoints = 3; // 1 Aydınlatma + 2 Priz (Ütü vb.)
-                roomWeakPoints = 0;
-                break;
-            case 'balcony':
-                roomStrongPoints = 2; // 1 Aydınlatma + 1 Priz
-                roomWeakPoints = 0;
-                break;
-            case 'storage':
-            case 'other':
-                roomStrongPoints = 1; // Sadece Aydınlatma
-                roomWeakPoints = 0;
-                break;
-            default:
-                roomStrongPoints = 4;
-                roomWeakPoints = 1;
-                break;
-        }
-
-        // Hesaplanmış değerleri genel sayaçlara ekle
-        stats.calc_electrical_points += roomStrongPoints;
-        stats.calc_weak_current_points += roomWeakPoints;
-        stats.calc_switch_socket_count += (roomStrongPoints + roomWeakPoints);
-        // --- EKLENECEK KOD BİTİŞİ ---
-
-
-    });
-
-    if (!isStructural) {
-        // İç kapılar iki tarafı da (iç/dış) keseceği için kapı başı 1.80 mt (0.90 * 2) düşüyoruz.
-        // Çelik kapı ise dairenin sadece içinden 0.90 mt keser.
-        // (Banyo gibi ıslak hacimlere açılan kapılarda tek taraf ıslaktır ama fire/zayiat payı olarak geneli 2 yüzey kabul etmek güvenlidir)
-        const totalDoorBaseboardDeduction = (stats.calc_inner_door * 1.80) + (stats.calc_steel_door * 0.90);
-
-        // Toplam kuru alan çevresinden (dry_perimeter) kapı boşluklarını tek seferde düş
-        stats.dry_perimeter = Math.max(0, stats.dry_perimeter - totalDoorBaseboardDeduction);
-    }
-
-    // --- STRUCTURAL WALLS ---
-    const useDetailedWalls = globalWallMode === 'detailed';
-    const useDetailedConcrete = globalConcreteMode === 'detailed';
-
-    if (useDetailedWalls) {
-        // DETAILED WALLS CALCULATION
-        if (unit.walls && unit.walls.length > 0) {
-            unit.walls.forEach(wall => {
-                let lengthM = 0;
-                if (wall.manualLengthM !== undefined && wall.manualLengthM > 0) {
-                    lengthM = wall.manualLengthM;
-                } else if (unit.scale > 0) {
-                    lengthM = wall.length_px / unit.scale;
-                }
-
-                // Determine Wall Height
-                let wallHeight = 0;
-                if (wall.properties.height && wall.properties.height > 0) {
-                    wallHeight = wall.properties.height;
-                } else {
-                    wallHeight = defaultFloorHeight;
-                    if (wall.properties.isUnderBeam && wall.properties.beamHeight > 0) {
-                        wallHeight -= (wall.properties.beamHeight / 100);
-                    } else {
-                        wallHeight -= avgSlabThicknessM;
-                    }
-                }
-
-                const wallArea = lengthM * wallHeight;
-                const thick = wall.properties.thickness;
-
-                // Map thickness to generic key
-                let tKey = "";
-                if (thick <= 10) tKey = "wall_10_area";
-                else if (thick <= 13.5) tKey = "wall_13_5_area";
-                else if (thick <= 15) tKey = "wall_15_area";
-                else if (thick <= 20) tKey = "wall_20_area";
-                else tKey = "wall_25_area";
-
-                if (stats[tKey] !== undefined) {
-                    stats[tKey] += wallArea;
-                }
-                const mat = globalWallMaterial;
-
-                if (mat === 'gazbeton') {
-                    // GAZBETON: Sadece Yapıştırıcı kullanır.
-                    // Sarfiyat: Ortalama 3-4 kg/m² (13.5 - 15cm için)
-                    // Formül: Alan * Kalınlık(cm) * 0.25 (katsayı)
-                    // Örn: 100m² * 15cm * 0.25 = 375 kg
-                    const adhesiveCoeff = 0.25 * thick;
-                    stats.adhesive_weight += wallArea * adhesiveCoeff;
-                } else {
-                    // TUĞLA ve BİMS: Harç kullanır.
-                    // Sarfiyat: Ortalama 0.02 - 0.03 m³/m²
-                    // Formül: Alan * Kalınlık(cm) * 0.002 (katsayı)
-                    // Örn: 100m² * 13.5cm * 0.002 = 2.7 m³ harç
-                    const mortarCoeff = 0.002 * thick;
-                    stats.mortar_volume += wallArea * mortarCoeff;
-                }
-
-
-            });
-        }
-
-        // Paint Area Strategy for Detailed Mode
-        if (unit.rooms.length > 0) {
-            let totalRoomWallArea = 0;
-            unit.rooms.forEach(r => {
-                const h = r.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
-                const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
-
-                // --- DEĞİŞİKLİK BAŞLANGICI ---
-                // Balkon Mantığı: Balkonun çevresinin tamamı duvar değildir.
-                // Genelde 2 duvar dolu, 2 taraf açıktır (L tipi). 
-                // Bu yüzden balkonlarda çevre uzunluğunun sadece %50'sini duvar alanı olarak alıyoruz.
-                let wallFactor = 1.0;
-
-                if (r.type === 'balcony') {
-                    wallFactor = 0.5; // 4 duvar yerine 2 duvar kabulü
-                }
-
-                // Eğer oda tipi 'wet' (banyo) ise ve duvar seramikse, yine de net duvar alanı hesaplanır
-                // ancak maliyet kalemlerinde "Boya" yerine "Seramik" kullanıldığı için sorun olmaz.
-
-                totalRoomWallArea += (p * h * wallFactor);
-                // --- DEĞİŞİKLİK BİTİŞİ ---
-            });
-
-            // Deduct window/door rough estimate (Kapı pencere boşlukları düşülüyor)
-            stats.net_wall_area = totalRoomWallArea * 0.85;
-        } else {
-            // Fallback to structural walls * 2 sides
-            let totalWallArea = 0;
-            Object.keys(stats).forEach(k => {
-                if (k.startsWith('wall_') && k.endsWith('_area')) totalWallArea += stats[k];
-            });
-            stats.net_wall_area = totalWallArea * 2;
-        }
-
-    } else {
-        // GLOBAL AUTO WALLS
-
-        const refArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
-
-        // YENİ: Kat tipine göre BuildingStats içindeki çevre uzunluğunu al
-        let floorPerimeter = Math.sqrt(refArea) * 4; // Fallback
-        if (unit.floorType === 'normal' && buildingStats.normalFloorPerimeter) {
-            floorPerimeter = buildingStats.normalFloorPerimeter;
-        } else if (unit.floorType === 'ground' && buildingStats.groundFloorPerimeter) {
-            floorPerimeter = buildingStats.groundFloorPerimeter;
-        } else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) {
-            floorPerimeter = buildingStats.basementFloorPerimeter;
-        }
-
-        // Ampirik Katsayı: Konut projelerinde 1 m² kat alanına ortalama 2.2 m² duvar yüzeyi (tek yüz) düşer.
-        // Kat yüksekliğine duyarlı olması için varsayılan 3 metreyi referans alarak bir çarpan ekliyoruz:
-        const heightFactor = Math.max(1, (defaultFloorHeight / 3.0));
-        const estimatedWallSurface = refArea * 2.2 * heightFactor;
-
-        // Dış Duvar = Panodan gelen Kat Çevresi * Kat Yüksekliği
-        const outerWallSurface = floorPerimeter * defaultFloorHeight;
-
-        // İç Duvar = Kalan Metraj
-        const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
-
-        if (stats["wall_20_area"] !== undefined) {
-            stats["wall_20_area"] += outerWallSurface;
-        } else {
-            stats["wall_20_area"] = outerWallSurface;
-        }
-
-        if (stats["wall_13_5_area"] !== undefined) {
-            stats["wall_13_5_area"] += innerWallSurface;
-        } else {
-            stats["wall_13_5_area"] = innerWallSurface;
-        }
-
-        stats.net_wall_area = estimatedWallSurface * 2;
-
-        if (globalWallMaterial === 'gazbeton') {
-            // Dış duvar 20cm, iç duvar 13.5cm
-            stats.adhesive_weight += (outerWallSurface * 20 * 0.25) + (innerWallSurface * 13.5 * 0.25);
-        } else {
-            stats.mortar_volume += (outerWallSurface * 20 * 0.002) + (innerWallSurface * 13.5 * 0.002);
-        }
-    }
-
-    Object.keys(windowDeductions).forEach(thickStr => {
-        const deductionArea = windowDeductions[thickStr];
-        if (deductionArea > 0) {
-            const tKey = `wall_${thickStr}_area`;
-            const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
-
-            // Eksi değerlere izin veriyoruz ki statik ve mimari planlar birleşirken net metraj doğru çıksın
-            if (stats[tKey] === undefined) stats[tKey] = 0;
-            stats[tKey] -= deductionArea;
-
-            // Seçili olan duvar kalınlığının çarpanına göre sarf malzemeden eksilt
-            if (globalWallMaterial === 'gazbeton') {
-                const adhesiveCoeff = 0.25 * thickVal;
-                stats.adhesive_weight -= (deductionArea * adhesiveCoeff);
-            } else {
-                const mortarCoeff = 0.002 * thickVal;
-                stats.mortar_volume -= (deductionArea * mortarCoeff);
-            }
-        }
-    });
-
-    Object.keys(wallOpeningDeductions).forEach(thickStr => {
-        const deductionArea = wallOpeningDeductions[thickStr];
-        if (deductionArea > 0) {
-            const tKey = `wall_${thickStr}_area`;
-            const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
-
-            if (stats[tKey] === undefined) stats[tKey] = 0;
-            stats[tKey] -= deductionArea;
-
-            if (globalWallMaterial === 'gazbeton') {
-                const adhesiveCoeff = 0.25 * thickVal;
-                stats.adhesive_weight -= (deductionArea * adhesiveCoeff);
-            } else {
-                const mortarCoeff = 0.002 * thickVal;
-                stats.mortar_volume -= (deductionArea * mortarCoeff);
-            }
-        }
-    });
-
-    // --- STRUCTURAL CONCRETE ---
-    const hasConcreteElements = (unit.columns && unit.columns.length > 0) ||
-        (unit.beams && unit.beams.length > 0) ||
-        (unit.slabs && unit.slabs.length > 0);
-
-
-    if (useDetailedConcrete) {
-        // 1. Columns
-        (unit.columns || []).forEach(col => {
-            let areaM2 = 0;
-            let perimeterM = 0;
-            if (col.manualAreaM2 !== undefined && col.manualAreaM2 > 0) {
-                areaM2 = col.manualAreaM2;
-                perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
-            } else if (unit.scale > 0) {
-                areaM2 = col.area_px / (unit.scale * unit.scale);
-                perimeterM = col.perimeter_px / unit.scale;
-            }
-
-            const height = (col.properties.height && col.properties.height > 0)
-                ? col.properties.height
-                : defaultFloorHeight;
-
-            stats.column_concrete_volume += areaM2 * height;
-            stats.column_formwork_area += perimeterM * height;
-        });
-
-        // 2. Beams
-        // 2. Beams
-        (unit.beams || []).forEach(beam => {
-            let lengthM = 0;
-            if (beam.manualLengthM !== undefined && beam.manualLengthM > 0) {
-                lengthM = beam.manualLengthM;
-            } else if (unit.scale > 0) {
-                lengthM = beam.length_px / unit.scale;
-            }
-            const widthM = beam.properties.width / 100;
-            const heightM = beam.properties.height / 100;
-            const slabThickM = beam.properties.slabThickness / 100;
-
-            // Beton hacminde değişiklik yok (Kiriş hacmi kesişim düşülmeden brüt hesaplanır veya kolonlardan düşülür)
-            stats.beam_concrete_volume += widthM * heightM * lengthM;
-
-            // Kiriş Yan Kalıp Yüksekliği (Döşeme kalınlığı düşülerek)
-            const sideFormHeight = Math.max(0, heightM - slabThickM);
-
-            // YENİ MANTIK: 
-            // 1. Kirişin yan yüzeyleri (iki taraf) boydan boya kalıplanır.
-            const sideFormworkArea = (2 * sideFormHeight) * lengthM;
-
-            // 2. Kirişin taban alanı hesaplanırken kolon/perde birleşim noktaları için %15 azaltma (fire) uygulanır.
-            const intersectionFactor = 0.85; // %15 düşüldü (Katsayıyı 0.90 yaparak %10 da yapabilirsiniz)
-            const bottomFormworkArea = (widthM * lengthM) * intersectionFactor;
-
-            // Toplam kalıp alanı
-            stats.beam_formwork_area += (sideFormworkArea + bottomFormworkArea);
-        });
-
-        // 3. Slabs
-        (unit.slabs || []).forEach(slab => {
-            let area = 0;
-            if (slab.manualAreaM2 > 0) {
-                area = slab.manualAreaM2;
-            } else if (slab.area_px && unit.scale > 0) {
-                area = slab.area_px / (unit.scale * unit.scale);
-            }
-
-            const thick = slab.properties.thickness / 100;
-            stats.slab_concrete_volume += area * thick;
-            stats.slab_formwork_area += area; // Bottom formwork
-        });
-
-    } else {
-        // GLOBAL AUTO CONCRETE
-        const refArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
-        const heightRatio = defaultFloorHeight / 3.0;
-
-        // Empirik Katsayılar (m2 inşaat alanı başına)
-        const concreteEmpiricalFactor = 0.38; // 0.38 m3 beton / m2
-        const totalConcrete = refArea * concreteEmpiricalFactor * heightRatio;
-
-        stats.slab_concrete_volume = totalConcrete * 0.65;
-        stats.column_concrete_volume = totalConcrete * 0.20;
-        stats.beam_concrete_volume = totalConcrete * 0.15;
-
-        const formworkEmpiricalFactor = 2.8; // 2.8 m2 kalıp / m2
-        const totalForm = refArea * formworkEmpiricalFactor * heightRatio;
-
-        stats.slab_formwork_area = totalForm * 0.5;
-        stats.column_formwork_area = totalForm * 0.25;
-        stats.beam_formwork_area = totalForm * 0.25;
-    }
-
-    // YENİ EKLENEN: Hesaplanan hacimleri statslara aktar ki cost_data eşleşebilsin
-    stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
-    stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-    stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
-    stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-
-    // --- GÜNCELLENEN KISIM: DEMİR METRAJI AYRIŞTIRMASI ---
-    if (useDetailedConcrete) {
-        // getIronCoefficient() fonksiyonundan gelen (ortalama 0.125 olan) değeri
-        // deprem/açıklık dinamik çarpanı olarak kullanıyoruz: (ironCoeff / 0.125)
-        const dynamicMultiplier = ironCoeff / 0.125;
-
-        // Referans Donatı Yoğunlukları (Ton/m³)
-        const densityColumn = 0.135; // Kolon/Perde: ~135 kg/m³
-        const densityBeam = 0.105; // Kiriş: ~105 kg/m³
-        const densitySlab = 0.085; // Döşeme: ~85 kg/m³
-
-        const ironFromColumns = stats.column_concrete_volume * densityColumn * dynamicMultiplier;
-        const ironFromBeams = stats.beam_concrete_volume * densityBeam * dynamicMultiplier;
-        const ironFromSlabs = stats.slab_concrete_volume * densitySlab * dynamicMultiplier;
-
-        stats.calc_iron_unit = ironFromColumns + ironFromBeams + ironFromSlabs;
-    } else {
-        // Otomatik Mod: Toplam beton üzerinden ortalama katsayı ile devam
-        stats.calc_iron_unit = stats.calc_concrete_unit * ironCoeff;
-    }
-    // --- ÇİFTE HESAPLAMAYI ÖNLEME VE OTOMATİK İNCE İŞLER (FALLBACK) ---
-    if (isStructural) {
-        // STATİK PLAN: İnce işler hesaplamadan dışlanır
-        stats.cornice_length = 0;
-        stats.wet_area = 0;
-        stats.dry_area = 0;
-        stats.radiator_length = 0;
-        stats.kitchen_cabinet_length = 0;
-        stats.calc_rough_plaster_area = 0;
-        stats.calc_paint_wall_area = 0;
-        stats.calc_ceiling_paint_area = 0;
-        stats.calc_plaster_area = 0;
-    } else {
-        // MİMARİ PLAN: Kaba işler (Duvar Bloğu, Beton, Kalıp vb.) hesaplamadan dışlanır
-        stats.wall_10_area = Math.min(0, stats.wall_10_area || 0);
-        stats.wall_13_5_area = Math.min(0, stats.wall_13_5_area || 0);
-        stats.wall_15_area = Math.min(0, stats.wall_15_area || 0);
-        stats.wall_20_area = Math.min(0, stats.wall_20_area || 0);
-        stats.wall_25_area = Math.min(0, stats.wall_25_area || 0);
-        stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0);
-        stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
-
-        stats.calc_concrete_unit = 0;
-        stats.calc_formwork_unit = 0;
-        stats.calc_iron_unit = 0;
-
-        // EĞER KULLANICI ODA ÇİZMEDİYSE/EKLEMEDİYSE SIVA SIFIR KALMASIN (OTOMATİK METRAJ)
-        if (stats.calc_rough_plaster_area === 0) {
-
-            // Bunun yerine ünitenin o kattaki tahmini alanını buluyoruz:
-            let fallbackArea = defaultFloorArea;
-            if (!isStructural && unit.count > 0) {
-                let floorCount = 1;
-                if (unit.floorType === 'normal') floorCount = Math.max(1, buildingStats.normalFloorCount);
-                if (unit.floorType === 'ground') floorCount = 1;
-                if (unit.floorType === 'basement') floorCount = Math.max(1, buildingStats.basementFloorCount);
-
-                // Bu daire tipinden 1 kata ortalama kaç adet düşüyor?
-                const unitsPerFloor = Math.max(1, unit.count / floorCount);
-
-                // Tahmini Daire Alanı = Kat Alanı / Katta Bulunan Daire Sayısı
-                fallbackArea = defaultFloorArea / unitsPerFloor;
-            }
-
-            const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
-
-            // Ampirik katsayılar: 1 m² kat alanına ortalama 2.8 m² iç sıva yüzeyi, 2.5 m² boya yüzeyi düşer
-            stats.calc_rough_plaster_area = fArea * 2.8;
-            stats.calc_paint_wall_area = fArea * 2.5;
-            stats.calc_ceiling_paint_area = fArea;
-            stats.calc_plaster_area = fArea * 3.5; // Duvar + Tavan Alçısı
-            stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
-
-            if (stats.wet_area === 0) {
-                stats.wet_area = fArea * 0.15 * 1.05; // %15 banyo/mutfak varsayımı + %5 fire
-                stats.net_wet_area = fArea * 0.15; // Net Alan
-            }
-            if (stats.dry_area === 0) {
-                stats.dry_area = fArea * 0.85 * 1.05; // %85 parke/kuru alan varsayımı + %5 fire
-            }
-        }
-    }
-    // ------------------------------------------------------------------
-    currentCosts.forEach(cat => {
-        cat.items.forEach(item => {
-            if (item.auto_source !== 'manual') {
-                let qty = 0;
-                // MAPPING GÜNCELLEMESİ: Yeni hesaplanan değerleri eşle
-                if (item.auto_source === 'calc_window_area') qty = stats.calc_window_area;
-                else if (item.auto_source === 'calc_sill_length') qty = stats.calc_sill_length;
-                else if (item.auto_source === 'calc_window_perimeter') qty = stats.calc_window_perimeter;
-                else if (item.auto_source === 'calc_balcony_railing') qty = stats.calc_balcony_railing;
-                else if (item.auto_source === 'calc_radiator') qty = stats.radiator_length;
-                else if (item.auto_source === 'calc_kitchen_cabinet') qty = stats.kitchen_cabinet_length;
-                else {
-                    const isConcrete = item.name === 'Betonarme Betonu (C30)';
-                    const isIron = item.name === 'İnşaat Demiri';
-                    const isFormwork = item.name === 'Kalıp İşçiliği & Malzeme';
-
-                    if (isConcrete || isIron || isFormwork) {
-                        if (useDetailedConcrete) {
-                            const totalVol = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
-                            const totalForm = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-
-                            if (isConcrete) qty = totalVol;
-                            else if (isFormwork) qty = totalForm;
-                           else if (isIron) qty = stats.calc_iron_unit;
-                        } else {
-                            if (isConcrete) qty = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
-                            else if (isFormwork) qty = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
-                            else if (isIron) qty = stats.calc_iron_unit;
-                        }
-                    }
-                    else {
-                        let sourceKey = item.auto_source;
-                        if (sourceKey.startsWith('calc_') && stats[sourceKey] === undefined) {
-                            sourceKey = sourceKey.replace('calc_', '') as any;
-                        }
-
-                        const rawVal = stats[sourceKey] || 0;
-                        qty = parseFloat((rawVal * item.multiplier).toFixed(2));
-                    }
-                }
-                const unitArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
-                const dynamicPrice = calculateDynamicUnitPrice(
-                    item,
-                    unitArea,
-                    projectTotalArea,
-                    buildingStats.province,
-                    buildingStats.isUrbanTransformation,
-                    buildingStats,
-                    currentCosts,
-                    globalWallMaterial
-                );
-
-                quantities[item.name] = qty;
-                totalCost += qty * dynamicPrice;
-            }
-        });
-    });
+    
+    const { quantities, totalCost } = PricingService.calculateCosts(stats, currentCosts, pricingContext);
 
     return { quantities, totalCost, stats };
 };
-
+// ============================================================================
 const needsTowerCrane = (totalArea: number, groundArea: number, floors: number) => {
     return totalArea > 5000 || (groundArea > 650 && floors > 6);
 };
