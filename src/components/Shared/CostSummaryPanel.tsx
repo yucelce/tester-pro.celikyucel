@@ -240,7 +240,7 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                             ];
                             if (excludedItems.includes(item.name)) return false;
                             if (quantities[item.name] > 0) return true;
-                            if (['Betonarme Betonu (C30)', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name)) return true;
+                            if (['Betonarme Betonu', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name)) return true;
                             return false;
                         }
                         

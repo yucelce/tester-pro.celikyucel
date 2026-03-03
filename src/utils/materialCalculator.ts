@@ -41,7 +41,7 @@ export const calculateRawMaterials = (
         cement: getPrice("Çimento (kg)", 3),
         sand: getPrice("Kum (m3)", 500),
         iron: getPrice("İnşaat Demiri", 30600) / 1000,
-        concrete: getPrice("Betonarme Betonu (C30)", 3890),
+        concrete: getPrice("Betonarme Betonu", 3890),
         adhesive: getPrice("Gazbeton Yapıştırıcısı", 4),
         ceramicTile: getPrice("Seramik Kaplama", 1100),
         ceramicAdhesive: getPrice("Seramik Yapıştırıcısı", 10),
@@ -87,7 +87,7 @@ export const calculateRawMaterials = (
     addMaterial('demir_8_12', 'İnce Çaplı Demir (Ø8 - Ø12)', 'Ton', ironTon * 0.30, 'structure', prices.iron * 1000);
     addMaterial('demir_14_22', 'Kalın Çaplı Demir (Ø14 - Ø22)', 'Ton', ironTon * 0.70, 'structure', prices.iron * 1000);
 
-    const concrete = quantities["Betonarme Betonu (C30)"] || 0;
+    const concrete = quantities["Betonarme Betonu"] || 0;
     addMaterial('hazir_beton', 'Hazır Beton (C30)', 'm³', concrete, 'structure', prices.concrete);
 
     const mortarVolume = stats.mortar_volume || 0;

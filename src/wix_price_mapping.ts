@@ -9,6 +9,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Mekanik Proje": "mekanikprojeisc",
   "Elektrik Projesi": "elektrikprojeisc",
 
+
   "Zemin Sondaj Birim Fiyatı": "zeminsondajmtpaket", // Wix'teki gerçek ID ile değiştirin
   "SPT Deneyi Birim Fiyatı": "sptdeneyiadetpaket",
   "Presiyometre Deneyi Birim Fiyatı": "presiyometredeneyiadetpaket",
@@ -68,7 +69,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
 
 
   // --- 3. KABA YAPI ---
-  "Betonarme Betonu (C30)": "betonmal",
+  "Betonarme Betonu": "betonmal",
   "İnşaat Demiri": "demirmal",
   "Kalıp İşçiliği & Malzeme": "kalipdemirbetonisc",
   "Temel Su Yalıtımı (Bohçalama)": "membranmalisc",

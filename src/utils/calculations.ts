@@ -442,7 +442,7 @@ export class PricingService {
                     else if (item.auto_source === 'calc_radiator') qty = stats.radiator_length;
                     else if (item.auto_source === 'calc_kitchen_cabinet') qty = stats.kitchen_cabinet_length;
                     else {
-                        const isConcrete = item.name === 'Betonarme Betonu (C30)';
+                        const isConcrete = item.name === 'Betonarme Betonu';
                         const isIron = item.name === 'İnşaat Demiri';
                         const isFormwork = item.name === 'Kalıp İşçiliği & Malzeme';
 
@@ -1872,7 +1872,7 @@ export const calculateDynamicUnitPrice = (
     if (item.name === "Grobeton") {
         if (currentCosts) {
             const kabaInsaatCat = currentCosts.find(c => c.id === 'kaba_insaat');
-            const c30Item = kabaInsaatCat?.items.find(i => i.name === "Betonarme Betonu (C30)");
+            const c30Item = kabaInsaatCat?.items.find(i => i.name === "Betonarme Betonu");
             if (c30Item) {
                 const c30Price = c30Item.manualPrice !== undefined ? c30Item.manualPrice : c30Item.unit_price;
                 return Math.round(c30Price * 0.85); // Grobeton fiyatı C30'un %85'i olarak hesaplanıyor
