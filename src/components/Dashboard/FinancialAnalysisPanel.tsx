@@ -410,7 +410,8 @@ export const FinancialAnalysisPanel: React.FC = () => {
         const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
         // totals nesnesi cashflow hook'undan gelir, eğer mevcut değilse tahmini enflasyonlu maliyet hesaplanabilir.
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
-        const avgSalePrice = totalUnitsCount > 0 ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalUnitsCount / 1000) * 1000 : 0; const targetDate = formatMonth(addMonths(constructionEndDate, 3));
+        const avgSalePrice = totalUnitsCount > 0 ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalUnitsCount / 1000) * 1000 : 0; 
+        const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
         units.forEach(u => {
             for (let i = 0; i < u.count; i++) {

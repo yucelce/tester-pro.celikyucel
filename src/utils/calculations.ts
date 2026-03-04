@@ -1332,7 +1332,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // 1. Toplam pencere alanını ünitelerden (dairelerden) çekiyoruz
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
 
-        const deductibleWindowArea = totalWindowArea
+        const deductibleWindowArea = totalWindowArea;
 
         if (buildingStats.buildingType === 'villa') {
             const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
@@ -1753,8 +1753,8 @@ export const calculateDynamicUnitPrice = (
             const laborItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
                 globalWallMaterial === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
-            const baseMatPrice = getGlobalPrice(currentCosts, matItemName)
-            const baseLaborPrice = getGlobalPrice(currentCosts, laborItemName) 
+            const baseMatPrice = getGlobalPrice(currentCosts, matItemName);
+            const baseLaborPrice = getGlobalPrice(currentCosts, laborItemName) ;
 
             if (item.name.startsWith("Duvar Malzemesi")) {
                 // Kalınlığı (cm) metreye çevirerek m3 fiyatı ile çarpıp m2 fiyatı buluyoruz.
