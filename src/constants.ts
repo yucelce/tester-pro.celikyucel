@@ -328,6 +328,48 @@ export const TURKEY_HEAT_MAP: Record<string, { zone: number, districts: Record<s
 };
 
 
+export const DEFAULT_PRICES: Record<string, number> = {
+    // --- TEMEL KABA VE İNCE İNŞAAT ---
+    "Hafriyat (Kazı ve Döküm)": 450,
+    "Betonarme Betonu": 3890,
+    "İnşaat Demiri": 30000,
+    "Kalıp İşçiliği & Malzeme": 1347,
+    "Temel Su Yalıtımı (Bohçalama)": 450,
+    "Seramik Kaplama": 1100,
+    "Seramik Yapıştırıcısı": 10,
+    "Seramik Derz Dolgusu": 25,
+    "Gazbeton Blok (m3)": 2650,
+    "Tuğla Blok (m3)": 2650,
+    "Bims Blok (m3)": 2650,
+    "Gazbeton İşçiliği (m2)": 250,
+    "Tuğla İşçiliği (m2)": 250,
+    "Bims İşçiliği (m2)": 250,
+
+    // --- ZEMİN ETÜDÜ & HARİTA ---
+    "Zemin Sondaj Birim Fiyatı": 850,
+    "SPT Deneyi Birim Fiyatı": 450,
+    "Presiyometre Deneyi Birim Fiyatı": 900,
+    "Zemin Laboratuvar Paketi": 3500,
+
+    // --- RESMİ İŞLEMLER, HARÇLAR & ABONELİKLER ---
+    "Yapı Sınıfı 3A": 19800,
+    "Enerji Kimlik Belgesi (EKB)": 1500,
+    "Elektrik Güvence Birim Bedeli": 746,
+    "Su Abonelik Paket Bedeli": 6500,
+    "Tapu Döner Sermaye": 2500,
+    "Noter Yazı Ücreti": 4500,
+    "Standart Sözleşme Harcı": 8000,
+
+    // --- TESİSAT, DOĞALGAZ & YANGIN ---
+    "Doğalgaz Kolon Hattı (mt) Birim": 2200,
+    "Doğalgaz Daire Başı Set Birim": 3800,
+    "Yangın Kapısı (Adet)": 18000,
+
+    // --- ŞANTİYE GENEL GİDERLERİ ---
+    "Şantiye Personel Giderleri (Bekçi vb.)": 35000,
+    "Şantiye Şefi (Aylık)": 90000 // Yıkım şefi vs için
+};
+
 // src/constants.ts dosyasının en altına ekleyin:
 export const PROVINCE_EARTHQUAKE_ZONES: Record<string, number> = {
     "Adana": 2, "Adıyaman": 1, "Afyonkarahisar": 1, "Ağrı": 2, "Aksaray": 4, "Amasya": 1,

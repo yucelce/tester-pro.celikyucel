@@ -1,6 +1,7 @@
 import { UnitType, BuildingStats, WallMaterial, RoomType } from '../types';
 import { CostCategory, CostItem } from '../cost_data';
 import { calculateWasteFactor } from './geometry';
+import { DEFAULT_PRICES} from '../constants';
 
 export const getIronCoefficient = (
     zone?: number,
@@ -752,8 +753,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return resmiIdariCat?.items.find(i => i.name === name)?.unit_price || fallback;
         };
         const subPrices = {
-            sondaj_mt: getPrice("Zemin Sondaj Birim Fiyatı", 850),
-            spt_adet: getPrice("SPT Deneyi Birim Fiyatı", 450),
+            sondaj_mt: getPrice("Zemin Sondaj Birim Fiyatı"),
+            spt_adet: getPrice("SPT Deneyi Birim Fiyatı"),
             presiyometre_adet: getPrice("Presiyometre Deneyi Birim Fiyatı", 900),
             laboratuvar_paket: getPrice("Zemin Laboratuvar Paketi", 3500)
         };
@@ -1926,6 +1927,56 @@ export const calculateDynamicUnitPrice = (
             const currentIncrease = 1 + (maxIncreaseFactor * ratio);
 
             return basePrice * currentIncrease;
+        }
+    }
+
+    if (item.name === "Özel Havuz (Hafriyat, İzolasyon ve Beton)" && buildingStats && currentCosts) {
+        const poolArea = buildingStats.poolArea || 0;
+        
+        if (poolArea > 0) {
+            const getPrice = (catId: string, itemName: string, fallback: number) => {
+                const cat = currentCosts.find(c => c.id === catId);
+                const foundItem = cat?.items.find(i => i.name === itemName);
+                return foundItem ? (foundItem.manualPrice !== undefined ? foundItem.manualPrice : foundItem.unit_price) : fallback;
+            };
+
+            // Sadece fiyatlar constants dosyasından (merkezden) çekiliyor
+            const p_excavation = getPrice("santiye_hafriyat", "Hafriyat (Kazı ve Döküm)", DEFAULT_PRICES.EXCAVATION);
+            const p_concrete = getPrice("kaba_insaat", "Betonarme Betonu", DEFAULT_PRICES.CONCRETE);
+            const p_iron = getPrice("kaba_insaat", "İnşaat Demiri", DEFAULT_PRICES.IRON);
+            const p_formwork = getPrice("kaba_insaat", "Kalıp İşçiliği & Malzeme", DEFAULT_PRICES.FORMWORK);
+            const p_insulation = getPrice("kaba_insaat", "Temel Su Yalıtımı (Bohçalama)", DEFAULT_PRICES.INSULATION_BASE);
+            const p_ceramic = getPrice("zemin_kaplama", "Seramik Kaplama", DEFAULT_PRICES.CERAMIC);
+            const p_ceramic_adhesive = getPrice("zemin_kaplama", "Seramik Yapıştırıcısı", DEFAULT_PRICES.CERAMIC_ADHESIVE);
+            const p_joint_filler = getPrice("zemin_kaplama", "Seramik Derz Dolgusu", DEFAULT_PRICES.JOINT_FILLER);
+
+            // Ölçüler ve çarpanlar eskisi gibi hesaplama içinde kalıyor
+            const depth = 1.5;
+            const perimeter = 4 * Math.sqrt(poolArea);
+            const wallArea = perimeter * depth;
+            const innerSurfaceArea = poolArea + wallArea;
+            
+            // Hassas Metrajlar
+            const excavationVol = (poolArea + perimeter * 0.5) * (depth + 0.3);
+            const concreteVol = (poolArea * 0.20) + (wallArea * 0.20);
+            const ironTon = concreteVol * 0.120;
+            const formworkArea = wallArea * 2;
+            
+            // Tutar Hesaplamaları
+            const costExcavation = excavationVol * p_excavation;
+            const costConcrete = concreteVol * p_concrete;
+            const costIron = ironTon * p_iron;
+            const costFormwork = formworkArea * p_formwork;
+            const costInsulation = innerSurfaceArea * p_insulation * 1.5; 
+            const costCeramic = innerSurfaceArea * p_ceramic;
+            const costAdhesive = innerSurfaceArea * 5 * p_ceramic_adhesive; 
+            const costFiller = innerSurfaceArea * 0.5 * p_joint_filler; 
+            
+            const totalPoolMaterialCost = costExcavation + costConcrete + costIron + costFormwork + costInsulation + costCeramic + costAdhesive + costFiller;
+            
+            const calculatedUnitPrice = totalPoolMaterialCost / poolArea;
+            
+            return Math.round(calculatedUnitPrice * 1.10);
         }
     }
 
