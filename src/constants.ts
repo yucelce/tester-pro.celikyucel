@@ -327,59 +327,59 @@ export const TURKEY_HEAT_MAP: Record<string, { zone: number, districts: Record<s
     }
 };
 
-
 export const DEFAULT_PRICES: Record<string, number> = {
+    // 04.03.2026 Güncellendi
     // --- TEMEL KABA VE İNCE İNŞAAT ---
-    "Hafriyat (Kazı ve Döküm)": 450,
-    "Betonarme Betonu": 3890,
-    "İnşaat Demiri": 30000,
-    "Kalıp İşçiliği & Malzeme": 1347,
-    "Temel Su Yalıtımı (Bohçalama)": 450,
-    "Seramik Kaplama": 1100,
-    "Seramik Yapıştırıcısı": 10,
-    "Seramik Derz Dolgusu": 25,
-    "Gazbeton Blok (m3)": 2650,
-    "Tuğla Blok (m3)": 2650,
-    "Bims Blok (m3)": 2650,
-    "Gazbeton İşçiliği (m2)": 250,
-    "Tuğla İşçiliği (m2)": 250,
-    "Bims İşçiliği (m2)": 250,
+    "Hafriyat (Kazı ve Döküm)": 765,           // hafriyatpaket
+    "Betonarme Betonu": 3840,                // betonmal
+    "İnşaat Demiri": 30700,                  // demirmal
+    "Kalıp İşçiliği & Malzeme": 1417.5,      // kalipdemirbetonisc
+    "Temel Su Yalıtımı (Bohçalama)": 338.6,  // membranmalisc
+    "Seramik Kaplama": 1373.8,               // seramikmalisc
+    "Seramik Yapıştırıcısı": 8.7,            // seramikyapistiricimal
+    "Seramik Derz Dolgusu": 35.8,            // seramikderzmal
+    "Gazbeton Blok (m3)": 3580,              // gazbetonmalm3mal
+    "Tuğla Blok (m3)": 2813,                 // tuglamalm3mal
+    "Bims Blok (m3)": 3836,                  // bimsmalm3mal
+    "Gazbeton İşçiliği (m2)": 283.5,         // gazbetonisc
+    "Tuğla İşçiliği (m2)": 337.5,            // tuglaisc
+    "Bims İşçiliği (m2)": 272.6,             // bimsisc
 
     // --- ZEMİN ETÜDÜ & HARİTA ---
-    "Zemin Sondaj Birim Fiyatı": 850,
-    "SPT Deneyi Birim Fiyatı": 450,
-    "Presiyometre Deneyi Birim Fiyatı": 900,
-    "Zemin Laboratuvar Paketi": 3500,
+    "Zemin Sondaj Birim Fiyatı": 2970,       // zeminsondajmtpaket
+    "SPT Deneyi Birim Fiyatı": 2180,         // sptdeneyiadetpaket
+    "Presiyometre Deneyi Birim Fiyatı": 3010,// presiyometredeneyiadetpaket
+    "Zemin Laboratuvar Paketi": 17718.76,    // zeminlaboratuvarpaket
 
     // --- RESMİ İŞLEMLER, HARÇLAR & ABONELİKLER ---
-    "Yapı Sınıfı 3A": 19800,
-    "Enerji Kimlik Belgesi (EKB)": 1500,
-    "Elektrik Güvence Birim Bedeli": 746,
-    "Su Abonelik Paket Bedeli": 6500,
-    "Tapu Döner Sermaye": 2500,
-    "Noter Yazı Ücreti": 4500,
-    "Standart Sözleşme Harcı": 8000,
+    "Yapı Sınıfı 3A": 19800,                 // yapi3asinifipaket
+    "Enerji Kimlik Belgesi (EKB)": 2025,     // enerjikimlikisc
+    "Elektrik Güvence Birim Bedeli": 737,    // elektrikabonelikkwpaket
+    "Su Abonelik Paket Bedeli": 1575,        // suabonelikisc
+    "Tapu Döner Sermaye": 2577.3,            // tapudonersermayeisc
+    "Noter Yazı Ücreti": 4725,               // noteryaziisc
+    "Standart Sözleşme Harcı": 7087.5,       // standartsozlesmeharciisc
 
     // --- TESİSAT, DOĞALGAZ & YANGIN ---
-    "Doğalgaz Kolon Hattı (mt) Birim": 2200,
-    "Doğalgaz Daire Başı Set Birim": 3800,
-    "Yangın Kapısı (Adet)": 18000,
+    "Doğalgaz Kolon Hattı (mt) Birim": 1984.2,     // dogalgazkolonhattimtmalisc
+    "Doğalgaz Daire Başı Set Birim": 3664.4,       // dogalgazdairebasisetadetmalisc
+    "Yangın Kapısı (Adet)": 18000,           // Wix listesinde bulunamadı, mevcut değer korundu
 
     // --- ŞANTİYE GENEL GİDERLERİ ---
-    "Şantiye Personel Giderleri (Bekçi vb.)": 35000,
-    "Şantiye Şefi (Aylık)": 90000, // Yıkım şefi vs için
+    "Şantiye Personel Giderleri (Bekçi vb.)": 70875, // santiyepersonelisc
+    "Şantiye Şefi (Aylık)": 147656.3,         // santiyesefiisc
 
-    "Çimento (kg)": 3,
-    "Kum (m3)": 500,
-    "Gazbeton Yapıştırıcısı": 4,
-    "İnşaat Çivisi (kg)": 45,
-    "Kalıp Yağı (Litre)": 60,
-    "Kereste (m3)": 8500,
-    "Bağ Teli (kg)": 55,
-    "Sıva Alçısı (Torba)": 140, // veya kg isimlerini düzeltirseniz kg karşılıkları
-    "Saten Alçı (Torba)": 160,
-    "Astar Boya (Kova)": 950,
-    "İç Cephe Boyası (Kova)": 2100,
+    "Çimento (kg)": 4.6,                     // cimentomal
+    "Kum (m3)": 1023,                        // kummal
+    "Gazbeton Yapıştırıcısı": 5,             // ytongyapistiricimal
+    "İnşaat Çivisi (kg)": 45,                // Mevcut değer korundu
+    "Kalıp Yağı (Litre)": 51.1,               // kalipyagiltmal
+    "Kereste (m3)": 9205,                    // kerestem3mal
+    "Bağ Teli (kg)": 55,                     // Mevcut değer korundu
+    "Sıva Alçısı (Torba)": 140,              // Mevcut değer korundu
+    "Saten Alçı (Torba)": 160,               // Mevcut değer korundu
+    "Astar Boya (Kova)": 950,                // Mevcut değer korundu
+    "İç Cephe Boyası (Kova)": 2100,          // Mevcut değer korundu
 };
 
 // src/constants.ts dosyasının en altına ekleyin:
