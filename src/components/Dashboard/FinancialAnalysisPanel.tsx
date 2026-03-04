@@ -246,7 +246,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 currentD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
             }
 
-
         });
 
         const salesByMonth: Record<string, number> = {};

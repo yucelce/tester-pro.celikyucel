@@ -135,7 +135,8 @@ export class QuantityTakeoffService {
             calc_kitchen_cabinet: 0, calc_kitchen_counter_length: 0, calc_bathroom_cabinet: 0, calc_kitchen_sink: 0,
             calc_toilet: 0, calc_shower_cabin: 0, calc_shower_set: 0, calc_basin_mixer: 0, calc_sink_mixer: 0,
             calc_electrical_points: 0, calc_weak_current_points: 0, calc_switch_socket_count: 0, calc_sub_panel_count: 0,
-            calc_heat_pump: 0, calc_vrf_infrastructure: 0, calc_vrf_indoor: 0
+            calc_heat_pump: 0, calc_vrf_infrastructure: 0, calc_vrf_indoor: 0,
+            calc_suspended_ceiling_area: 0,
         };
 
         const windowDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
@@ -210,16 +211,34 @@ export class QuantityTakeoffService {
         const windowDeduction = room.properties.windowArea || 0;
         const grossWallArea = Math.max(0, (room.perimeterM * room.roomHeight) - (doorDeduction + windowDeduction));
 
-        stats.calc_ceiling_paint_area += room.areaM2;
+
+        // YENİ: Islak hacim tavanı kontrolü (Banyo ve WC'lerde asma tavan yapılır, alçı sıva yapılmaz)
+        const isWetAreaCeiling = room.type === 'bath' || room.type === 'wc';
+
+        if (isWetAreaCeiling) {
+            stats.calc_suspended_ceiling_area = (stats.calc_suspended_ceiling_area || 0) + room.areaM2;
+        } else {
+            stats.calc_ceiling_paint_area += room.areaM2; // Sadece asma tavan olmayan yerlere tavan boyası
+        }
+
         stats.calc_rough_plaster_area += grossWallArea;
 
         if (room.properties.wallFinish === 'boya') {
             stats.calc_paint_wall_area += grossWallArea;
-            stats.calc_plaster_area += (grossWallArea + room.areaM2);
+            stats.calc_plaster_area += grossWallArea;
+
+            if (!isWetAreaCeiling) {
+                stats.calc_plaster_area += room.areaM2; // Asma tavan yoksa tavanı alçı metrajına ekle
+            }
         } else {
-            stats.calc_plaster_area += room.areaM2;
-            stats.wet_area += grossWallArea;
+            stats.wet_area += grossWallArea; // Duvarlar seramik
+
+            if (!isWetAreaCeiling) {
+                stats.calc_plaster_area += room.areaM2; // Asma tavan yoksa tavanı alçı metrajına ekle
+            }
         }
+
+
 
         if (room.properties.hasCornice) stats.cornice_length += room.perimeterM;
         if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
@@ -686,13 +705,13 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts }) => {
         const totalUnits = aggregatedUnitStats['calc_unit_count'] || (totalConstructionArea / 100);
         return calculateTapuNoterFees(
-        totalUnits,
-        buildingStats.province,
-        buildingStats.constructionModel,
-        buildingStats.isUrbanTransformation,
-        0, 
-        currentCosts
-    );
+            totalUnits,
+            buildingStats.province,
+            buildingStats.constructionModel,
+            buildingStats.isUrbanTransformation,
+            0,
+            currentCosts
+        );
     },
 
     'calc_acoustic': ({ totalConstructionArea, item }) => {

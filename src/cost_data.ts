@@ -31,7 +31,8 @@ export interface CostItem {
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
-  'calc_smart_home' | "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt'
+  'calc_smart_home' | "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
+  'calc_suspended_ceiling_area'
 
 
   ;
@@ -180,7 +181,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Alçı Sıva (Kaba+Saten)", unit: "m2", unit_price: 206, auto_source: "calc_paint_wall_area", multiplier: 1, scope: 'unit' },
       { name: "İç Cephe Boyası", unit: "m2", unit_price: 195.6, auto_source: "calc_paint_wall_area", multiplier: 1, scope: 'unit' },
       { name: "Tavan Boyası", unit: "m2", unit_price: 38, auto_source: "calc_ceiling_paint_area", multiplier: 1, scope: 'unit' },
-      { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 390, auto_source: "manual", multiplier: 1, scope: 'unit' },
+      { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 650, auto_source: "calc_suspended_ceiling_area", multiplier: 1, scope: 'unit' },
       { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 126, auto_source: "cornice_length", multiplier: 1, scope: 'unit' },
 
     ]

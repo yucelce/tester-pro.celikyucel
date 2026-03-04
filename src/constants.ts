@@ -378,7 +378,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Kereste (m3)": 9205,                    // kerestem3mal
     "Bağ Teli (kg)": 55,                     // Mevcut değer korundu
     "Sıva Alçısı (Torba)": 140,              // Mevcut değer korundu
-    "Saten Alçı (Torba)": 160,               // Mevcut değer korundu
+    "Saten Alçı (Torba)": 160,  
+    "Asma Tavan (Alçıpan)": 1100,             // Mevcut değer korundu
     "Astar Boya (Kova)": 950,                // Mevcut değer korundu
     "İç Cephe Boyası (Kova)": 2100,          // Mevcut değer korundu
 };
