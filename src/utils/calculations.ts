@@ -901,7 +901,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const structureWeeks = Math.ceil(totalFloors * 2.5);
             const setupDismantleWeeks = 4;
             const totalWeeks = structureWeeks + setupDismantleWeeks;
-            return Math.ceil(totalWeeks / 4.33);
+            return totalWeeks / 4.33;
         }
         return 0;
     },
