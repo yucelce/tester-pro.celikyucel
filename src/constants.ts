@@ -353,7 +353,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
 
     // --- RESMİ İŞLEMLER, HARÇLAR & ABONELİKLER ---
     "Yapı Sınıfı 3A": 19800,                 // yapi3asinifipaket
-    "Enerji Kimlik Belgesi (EKB)": 2025,     // enerjikimlikisc
+    "Enerji Kimlik Belgesi": 2025,     // enerjikimlikisc
     "Elektrik Güvence Birim Bedeli": 737,    // elektrikabonelikkwpaket
     "Su Abonelik Paket Bedeli": 1575,        // suabonelikisc
     "Tapu Döner Sermaye": 2577.3,            // tapudonersermayeisc

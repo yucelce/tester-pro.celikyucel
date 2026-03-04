@@ -158,10 +158,10 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Banyo Dolabı & Lavabo": "banyodolabisetpaket",     // Fiyat: 6.210 TL
   "Klozet Takımı (Gömme Rezervuar)": "klozetsetipaket", // Fiyat: 6.830 TL
   "Duşakabin": "dusakabinpaket",                      // Fiyat: 10.350 TL
-  "Batarya Grubu (Mutfak/Banyo)": "lavabobataryasimal", // Fiyat: 1.605 TL (En yakın eşleşme)
+
   "Bina Giriş Kapısı (Ana)": "binakapisimal",         // Fiyat: 60.876 TL
   "Portmanto / Vestiyer": "portmantomal",                        // Fiyat: 17.340 TL
-  "Daire İç Merdiven": "dubleksmerdivenipaket",   // Fiyat: 72.460 TL
+
   "Davlumbaz / Aspiratör": "davlumbazmal",              // Fiyat: 4.915 TL
   // Fiyat: 3.880 TL
   "Lavabo Bataryası": "lavabobataryasimal", // Banyo/Lavabo için
