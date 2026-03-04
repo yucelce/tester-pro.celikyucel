@@ -281,6 +281,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         normalFloorArea: 250, groundFloorArea: 250, basementFloorArea: 300,
         normalFloorHallArea: 3, groundFloorHallArea: 6, basementFloorHallArea: 3, totalArea: 1550,
         isHallManual: false,
+        hasRoofFloor: false, // EKLENDİ
+        roofFloorArea: 0,    // EKLENDİ
+        roofFloorHeight: 1.8,// EKLENDİ
 
         normalFloorPerimeter: 63.25, // Math.sqrt(250) * 4
         groundFloorPerimeter: 63.25, // Math.sqrt(250) * 4
@@ -725,9 +728,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // --- CALCULATIONS (Automatic) ---
     const totalConstructionArea = useMemo(() => {
-        return (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
+        let area = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
             buildingStats.groundFloorArea +
             (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
+            
+        // Çatı katı varsa toplama dahil et
+        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea) {
+            area += buildingStats.roofFloorArea;
+        }
+        return area;
     }, [buildingStats]);
     // GÜNCELLENEN KISIM: İş Zaman Programı tabanlı süre hesabı
     const autoDuration = useMemo(() => {

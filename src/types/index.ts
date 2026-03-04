@@ -150,9 +150,17 @@ export interface BuildingStats {
     poolArea?: number;       // Havuz alanı (m2)
     parkingArea?: number;    // Açık otopark alanı (m2)
     verandaArea?: number;    // Veranda / Kış bahçesi alanı (m2)
-subasmanHeight?: number;
+    subasmanHeight?: number;
 
-hasSmartHome?: boolean;
+    hasRoofFloor?: boolean;
+    roofFloorArea?: number;
+    roofFloorHeight?: number; // Eğimden dolayı ortalama yükseklik
+    roofFloorMaxHeight?: number;
+    roofFloorPerimeter?: number;
+    isRoofPerimeterManual?: boolean;
+    isRoofHeightManual?: boolean;
+
+    hasSmartHome?: boolean;
     smartHomeLighting?: boolean;
     smartHomeHeating?: boolean;
     smartHomeSensors?: boolean;

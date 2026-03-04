@@ -109,7 +109,8 @@ export class GeometryAnalyzer {
 
         const projectTotalArea = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
             buildingStats.groundFloorArea +
-            (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
+            (buildingStats.basementFloorCount * buildingStats.basementFloorArea) +
+            (buildingStats.hasRoofFloor ? (buildingStats.roofFloorArea || 0) : 0);
 
         return { defaultFloorHeight, defaultFloorArea, avgSlabThicknessM, rooms, totalArea, totalPerimeter, projectTotalArea };
     }
@@ -1340,8 +1341,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return (buildingStats.normalFloorArea) * 1.45;
     },
 
-    'calc_wall_global': ({ totalConstructionArea, buildingStats }) => {
-        return (totalConstructionArea * buildingStats.normalFloorHeight) / 3.0;
+    'calc_wall_global': ({ buildingStats }) => {
+        // 1. Normal katların duvar metrajı
+        const normalWall = (buildingStats.normalFloorCount * buildingStats.normalFloorArea * buildingStats.normalFloorHeight) / 3.0;
+        
+        // 2. Zemin katın duvar metrajı
+        const groundWall = (buildingStats.groundFloorArea * buildingStats.groundFloorHeight) / 3.0;
+        
+        // 3. Bodrum katların İÇ duvar metrajı
+        const basementWall = (buildingStats.basementFloorCount * buildingStats.basementFloorArea * buildingStats.basementFloorHeight) / 3.0;
+        
+        // 4. Çatı katı duvar metrajı (Eğimli tavan)
+        let roofWall = 0;
+        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
+            roofWall = (buildingStats.roofFloorArea * (buildingStats.roofFloorHeight || 1.8)) / 3.0;
+        }
+        
+        // Hepsini topla
+        return normalWall + groundWall + basementWall + roofWall;
     },
 
     'calc_facade': ({ buildingStats, aggregatedUnitStats }) => {
@@ -1666,7 +1683,8 @@ export const calculateComplexGlobalQuantity = (
     // Fiziksel İmalatlar İçin (Bodrum DAHİL Toplam Yükseklik)
     const totalBuildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
         buildingStats.groundFloorHeight +
-        (buildingStats.basementFloorCount * buildingStats.basementFloorHeight);
+        (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) +
+        (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0);
 
     // Yönetmelik Sınırları İçin (Bodrum HARİÇ Bina Yüksekliği)
     const regulationHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +

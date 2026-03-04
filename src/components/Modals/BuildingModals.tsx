@@ -511,6 +511,109 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </div>
                                     </div>
                                 </div>
+                               {/* Çatı Katı (Dubleks / Piyes) */}
+                                <div className="space-y-4 bg-slate-800/30 p-4 md:p-5 rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition">
+                                    <h4 className="font-bold text-purple-400 text-sm md:text-base flex items-center justify-between border-b border-purple-900/50 pb-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={buildingStats.hasRoofFloor || false}
+                                                onChange={(e) => setBuildingStats({ ...buildingStats, hasRoofFloor: e.target.checked })}
+                                                className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+                                            />
+                                            <i className="fas fa-home"></i> Çatı Katı (Piyes)
+                                        </label>
+                                    </h4>
+                                    
+                                    {buildingStats.hasRoofFloor && (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fadeIn">
+                                            {/* 1. Tepe Yükseklik */}
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Tepe Yükseklik (m)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.1" 
+                                                    value={buildingStats.roofFloorMaxHeight || ''} 
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        setBuildingStats({ 
+                                                            ...buildingStats, 
+                                                            roofFloorMaxHeight: val,
+                                                            // Eğer kullanıcı ort. yüksekliğe elle müdahale etmediyse otomatik 0.60 katını yazdır
+                                                            ...(!buildingStats.isRoofHeightManual ? { roofFloorHeight: parseFloat((val * 0.6).toFixed(2)) } : {})
+                                                        });
+                                                    }} 
+                                                    className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm" 
+                                                    placeholder="Örn: 3.0" 
+                                                />
+                                            </div>
+
+                                            {/* 2. Ort. Yükseklik */}
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Ort. Yükseklik (m)</label>
+                                                <div className="relative">
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.1" 
+                                                        value={buildingStats.roofFloorHeight || ''} 
+                                                        onChange={(e) => setBuildingStats({ ...buildingStats, roofFloorHeight: parseFloat(e.target.value) || 0, isRoofHeightManual: true })} 
+                                                        className={`w-full bg-slate-900 border rounded p-2 text-white text-sm pr-7 ${buildingStats.isRoofHeightManual ? 'border-yellow-500' : 'border-slate-600'}`} 
+                                                        placeholder="Örn: 1.8" 
+                                                    />
+                                                    {buildingStats.isRoofHeightManual && (
+                                                        <button 
+                                                            onClick={() => setBuildingStats({ ...buildingStats, isRoofHeightManual: false, roofFloorHeight: parseFloat(((buildingStats.roofFloorMaxHeight || 0) * 0.6).toFixed(2)) })} 
+                                                            className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400" 
+                                                            title="Tepe yüksekliğine göre otomatik hesapla"
+                                                        >
+                                                            <i className="fas fa-undo text-[10px]"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* 3. Kat Alanı */}
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Kat Alanı (m²)</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={buildingStats.roofFloorArea || ''} 
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        setBuildingStats({ 
+                                                            ...buildingStats, 
+                                                            roofFloorArea: val,
+                                                            ...( !buildingStats.isRoofPerimeterManual ? { roofFloorPerimeter: parseFloat((Math.sqrt(val) * 4).toFixed(2)) } : {} )
+                                                        });
+                                                    }} 
+                                                    className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono" 
+                                                />
+                                            </div>
+
+                                            {/* 4. Çevre */}
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Çevre (m)</label>
+                                                <div className="relative">
+                                                    <input 
+                                                        type="number" 
+                                                        value={buildingStats.roofFloorPerimeter || 0} 
+                                                        onChange={(e) => setBuildingStats({ ...buildingStats, roofFloorPerimeter: parseFloat(e.target.value) || 0, isRoofPerimeterManual: true })} 
+                                                        className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono pr-7 ${buildingStats.isRoofPerimeterManual ? 'border-yellow-500' : 'border-slate-600'}`} 
+                                                    />
+                                                    {buildingStats.isRoofPerimeterManual && (
+                                                        <button 
+                                                            onClick={() => setBuildingStats({ ...buildingStats, isRoofPerimeterManual: false, roofFloorPerimeter: parseFloat((Math.sqrt(buildingStats.roofFloorArea || 0) * 4).toFixed(2)) })} 
+                                                            className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400" 
+                                                            title="Kare kabulü ile otomatik hesapla"
+                                                        >
+                                                            <i className="fas fa-undo text-[10px]"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
