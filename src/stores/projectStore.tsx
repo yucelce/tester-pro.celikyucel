@@ -288,7 +288,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isNormalPerimeterManual: false,
         isGroundPerimeterManual: false,
         isBasementPerimeterManual: false,
-        
+
 
         heatingSystem: 'radiator',
         constructionModel: 'standard', // Varsayılan: Kendin Yap / Taahhüt
@@ -445,19 +445,36 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 if (matItem) rawMaterialPriceM3 = matItem.unit_price;
                                 if (laborItem) laborPriceM2 = laborItem.unit_price;
                             }
-                            // --- YENİ EKLENEN KISIM: Çimento ve Kum fiyatlarını bularak harç m3 fiyatını hesapla ---
+
+
+
+
+
+                            // --- YENİ EKLENEN KISIM: Çimento, Kum ve Kireç fiyatlarını bularak harç m3 fiyatlarını hesapla ---
                             const cementPrice = getGlobalPrice(updatedCosts, "Çimento (kg)") || 3;
                             const sandPrice = getGlobalPrice(updatedCosts, "Kum (m3)") || 500;
+                            const limePrice = getGlobalPrice(updatedCosts, "Kireç (kg)") || 4;
 
-                            // 1 m3 Harç = 1 m3 Kum + 250 kg Çimento
-                            const mortarPriceM3 = sandPrice + (cementPrice * 250);
+                            // Duvar Örme Harcı = 1 m3 Kum + 200 kg Çimento + 100 kg Kireç
+                            const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
+
+                            // Mermer/Şap Harcı = 1 m3 Kum + 300 kg Çimento (Kireçsiz)
+                            const marbleMortarPriceM3 = sandPrice + (cementPrice * 300);
 
                             return updatedCosts.map(cat => {
                                 if (cat.id === 'duvar_tavan') {
                                     return {
                                         ...cat,
                                         items: cat.items.map(item => {
+                                            // Duvar örme harcının fiyatını dinamik olarak güncelle
+                                            if (item.name === "Duvar Örme Harcı (Kara Harç)") {
+                                                return { ...item, unit_price: Math.round(wallMortarPriceM3) };
+                                            }
+
                                             if (item.name.startsWith('Duvar Malzemesi (') && item.name.includes('cm)')) {
+
+
+
                                                 const match = item.name.match(/\(([\d\.]+) cm\)/);
                                                 if (match && match[1]) {
                                                     const thicknessCm = parseFloat(match[1]);
@@ -483,7 +500,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                         ...cat,
                                         items: cat.items.map(item => {
                                             if (item.name === "Mermer Harcı ve Kumu") {
-                                                return { ...item, unit_price: Math.round(mortarPriceM3) };
+                                                return { ...item, unit_price: Math.round(marbleMortarPriceM3) }; // marbleMortarPriceM3 olarak değiştirildi
                                             }
                                             return item;
                                         })

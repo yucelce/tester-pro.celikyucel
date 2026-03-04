@@ -41,6 +41,7 @@ export const calculateRawMaterials = (
     const prices = {
         cement: getGlobalPrice(costs, "Çimento (kg)"),
         sand: getGlobalPrice(costs, "Kum (m3)"),
+        lime: getGlobalPrice(costs, "Kireç (kg)"), // YENİ EKLENDİ
         iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000,
         concrete: getGlobalPrice(costs, "Betonarme Betonu"),
         adhesive: getGlobalPrice(costs, "Gazbeton Yapıştırıcısı"),
@@ -92,8 +93,11 @@ export const calculateRawMaterials = (
 
     const mortarVolume = stats.mortar_volume || 0;
     const adhesiveWeight = stats.adhesive_weight || 0;
-    addMaterial('cimento_duvar', 'Çimento (Duvar Harcı)', 'Torba (50kg)', (mortarVolume * 250) / 50, 'walls', prices.cement * 50);
+
+    addMaterial('cimento_duvar', 'Çimento (Duvar Harcı)', 'Torba (50kg)', (mortarVolume * 200) / 50, 'walls', prices.cement * 50);
+    addMaterial('kirec_duvar', 'Kireç (Duvar Harcı)', 'Torba (25kg)', (mortarVolume * 100) / 25, 'walls', prices.lime * 25);
     addMaterial('kum_duvar', 'İnce Kum (Duvar Harcı)', 'm³', mortarVolume * 1.0, 'walls', prices.sand);
+
     addMaterial('gazbeton_tutkal', 'Gazbeton Tutkalı', 'Torba (25kg)', adhesiveWeight / 25, 'walls', prices.adhesive * 25);
 
     const plasterArea = stats.calc_rough_plaster_area || 0;

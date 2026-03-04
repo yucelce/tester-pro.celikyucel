@@ -370,7 +370,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Şantiye Şefi (Aylık)": 147656.3,         // santiyesefiisc
 
     "Çimento (kg)": 4.6,                     // cimentomal
-    "Kum (m3)": 1023,                        // kummal
+    "Kum (m3)": 1023,  
+    "Kireç (kg)": 4,                      // kummal
     "Gazbeton Yapıştırıcısı": 5,             // ytongyapistiricimal
     "İnşaat Çivisi (kg)": 45,                // Mevcut değer korundu
     "Kalıp Yağı (Litre)": 51.1,               // kalipyagiltmal

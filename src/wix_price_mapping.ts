@@ -148,6 +148,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
 
   "Çimento (kg)": "cimentomal",
   "Kum (m3)": "kummal",
+  "Kireç (kg)": "kirecmal", // YENİ EKLENDİ
 
   // --- 7. İNCE İŞLER ---
   // --- 7. İNCE İŞLER (LİSTEDEN EŞLEŞTİRİLDİ) ---

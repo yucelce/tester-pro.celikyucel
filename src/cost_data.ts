@@ -182,7 +182,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Tavan Boyası", unit: "m2", unit_price: 38, auto_source: "calc_ceiling_paint_area", multiplier: 1, scope: 'unit' },
       { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 390, auto_source: "manual", multiplier: 1, scope: 'unit' },
       { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 126, auto_source: "cornice_length", multiplier: 1, scope: 'unit' },
-      
+
     ]
   },
 
@@ -224,7 +224,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "Süpürgelik", unit: "mt", unit_price: 150, auto_source: "dry_perimeter", multiplier: 1, scope: 'unit' },
       { name: "Mermer Harcı ve Kumu", unit: "m3", unit_price: 1200, auto_source: "calc_marble_mortar", multiplier: 1, scope: 'global' },
       { name: "Çimento (kg)", unit: "kg", unit_price: 3, auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Kum (m3)", unit: "m3", unit_price: 500, auto_source: "manual", multiplier: 0, scope: 'hidden' }
+      { name: "Kum (m3)", unit: "m3", unit_price: 500, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Kireç (kg)", unit: "kg", unit_price: 4, auto_source: "manual", multiplier: 0, scope: 'hidden' }
     ]
   },
 
