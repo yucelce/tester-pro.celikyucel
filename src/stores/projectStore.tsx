@@ -169,6 +169,11 @@ interface ProjectContextType {
     startNewProject: (type: 'apartment' | 'villa') => void;
 
     bulkUpdatePrices: (newPrices: { itemName: string, price: number }[]) => void;
+
+    duplexPairs: import('../types').DuplexPair[];
+    addDuplexPair: (pair: Omit<import('../types').DuplexPair, 'id'>) => void;
+    updateDuplexPair: (id: string, count: number) => void;
+    removeDuplexPair: (id: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -301,6 +306,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         evictionCostPerUnit: 0,
         includeRentCost: false
     });
+
+    const [duplexPairs, setDuplexPairs] = useState<import('../types').DuplexPair[]>([]);
+
+    const addDuplexPair = (pair: Omit<import('../types').DuplexPair, 'id'>) => {
+        setDuplexPairs(prev => [...prev, { ...pair, id: Date.now().toString() }]);
+        setIsDataDirty(true);
+    };
+
+    const updateDuplexPair = (id: string, count: number) => {
+        setDuplexPairs(prev => prev.map(p => p.id === id ? { ...p, count } : p));
+        setIsDataDirty(true);
+    };
+
+    const removeDuplexPair = (id: string) => {
+        setDuplexPairs(prev => prev.filter(p => p.id !== id));
+        setIsDataDirty(true);
+    };
 
     const [globalWallMode, setGlobalWallMode] = useState<'auto' | 'detailed'>('auto');
     const [globalConcreteMode, setGlobalConcreteMode] = useState<'auto' | 'detailed'>('auto');
@@ -829,6 +851,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addToAggregated(stats, u.count);
         });
 
+        // Üst katlarda çelik kapı, pano, diafon vb. olmaz. Bunları toplam sayıdan düşüyoruz.
+        duplexPairs.forEach(pair => {
+            const c = pair.count;
+            if (aggregatedUnitStats['calc_steel_door']) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
+            if (aggregatedUnitStats['calc_combi_count']) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
+            if (aggregatedUnitStats['calc_heat_pump']) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
+            if (aggregatedUnitStats['calc_sub_panel_count']) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
+            if (aggregatedUnitStats['calc_unit_count']) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+            
+            // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
+            aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
+        });
+
         const details = costs.map(cat => {
             let catTotal = 0;
 
@@ -1035,6 +1070,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Diğer verileri sıfırla
         setStructuralUnits([]);
         setCustomCosts([]);
+        setDuplexPairs([]);
         setIsDataDirty(true);
         recalculateCosts('both');
     };
@@ -1271,6 +1307,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 buildingStats,
                 customCosts,
                 financialSettings,
+                duplexPairs,
                 costs: costs.map(c => ({
                     id: c.id,
                     items: c.items.filter(i => i.manualPrice !== undefined || i.manualQuantity !== undefined).map(i => ({
@@ -1331,6 +1368,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setGlobalWallMaterial(project.data.globalSettings.wallMaterial);
             setGlobalWallThickness(project.data.globalSettings.wallThickness);
             setCustomCosts(project.data.customCosts || []);
+            setDuplexPairs(project.data.duplexPairs || []);
 
             if (project.data.financialSettings) {
                 const migratedSales = project.data.financialSettings.sales.map((s: any) => ({
@@ -1421,7 +1459,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             totalConstructionArea, constructionDuration, isFetchingHeat,
             isDataDirty, dismissDataDirty, recalculateCosts,
             addUnit, addStructuralUnit, updateUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType,
-            setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction, setGlobalWallThickness: setGlobalWallThicknessAction,
+            setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction, 
+            setGlobalWallThickness: setGlobalWallThicknessAction,
             updateCostItem: updateCostItemAction,
             saveProject, loadProject, fetchProjects, deleteProject,
             updateConstructionDuration, duplicateUnit,
@@ -1434,7 +1473,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale, startNewProject, bulkUpdatePrices
+            removeSale, startNewProject, bulkUpdatePrices, duplexPairs, addDuplexPair, updateDuplexPair, removeDuplexPair,
         }}>
             {children}
         </ProjectContext.Provider>

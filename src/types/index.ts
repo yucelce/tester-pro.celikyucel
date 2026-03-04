@@ -232,6 +232,7 @@ export interface SavedProject {
         buildingStats: BuildingStats;
         customCosts?: CustomCostItem[];
         costs: any[]; // Stores custom prices
+        duplexPairs?: DuplexPair[];
         globalSettings: {
             wallMode: 'auto' | 'detailed';
             concreteMode: 'auto' | 'detailed';
@@ -240,6 +241,13 @@ export interface SavedProject {
         }
         financialSettings?: FinancialSettings;
     }
+}
+
+export interface DuplexPair {
+    id: string;
+    lowerUnitId: string;
+    upperUnitId: string;
+    count: number;
 }
 
 export interface ScheduleTaskOverride {

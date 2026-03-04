@@ -1529,71 +1529,70 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return stepCount * stepHypot;
     },
 
-    'calc_internal_stair_steps': ({ buildingStats }) => {
-        // Sadece Villa modunda çalışır, apartmanlarda maliyeti 0 döner
-        if (buildingStats.buildingType !== 'villa') return 0;
-
+    'calc_internal_stair_steps': ({ buildingStats, aggregatedUnitStats }) => {
         const idealRiserHeight = 0.175; // İdeal rıht yüksekliği
         const landingBonus = 3;        // Sahanlık için eklenen basamak seti (piyasa teamülü)
         let totalSteps = 0;
 
-        // 1. Bodrum Katlardan Çıkış
-        if (buildingStats.basementFloorCount > 0) {
-            const basementHeight = buildingStats.basementFloorHeight || 2.80;
-            const stepsPerBasement = Math.round(basementHeight / idealRiserHeight);
-            totalSteps += buildingStats.basementFloorCount * (stepsPerBasement + landingBonus);
+        if (buildingStats.buildingType === 'villa') {
+            if (buildingStats.basementFloorCount > 0) {
+                const basementHeight = buildingStats.basementFloorHeight || 2.80;
+                const stepsPerBasement = Math.round(basementHeight / idealRiserHeight);
+                totalSteps += buildingStats.basementFloorCount * (stepsPerBasement + landingBonus);
+            }
+            if (buildingStats.normalFloorCount > 0) {
+                const groundHeight = buildingStats.groundFloorHeight || 3.20;
+                const groundSteps = Math.round(groundHeight / idealRiserHeight);
+                totalSteps += (groundSteps + landingBonus);
+            }
+            if (buildingStats.normalFloorCount > 1) {
+                const normalHeight = buildingStats.normalFloorHeight || 3.00;
+                const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
+                const flights = buildingStats.normalFloorCount - 1;
+                totalSteps += flights * (normalStepsPerFlight + landingBonus);
+            }
+        } else {
+            // APARTMAN DUBLEKS MANTIĞI: Düşüm yapılan dubleks adedi kadar merdiven eklenir.
+            const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
+            if (duplexCount > 0) {
+                const normalHeight = buildingStats.normalFloorHeight || 3.00;
+                const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
+                totalSteps += duplexCount * (normalStepsPerFlight + landingBonus);
+            }
         }
-
-        // 2. Zeminden 1. Kata Çıkış (Eğer normal kat varsa)
-        if (buildingStats.normalFloorCount > 0) {
-            const groundHeight = buildingStats.groundFloorHeight || 3.20;
-            const groundSteps = Math.round(groundHeight / idealRiserHeight);
-            totalSteps += (groundSteps + landingBonus);
-        }
-
-        // 3. Diğer Normal Katlar Arası (Örn: 1. kat'tan 2. kat'a)
-        if (buildingStats.normalFloorCount > 1) {
-            const normalHeight = buildingStats.normalFloorHeight || 3.00;
-            const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
-            const flights = buildingStats.normalFloorCount - 1;
-
-            totalSteps += flights * (normalStepsPerFlight + landingBonus);
-        }
-
-        return totalSteps; // Birimi: Adet (Takım Basamak)
+        return totalSteps;
     },
 
-    'calc_internal_stair_railing_mt': ({ buildingStats }) => {
-        // Sadece Villa modunda çalışır
-        if (buildingStats.buildingType !== 'villa') return 0;
-
+    'calc_internal_stair_railing_mt': ({ buildingStats, aggregatedUnitStats }) => {
         const idealRiserHeight = 0.175;
         const treadDepth = 0.28;
         let totalRailingMt = 0;
 
-        // Hipotenüs üzerinden gerçek korkuluk boyu hesaplama
         const calcFlightRailing = (height: number) => {
             const riserCount = Math.round(height / idealRiserHeight);
             const horizontalLength = (riserCount - 1) * treadDepth;
-            // Hipotenüs + %15 (Sahanlık dönüşü ve işçilik payı)
             return Math.sqrt(Math.pow(height, 2) + Math.pow(horizontalLength, 2)) * 1.15;
         };
 
-        if (buildingStats.basementFloorCount > 0) {
-            totalRailingMt += buildingStats.basementFloorCount * calcFlightRailing(buildingStats.basementFloorHeight || 2.80);
+        if (buildingStats.buildingType === 'villa') {
+            if (buildingStats.basementFloorCount > 0) {
+                totalRailingMt += buildingStats.basementFloorCount * calcFlightRailing(buildingStats.basementFloorHeight || 2.80);
+            }
+            if (buildingStats.normalFloorCount > 0) {
+                totalRailingMt += calcFlightRailing(buildingStats.groundFloorHeight || 3.20);
+            }
+            if (buildingStats.normalFloorCount > 1) {
+                totalRailingMt += (buildingStats.normalFloorCount - 1) * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+            }
+        } else {
+             // APARTMAN DUBLEKS MANTIĞI
+             const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
+             if (duplexCount > 0) {
+                 totalRailingMt += duplexCount * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+             }
         }
-
-        if (buildingStats.normalFloorCount > 0) {
-            totalRailingMt += calcFlightRailing(buildingStats.groundFloorHeight || 3.20);
-        }
-
-        if (buildingStats.normalFloorCount > 1) {
-            totalRailingMt += (buildingStats.normalFloorCount - 1) * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
-        }
-
-        return Math.round(totalRailingMt * 100) / 100; // Birimi: Metre Tül (mt)
+        return Math.round(totalRailingMt * 100) / 100;
     },
-
     'calc_marble_mortar': ({ buildingStats, totalBuildingHeight }) => {
         if (buildingStats.buildingType === 'villa') return 0;
         const stepCount = totalBuildingHeight / 0.17;

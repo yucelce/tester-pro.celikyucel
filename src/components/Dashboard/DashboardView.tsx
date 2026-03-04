@@ -13,6 +13,7 @@ import { FinancialAnalysisPanel } from './FinancialAnalysisPanel';
 import { ProcurementModal } from '../Modals/ProcurementModal';
 import { TutorialOverlay } from '../Shared/TutorialOverlay';
 import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
+import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -55,11 +56,13 @@ export const DashboardView: React.FC = () => {
         addUnit, addStructuralUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial, updateCostItem,
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices
+        globalStats, costs, bulkUpdatePrices, duplexPairs
     } = useProjectStore();
 
     // YENİ: Alan hatası detayını göstermek için state
     const [showAreaErrorDetail, setShowAreaErrorDetail] = React.useState(false);
+
+    const [showDuplexModal, setShowDuplexModal] = useState(false);
 
     const {
         navigateToEditor, openModal, expandedCategories, toggleCategory, toggleAllCategories, accountId,
@@ -613,19 +616,28 @@ export const DashboardView: React.FC = () => {
 
                 {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ (Apartment Units) */}
                 <section id="tour-units">
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
                         <div>
                             <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
-                                    {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
-                                </h2>                            </h2>
+                                <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
+                                {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
+                            </h2>
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
                         </div>
-                        <button onClick={addUnit} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm">
-                            <i className="fas fa-plus"></i><span className="hidden md:inline"> Yeni Tip Ekle</span><span className="md:hidden">Ekle</span>
-                        </button>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            {/* DUBLEKS EŞLE BUTONU (Sadece apartman modunda ve 1'den fazla tip varsa görünür) */}
+                            {buildingStats.buildingType === 'apartment' && units.length > 1 && (
+                                <button onClick={() => setShowDuplexModal(true)} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-indigo-700">
+                                    <i className="fas fa-link"></i><span className="hidden md:inline"> Dubleks Eşle</span>
+                                </button>
+                            )}
+
+                            <button onClick={addUnit} className="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-purple-700">
+                                <i className="fas fa-plus"></i><span className="hidden md:inline"> Yeni Tip Ekle</span><span className="md:hidden">Tip Ekle</span>
+                            </button>
+                        </div>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {units.length === 0 && (
                             <div className="col-span-full text-center text-slate-500 py-8 bg-white dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700 border-dashed">
@@ -640,9 +652,16 @@ export const DashboardView: React.FC = () => {
                                 return acc + area;
                             }, 0);
 
+                            const isDuplexPart = duplexPairs.some(p => p.lowerUnitId === unit.id || p.upperUnitId === unit.id);
+
                             return (
                                 <div key={unit.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-slate-400 dark:hover:border-slate-600 transition group relative">
                                     <div className="h-40 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center border-b border-slate-200 dark:border-slate-700">
+                                        {isDuplexPart && (
+                                            <span className="absolute top-2 left-2 bg-indigo-600/90 backdrop-blur text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md flex items-center gap-1 z-10">
+                                                <i className="fas fa-link"></i> Dubleks Parçası
+                                            </span>
+                                        )}
                                         {unit.imageData ? (
                                             <img src={unit.imageData} className="w-full h-full object-cover opacity-80 dark:opacity-60" alt={unit.name} />
                                         ) : (
@@ -1272,6 +1291,7 @@ export const DashboardView: React.FC = () => {
                 recurringGroup={procurementData.recurringGroup}
             />
             <TutorialOverlay />
+            {showDuplexModal && <DuplexManagerModal onClose={() => setShowDuplexModal(false)} />}
         </div>
     );
 };
