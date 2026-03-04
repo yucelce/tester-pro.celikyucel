@@ -1937,21 +1937,16 @@ export const calculateDynamicUnitPrice = (
         const poolArea = buildingStats.poolArea || 0;
 
         if (poolArea > 0) {
-            const getPrice = (catId: string, itemName: string, fallback: number) => {
-                const cat = currentCosts.find(c => c.id === catId);
-                const foundItem = cat?.items.find(i => i.name === itemName);
-                return foundItem ? (foundItem.manualPrice !== undefined ? foundItem.manualPrice : foundItem.unit_price) : fallback;
-            };
-
+          
             // Sadece fiyatlar constants dosyasından (merkezden) çekiliyor
-            const p_excavation = getPrice("santiye_hafriyat", "Hafriyat (Kazı ve Döküm)", DEFAULT_PRICES.EXCAVATION);
-            const p_concrete = getPrice("kaba_insaat", "Betonarme Betonu", DEFAULT_PRICES.CONCRETE);
-            const p_iron = getPrice("kaba_insaat", "İnşaat Demiri", DEFAULT_PRICES.IRON);
-            const p_formwork = getPrice("kaba_insaat", "Kalıp İşçiliği & Malzeme", DEFAULT_PRICES.FORMWORK);
-            const p_insulation = getPrice("kaba_insaat", "Temel Su Yalıtımı (Bohçalama)", DEFAULT_PRICES.INSULATION_BASE);
-            const p_ceramic = getPrice("zemin_kaplama", "Seramik Kaplama", DEFAULT_PRICES.CERAMIC);
-            const p_ceramic_adhesive = getPrice("zemin_kaplama", "Seramik Yapıştırıcısı", DEFAULT_PRICES.CERAMIC_ADHESIVE);
-            const p_joint_filler = getPrice("zemin_kaplama", "Seramik Derz Dolgusu", DEFAULT_PRICES.JOINT_FILLER);
+            const p_excavation = getGlobalPrice(currentCosts, "Hafriyat (Kazı ve Döküm)");
+            const p_concrete = getGlobalPrice(currentCosts, "Betonarme Betonu");
+            const p_iron = getGlobalPrice(currentCosts, "İnşaat Demiri");
+            const p_formwork = getGlobalPrice(currentCosts, "Kalıp İşçiliği & Malzeme");
+            const p_insulation = getGlobalPrice(currentCosts, "Temel Su Yalıtımı (Bohçalama)");
+            const p_ceramic = getGlobalPrice(currentCosts, "Seramik Kaplama");
+            const p_ceramic_adhesive = getGlobalPrice(currentCosts, "Seramik Yapıştırıcısı");
+            const p_joint_filler = getGlobalPrice(currentCosts, "Seramik Derz Dolgusu");
 
             // Ölçüler ve çarpanlar eskisi gibi hesaplama içinde kalıyor
             const depth = 1.5;
@@ -2174,16 +2169,7 @@ export const calculateTapuNoterFees = (
     currentCosts?: CostCategory[]
 ): number => {
 
-    // Yardımcı Fonksiyon: cost_data.ts içinden özel tanımlı fiyatları çekmek için
-    const getPrice = (name: string, fallback: number) => {
-        if (!currentCosts) return fallback;
-        for (const cat of currentCosts) {
-            const item = cat.items.find(i => i.name === name);
-            if (item) return item.unit_price;
-        }
-        return fallback;
-    };
-
+    
     // 1. BÜYÜKŞEHİR VE YÖRESEL KATSAYI (Tapu Döner Sermaye ve Arsa Rayiçleri İçin)
     const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
     const mediumCostCities = ['Kocaeli', 'Adana', 'Mersin', 'Gaziantep', 'Konya', 'Kayseri', 'Eskişehir', 'Sakarya', 'Tekirdağ', 'Aydın'];
@@ -2197,10 +2183,10 @@ export const calculateTapuNoterFees = (
 
     // 2. GÜNCEL BAZ FİYATLAR (Tahmini)
     // Kat İrtifakı kurulumu için daire başı temel Döner Sermaye bedeli (Yöresel katsayı ile çarpılır)
-    const baseTapuDoner = getPrice("Tapu Döner Sermaye", 2500) * cityMultiplier;
+    const baseTapuDoner = getGlobalPrice(currentCosts, "Tapu Döner Sermaye") * cityMultiplier;
 
     // Noter Standart Yazı, Suret ve Değerli Kağıt Bedeli
-    const baseNoterPaperFee = getPrice("Noter Yazı Ücreti", 4500);
+    const baseNoterPaperFee = getGlobalPrice(currentCosts, "Noter Yazı Ücreti");
 
     // SENARYO 1: KENTSEL DÖNÜŞÜM (6306 Sayılı Kanun Kapsamında Riskli Yapı)
     if (isUrbanTransformation) {
@@ -2227,7 +2213,7 @@ export const calculateTapuNoterFees = (
     // SENARYO 3: STANDART TAAHHÜT / KENDİ ARSANA YAP (Kentsel Dönüşüm YOKSA)
     // Arsa sahibi sizsiniz, devir yok. Sadece Müteahhitlik/Taahhüt ve Yapı Denetim sözleşmeleri noterde onaylanır.
     // Kat irtifakı için Tapu Döner Sermayesi ödenir.
-    const baseStandardContract = getPrice("Standart Sözleşme Harcı", 8000);
+    const baseStandardContract = getGlobalPrice(currentCosts, "Standart Sözleşme Harcı");
     const standardContractFee = baseStandardContract * cityMultiplier;
     const tapuTotal = unitCount * baseTapuDoner;
 

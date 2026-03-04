@@ -1,5 +1,6 @@
 import { ScheduleItem } from './scheduleCalculator';
 import { CostCategory } from '../cost_data'; // EKLENDİ
+import { getGlobalPrice } from './calculations'; // EKLENDİ
 
 export interface RawMaterialDetail {
     taskId: string;
@@ -38,24 +39,23 @@ export const calculateRawMaterials = (
 
     // Fiyatları Çek (Sistemdeki güncel fiyatlar)
     const prices = {
-        cement: getPrice("Çimento (kg)", 3),
-        sand: getPrice("Kum (m3)", 500),
-        iron: getPrice("İnşaat Demiri", 30600) / 1000,
-        concrete: getPrice("Betonarme Betonu", 3890),
-        adhesive: getPrice("Gazbeton Yapıştırıcısı", 4),
-        ceramicTile: getPrice("Seramik Kaplama", 1100),
-        ceramicAdhesive: getPrice("Seramik Yapıştırıcısı", 10),
-        jointFiller: getPrice("Seramik Derz Dolgusu", 25),
+        cement: getGlobalPrice(costs, "Çimento (kg)"),
+        sand: getGlobalPrice(costs, "Kum (m3)"),
+        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000,
+        concrete: getGlobalPrice(costs, "Betonarme Betonu"),
+        adhesive: getGlobalPrice(costs, "Gazbeton Yapıştırıcısı"),
+        ceramicTile: getGlobalPrice(costs, "Seramik Kaplama"),
+        ceramicAdhesive: getGlobalPrice(costs, "Seramik Yapıştırıcısı"),
+        jointFiller: getGlobalPrice(costs, "Seramik Derz Dolgusu"),
 
-        // --- ÖNCEDEN STATİK OLANLAR ŞİMDİ DİNAMİK ---
-        civi: getPrice("İnşaat Çivisi (kg)", 45),
-        kalipYagi: getPrice("Kalıp Yağı (Litre)", 60),
-        kereste: getPrice("Kereste (m3)", 8500),
-        bagTeli: getPrice("Bağ Teli (kg)", 55),
-        sivaAlcisi: getPrice("Sıva Alçısı (kg)", 6.2),
-        satenAlci: getPrice("Saten Alçı (kg)", 8.5),
-        astarBoya: getPrice("Astar Boya (kg)", 45),
-        icCepheBoya: getPrice("İç Cephe Boyası (kg)", 98.7)// cost_data'daki "İç Cephe Boyası" m2 fiyatıdır, kova fiyatı için ayrı gizli kalem açmalıyız.
+        civi: getGlobalPrice(costs, "İnşaat Çivisi (kg)"),
+        kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
+        kereste: getGlobalPrice(costs, "Kereste (m3)"),
+        bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
+        sivaAlcisi: getGlobalPrice(costs, "Sıva Alçısı (kg)"),
+        satenAlci: getGlobalPrice(costs, "Saten Alçı (kg)"),
+        astarBoya: getGlobalPrice(costs, "Astar Boya (kg)"),
+        icCepheBoya: getGlobalPrice(costs, "İç Cephe Boyası (kg)")
     };
 
     const addMaterial = (id: string, name: string, unit: string, qty: number, taskId: string, unitPrice: number) => {
