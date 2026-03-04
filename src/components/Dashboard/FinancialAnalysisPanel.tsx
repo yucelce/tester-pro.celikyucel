@@ -24,6 +24,12 @@ const formatMonthDisplay = (dateStr: string) => {
     return `${months[parseInt(month) - 1]} ${year}`;
 }
 
+const calculateSCurve = (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    return x * x * (3 - 2 * x);
+}
+
 export const FinancialAnalysisPanel: React.FC = () => {
     const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails } = useProjectStore();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -203,19 +209,31 @@ export const FinancialAnalysisPanel: React.FC = () => {
             monthsDiff = Math.max(0, monthsDiff);
             let finalTaskCost = fixedTasks.includes(task.id) ? baseTaskCost : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
-            // MALİYETİ AYLARA GÜN BAZLI DAĞITMA MANTIĞI
-            let currentD = new Date(startDate);
-            while (currentD <= endDate) {
-                // Bu ayın son gününü bul
-                let eom = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 0);
-                if (eom > endDate) eom = endDate; // İş bu ay içinde bitiyorsa, bitiş gününü al
 
-                // Bu ay bu iş için kaç gün harcandı?
+            // MALİYETİ AYLARA S-CURVE (ÇAN EĞRİSİ) İLE DAĞITMA MANTIĞI
+            let currentD = new Date(startDate);
+            let accumulatedDays = 0; // İşin başından o ayın başına kadar geçen toplam gün
+
+            while (currentD <= endDate) {
+                let eom = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 0);
+                if (eom > endDate) eom = endDate;
+
                 let daysInThisMonth = (eom.getTime() - currentD.getTime()) / (1000 * 3600 * 24);
-                // İlk gün de sayılsın diye +1 yapıyoruz (kabaca)
                 if (daysInThisMonth === 0) daysInThisMonth = 1;
 
-                let costRatio = daysInThisMonth / totalDays;
+                // 1. Ayın BAŞINDAKİ tamamlanma yüzdesi
+                const startProgressRatio = accumulatedDays / totalDays;
+
+                accumulatedDays += daysInThisMonth;
+
+                // 2. Ayın SONUNDAKİ tamamlanma yüzdesi
+                const endProgressRatio = accumulatedDays / totalDays;
+
+                // 3. S-Curve farkı: Bu aya düşen net maliyet yüzdesi
+                // Örneğin: İşin başı yavaştır (ilk %20'lik sürede maliyetin sadece %10'u çıkar)
+                // Ortasında hızlanır (orta %20'lik sürede maliyetin %30'u çıkar)
+                let costRatio = calculateSCurve(endProgressRatio) - calculateSCurve(startProgressRatio);
+
                 let monthStr = formatMonth(currentD);
 
                 // Gideri o aya ekle
@@ -227,6 +245,8 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 // Bir sonraki ayın ilk gününe atla
                 currentD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
             }
+
+
         });
 
         const salesByMonth: Record<string, number> = {};
@@ -410,7 +430,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
         const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
         // totals nesnesi cashflow hook'undan gelir, eğer mevcut değilse tahmini enflasyonlu maliyet hesaplanabilir.
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
-        const avgSalePrice = totalUnitsCount > 0 ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalUnitsCount / 1000) * 1000 : 0; 
+        const avgSalePrice = totalUnitsCount > 0 ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalUnitsCount / 1000) * 1000 : 0;
         const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
         units.forEach(u => {
