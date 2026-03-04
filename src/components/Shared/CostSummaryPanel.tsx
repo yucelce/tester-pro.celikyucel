@@ -70,45 +70,6 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                 )}
             </div>
 
-            {!isStructural && (
-                <div className="flex justify-between items-center px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase">Fiyat Listesi Aktarımı</span>
-                    <div className="flex gap-2">
-                        <button 
-                            onClick={() => exportCostsToExcel(projectCostDetails)} 
-                            className="text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-1 rounded hover:bg-green-200 dark:hover:bg-green-800 flex items-center gap-1 transition"
-                            title="Tüm keşfi Excel'e indir"
-                        >
-                            <i className="fas fa-file-excel"></i> İndir
-                        </button>
-
-                        <label 
-                            className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center gap-1 transition cursor-pointer"
-                            title="Excel'de düzenlediğin fiyatları geri yükle"
-                        >
-                            <i className="fas fa-upload"></i> Yükle
-                            <input 
-                                type="file" 
-                                accept=".xlsx, .xls" 
-                                className="hidden" 
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                        importPricesFromExcel(e.target.files[0], (newPrices) => {
-                                            if(newPrices.length > 0) {
-                                                bulkUpdatePrices(newPrices);
-                                                alert(`${newPrices.length} adet kalemin birim fiyatı Excel'den başarıyla güncellendi!`);
-                                            } else {
-                                                alert('Excel dosyasında geçerli fiyat verisi bulunamadı. Lütfen formata dokunmadığınızdan emin olun.');
-                                            }
-                                            e.target.value = ''; // Aynı dosyayı tekrar seçebilmek için inputu sıfırlıyoruz
-                                        });
-                                    }
-                                }} 
-                            />
-                        </label>
-                    </div>
-                </div>
-            )}
 
             <div className="flex-1 overflow-y-auto p-2 space-y-3 custom-scrollbar">
 
