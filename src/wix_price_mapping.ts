@@ -73,9 +73,12 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "İnşaat Demiri": "demirmal",
   "Kalıp İşçiliği & Malzeme": "kalipdemirbetonisc",
   "Temel Su Yalıtımı (Bohçalama)": "membranmalisc",
+  
   "Çatı Konstrüksiyon ve Kaplama": "catipaket",
+  "Subasman Dolgusu (Stabilize/Mıcır)":"micirm3mal",
 
   "Balkon ve Teras Su Yalıtımı": "banyoyalitimpaket",
+  "Temel Yalıtım Koruma (XPS)":"xpsm2mal",
 
   "Kalıp Yağı (Litre)": "kalipyagiltmal",
   "Kereste (m3)": "kerestem3mal",
@@ -134,6 +137,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Seramik Kaplama": "seramikmalisc",
   "Merdiven Mermer Kaplama": "basamakmalisc",
   "Merdiven Korkuluğu": "aluminyumkorkulukpaket",
+  "İç Merdiven Kaplama":"parkebasamakmalisc",
+  "İç Merdiven Korkuluk":"aluminyumkorkulukmalisc",
   "Süpürgelik": "supurgelikmalisc",
   "Sahanlık ve Kat Holü Mermer": "sahanlikmalisc",
   "Mermer Harcı ve Kumu": "harcm3paket",
@@ -162,6 +167,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Lavabo Bataryası": "lavabobataryasimal", // Banyo/Lavabo için
   "Evye Bataryası": "evyebataryasimal",     // Mutfak için               // Fiyat: 3.625 TL
   "Duş Seti (Başlık/Hortum)": "dussetimal",           // Fiyat: 2.588 TL
+
+  "Ağaç Dikimi":"agacmal",
 
   // --- 8. MEKANİK TESİSAT ---
   "Sıhhi Tesisat (Temiz+Pis Su)": "sihhitesisatisc", // cost_data'daki isim güncellendi
@@ -196,6 +203,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Zayıf Akım Sorti (TV/Data/Tel)": "zayifliakimsortiadetpaket",       // Yeni ID gerekli
   "Anahtar/Priz Montajı ve Malzemesi": "anahtarprizadetpaket",             // Mevcut ID kullanılabilir
   "Daire Sigorta Panosu ve Şalt Malz.": "dairesigortasalterpaket",          // Mevcut ID kullanılabilir
+  "Temel Topraklaması (Galvaniz Şerit)":"galvaniz_topraklama_seritmtmal",
 
   "Görüntülü Diafon Sistemi": "goruntuludiyafonpaket",
   "Merkezi Uydu Sistemi": "uydusistemipaket",

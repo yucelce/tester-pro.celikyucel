@@ -31,7 +31,10 @@ export interface CostItem {
   'calc_villa_veranda' | "calc_smart_home" | "calc_facade_composite" | 'calc_vrf_outdoor' | "calc_heat_pump" |
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
-  'calc_smart_home' | "calc_subasman_filling";
+  'calc_smart_home' | "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt'
+
+
+  ;
 
   multiplier: number;
   manualQuantity?: number;
@@ -117,7 +120,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Şantiye Su Tüketimi (Aylık)", unit: "Ay", unit_price: 25, auto_source: "calc_duration_months", multiplier: 1, scope: 'global' },
 
       { name: "Su Drenaj Sistemi", unit: "mt", unit_price: 450, auto_source: "calc_drainage", multiplier: 1, scope: 'global' },
-      { name: "Kırıcı İş Makinesi Farkı (Kayalık)", unit: "Saat", unit_price: 3500, auto_source: "calc_breaker_machine", multiplier: 1, scope: 'global' }, 
+      { name: "Kırıcı İş Makinesi Farkı (Kayalık)", unit: "Saat", unit_price: 3500, auto_source: "calc_breaker_machine", multiplier: 1, scope: 'global' },
       { name: "Püskürtme Beton (İksa)", unit: "m2", unit_price: 650, auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Kule Vinç Aylık Kira ve Operatör", unit: "Ay", unit_price: 85000, auto_source: "calc_tower_crane_duration", multiplier: 1, scope: 'global' },
       { name: "Kule Vinç Kurulum ve Söküm Bedeli", unit: "Paket", unit_price: 180000, auto_source: "calc_tower_crane_setup", multiplier: 1, scope: 'global', inputType: 'manual_total' },
@@ -193,7 +196,7 @@ export const COST_DATA: CostCategory[] = [
     title: "5. Dış Cephe ve Yalıtım",
     items: [
       { name: "Mantolama Malzemesi", unit: "m2", unit_price: 700, auto_source: "calc_facade", multiplier: 1, scope: 'global' },
-      { name: "Mantolama İşçiliği", unit: "m2", unit_price: 500, auto_source: "calc_facade", multiplier: 1, scope: 'global' }, 
+      { name: "Mantolama İşçiliği", unit: "m2", unit_price: 500, auto_source: "calc_facade", multiplier: 1, scope: 'global' },
       { name: "PVC Pencere (Doğrama)", unit: "m2", unit_price: 4500, auto_source: "calc_window_area", multiplier: 1, scope: 'unit' },
       { name: "Mermer Denizlik", unit: "mt", unit_price: 750, auto_source: "calc_sill_length", multiplier: 1, scope: 'unit' },
       { name: "Balkon Korkulukları (Alüminyum)", unit: "mt", unit_price: 1800, auto_source: "calc_balcony_railing", multiplier: 1, scope: 'unit' },
@@ -214,7 +217,7 @@ export const COST_DATA: CostCategory[] = [
     items: [
       { name: "Banyo ve Islak Hacim Su Yalıtımı", unit: "m2", unit_price: 400, auto_source: "wet_area", multiplier: 1.1, scope: 'unit' },
       { name: "Şap Malzemesi", unit: "m2", unit_price: 100, auto_source: "total_area", multiplier: 1, scope: 'unit' },
-      { name: "Şap İşçiliği", unit: "m2", unit_price: 80, auto_source: "total_area", multiplier: 1, scope: 'unit' }, 
+      { name: "Şap İşçiliği", unit: "m2", unit_price: 80, auto_source: "total_area", multiplier: 1, scope: 'unit' },
       { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, scope: 'unit' },
       { name: "Seramik Kaplama", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, scope: 'unit' },
       { name: "Seramik Yapıştırıcısı", unit: "kg", unit_price: 10, auto_source: "net_wet_area", multiplier: 5, scope: 'unit' },
@@ -241,13 +244,21 @@ export const COST_DATA: CostCategory[] = [
       { name: "Banyo Dolabı & Lavabo", unit: "Adet", unit_price: 6210, auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", unit_price: 17340, auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       {
-        name: "İç Merdiven (Dubleks)",
-        unit: "Adet",
-        unit_price: 72460,
-        auto_source: "calc_villa_stairs",
+        name: "İç Merdiven Kaplama",
+        unit: "Basamak",
+        unit_price: 4000,
+        auto_source: "calc_internal_stair_steps",
         multiplier: 1,
         scope: 'global'
-      }
+      },
+      {
+        name: "İç Merdiven Korkuluk",
+        unit: "mt",
+        unit_price: 2000,
+        auto_source: "calc_internal_stair_railing_mt",
+        multiplier: 1,
+        scope: 'global'
+      },
     ]
   },
 
@@ -256,7 +267,7 @@ export const COST_DATA: CostCategory[] = [
     id: "vitrifiye_ankastre",
     title: "8. Vitrifiye, Ankastre ve Islak Hacim",
     items: [
-      { name: "Mutfak Tezgahı (Granit/Çimstone)", unit: "mt", unit_price: 6990, auto_source: "calc_kitchen_counter_length", multiplier: 1, scope: 'unit' }, 
+      { name: "Mutfak Tezgahı (Granit/Çimstone)", unit: "mt", unit_price: 6990, auto_source: "calc_kitchen_counter_length", multiplier: 1, scope: 'unit' },
       { name: "Mutfak Evyesi", unit: "Adet", unit_price: 3880, auto_source: "calc_kitchen_sink", multiplier: 1, scope: 'unit' },
       { name: "Davlumbaz / Aspiratör", unit: "Adet", unit_price: 4915, auto_source: "calc_kitchen_sink", multiplier: 1, scope: 'unit' },
       { name: "Klozet Takımı (Gömme Rezervuar)", unit: "Adet", unit_price: 6830, auto_source: "calc_toilet", multiplier: 1, scope: 'unit' },
@@ -343,13 +354,12 @@ export const COST_DATA: CostCategory[] = [
     title: "11. Peyzaj ve Çevre Düzenleme",
     items: [
       { name: "Bahçe / Çevre Duvarı", unit: "mt", unit_price: 3500, auto_source: "calc_garden_wall", multiplier: 1, scope: 'global' },
-      { name: "Ağaç Dikimi (Yönetmelik)", unit: "Adet", unit_price: 1500, auto_source: "calc_tree_count", multiplier: 1, scope: 'global' },
+      { name: "Ağaç Dikimi", unit: "Adet", unit_price: 1500, auto_source: "calc_tree_count", multiplier: 1, scope: 'global' },
       { name: "Çim Ekimi ve Otomatik Sulama Sistemi", unit: "m2", unit_price: 350, auto_source: "calc_grass_and_irrigation", multiplier: 1, scope: 'global' },
       { name: "Sert Zemin / Yürüyüş Yolu", unit: "m2", unit_price: 600, auto_source: "calc_hard_ground", multiplier: 1, scope: 'global' },
 
       { name: "Özel Havuz (Hafriyat, İzolasyon ve Beton)", unit: "m2", unit_price: 18500, auto_source: "calc_pool_concrete", multiplier: 1, scope: 'global' },
       { name: "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)", unit: "Paket", unit_price: 150000, auto_source: "calc_pool_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Açık Otopark (Pergole ve Zemin Kaplama)", unit: "m2", unit_price: 7500, auto_source: "calc_villa_parking", multiplier: 1, scope: 'global' },
       { name: "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)", unit: "m2", unit_price: 11000, auto_source: "calc_villa_veranda", multiplier: 1, scope: 'global' }
     ]
   }

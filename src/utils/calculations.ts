@@ -784,7 +784,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             // YENİ: Bodrum yoksa Subasman Perdesi (Varsayılan 50cm yükseklik, 25cm kalınlık)
             const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             if (subasmanH > 0) {
-                vBodrumPerde = basePerim * subasmanH * 0.25; 
+                vBodrumPerde = basePerim * subasmanH * 0.25;
             }
         }
 
@@ -868,12 +868,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return xpsArea;
     },
 
-    'calc_villa_stairs': ({ buildingStats }) => {
-        if (buildingStats.buildingType === 'villa') {
-            return buildingStats.normalFloorCount + buildingStats.basementFloorCount;
-        }
-        return 0;
-    },
+  
 
     'calc_facade_composite': ({ buildingStats, item }) => {
         if (buildingStats.buildingType === 'villa') {
@@ -1150,12 +1145,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             // Aydınlatma kontrolü: Bölge (Oda) sayısına göre röle ve anahtar maliyeti
             baseCost += (estimatedZones * 4500);
         }
-        
+
         if (buildingStats.smartHomeHeating) {
             // İklimlendirme (Termostat) kontrolü: Bölge (Oda) sayısına göre vana ve termostat maliyeti
             baseCost += (estimatedZones * 5500);
         }
-        
+
         if (buildingStats.smartHomeSensors) {
             // Islak hacim (Banyo, Mutfak, WC) ve Gaz noktalarına göre dinamik sensör adedi hesabı
             let wetAreaZones = 2; // Varsayılan: 1 mutfak + 1 banyo
@@ -1163,12 +1158,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 wetAreaZones = (aggregatedUnitStats['calc_toilet'] || 1) + (aggregatedUnitStats['calc_kitchen_sink'] || 1);
             }
             const floors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1; // Villa kat sayısı
-            
+
             // Su basma sensörü (Banyo/Mutfak başı 2500TL), Gaz Sensörü (Mutfak başı 3500TL), 
             // Duman Dedektörü (Her kata 1500TL) ve Ana Kesici Valfler (Sabit 8000TL)
             baseCost += (wetAreaZones * 2500) + (1 * 3500) + (floors * 1500) + 8000;
         }
-        
+
         if (buildingStats.smartHomeBlinds) {
             // Panjur/Perde motor kontrolü: Pencere alanına göre gerçekçi adet hesabı
             let windowCount = estimatedZones; // Varsayılan: Her odaya ortalama 1 pencere
@@ -1520,6 +1515,71 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const stepHypot = Math.hypot(0.17, 0.28);
         return stepCount * stepHypot;
     },
+
+    'calc_internal_stair_steps': ({ buildingStats }) => {
+        // Sadece Villa modunda çalışır, apartmanlarda maliyeti 0 döner
+        if (buildingStats.buildingType !== 'villa') return 0;
+
+        const idealRiserHeight = 0.175; // İdeal rıht yüksekliği
+        const landingBonus = 3;        // Sahanlık için eklenen basamak seti (piyasa teamülü)
+        let totalSteps = 0;
+
+        // 1. Bodrum Katlardan Çıkış
+        if (buildingStats.basementFloorCount > 0) {
+            const basementHeight = buildingStats.basementFloorHeight || 2.80;
+            const stepsPerBasement = Math.round(basementHeight / idealRiserHeight);
+            totalSteps += buildingStats.basementFloorCount * (stepsPerBasement + landingBonus);
+        }
+
+        // 2. Zeminden 1. Kata Çıkış (Eğer normal kat varsa)
+        if (buildingStats.normalFloorCount > 0) {
+            const groundHeight = buildingStats.groundFloorHeight || 3.20;
+            const groundSteps = Math.round(groundHeight / idealRiserHeight);
+            totalSteps += (groundSteps + landingBonus);
+        }
+
+        // 3. Diğer Normal Katlar Arası (Örn: 1. kat'tan 2. kat'a)
+        if (buildingStats.normalFloorCount > 1) {
+            const normalHeight = buildingStats.normalFloorHeight || 3.00;
+            const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
+            const flights = buildingStats.normalFloorCount - 1;
+
+            totalSteps += flights * (normalStepsPerFlight + landingBonus);
+        }
+
+        return totalSteps; // Birimi: Adet (Takım Basamak)
+    },
+
+    'calc_internal_stair_railing_mt': ({ buildingStats }) => {
+        // Sadece Villa modunda çalışır
+        if (buildingStats.buildingType !== 'villa') return 0;
+
+        const idealRiserHeight = 0.175;
+        const treadDepth = 0.28;
+        let totalRailingMt = 0;
+
+        // Hipotenüs üzerinden gerçek korkuluk boyu hesaplama
+        const calcFlightRailing = (height: number) => {
+            const riserCount = Math.round(height / idealRiserHeight);
+            const horizontalLength = (riserCount - 1) * treadDepth;
+            // Hipotenüs + %15 (Sahanlık dönüşü ve işçilik payı)
+            return Math.sqrt(Math.pow(height, 2) + Math.pow(horizontalLength, 2)) * 1.15;
+        };
+
+        if (buildingStats.basementFloorCount > 0) {
+            totalRailingMt += buildingStats.basementFloorCount * calcFlightRailing(buildingStats.basementFloorHeight || 2.80);
+        }
+
+        if (buildingStats.normalFloorCount > 0) {
+            totalRailingMt += calcFlightRailing(buildingStats.groundFloorHeight || 3.20);
+        }
+
+        if (buildingStats.normalFloorCount > 1) {
+            totalRailingMt += (buildingStats.normalFloorCount - 1) * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+        }
+
+        return Math.round(totalRailingMt * 100) / 100; // Birimi: Metre Tül (mt)
+    }
 
     'calc_marble_mortar': ({ buildingStats, totalBuildingHeight }) => {
         if (buildingStats.buildingType === 'villa') return 0;
