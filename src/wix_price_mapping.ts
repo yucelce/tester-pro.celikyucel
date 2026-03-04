@@ -3,7 +3,7 @@
 // Sağ Taraf: Wix Veritabanı '_id'
 
 export const WIX_PRICE_MAP: Record<string, string> = {
-  // --- 1. PROJELENDİRME VE RESMİ GİDERLER ---
+  // --- 1. PROJELENDİRME VE RESMİ GİDERLER ----
   "Mimari Proje": "mimariprojeisc",
   "Statik Proje": "statikprojeisc",
   "Mekanik Proje": "mekanikprojeisc",
