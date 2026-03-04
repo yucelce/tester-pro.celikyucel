@@ -868,7 +868,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return xpsArea;
     },
 
-  
+
 
     'calc_facade_composite': ({ buildingStats, item }) => {
         if (buildingStats.buildingType === 'villa') {
@@ -1579,7 +1579,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         }
 
         return Math.round(totalRailingMt * 100) / 100; // Birimi: Metre Tül (mt)
-    }
+    },
 
     'calc_marble_mortar': ({ buildingStats, totalBuildingHeight }) => {
         if (buildingStats.buildingType === 'villa') return 0;
