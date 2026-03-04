@@ -182,11 +182,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Tavan Boyası", unit: "m2", unit_price: 38, auto_source: "calc_ceiling_paint_area", multiplier: 1, scope: 'unit' },
       { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 390, auto_source: "manual", multiplier: 1, scope: 'unit' },
       { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 126, auto_source: "cornice_length", multiplier: 1, scope: 'unit' },
-
-      { name: "Sıva Alçısı (Torba)", unit: "Adet", unit_price: 140, auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Saten Alçı (Torba)", unit: "Adet", unit_price: 160, auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Astar Boya (Kova)", unit: "Adet", unit_price: 950, auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "İç Cephe Boyası (Kova)", unit: "Adet", unit_price: 2100, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      
     ]
   },
 

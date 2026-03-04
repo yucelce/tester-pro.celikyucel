@@ -132,7 +132,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Pencere Söveleri": "sovemalisc",
 
   // --- 6. ZEMİN VE MERDİVEN ---
-  "Şap Atılması (Malz.+İşçilik)": "sappaket",
+ 
   "Laminat Parke (Anahtar Teslim)": "parkepaket",
   "Seramik Kaplama": "seramikmalisc",
   "Merdiven Mermer Kaplama": "basamakmalisc",
@@ -200,7 +200,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   // Wix tarafında bu ID'lerin karşılığı fiyat olmalı (yoksa eski 'elektriktesisatm2paket' fiyatını kullanabilir veya yeni ID açabilirsiniz).
 
   "Kuvvetli Akım Sorti (Priz/Aydınlatma)": "kuvvetliakimsortiadetpaket", // Yeni ID gerekli
-  "Zayıf Akım Sorti (TV/Data/Tel)": "zayifliakimsortiadetpaket",       // Yeni ID gerekli
+  "Zayıf Akım Sorti (TV/Data/Tel)": "zayifakimsortiadetpaket",       // Yeni ID gerekli
   "Anahtar/Priz Montajı ve Malzemesi": "anahtarprizadetpaket",             // Mevcut ID kullanılabilir
   "Daire Sigorta Panosu ve Şalt Malz.": "dairesigortasalterpaket",          // Mevcut ID kullanılabilir
   "Temel Topraklaması (Galvaniz Şerit)":"galvaniz_topraklama_seritmtmal",
