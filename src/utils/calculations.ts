@@ -5,25 +5,14 @@ import { DEFAULT_PRICES } from '../constants';
 
 export const getGlobalPrice = (
     currentCosts: CostCategory[] | undefined,
-    itemName: string,
-    categoryId?: string // Opsiyonel: Sadece belirli bir kategoride aramak için
+    itemName: string
 ): number => {
-    // 1. Sistemde maliyetler (currentCosts) yüklüyse içinde ara
+    // 1. Sistemde maliyetler (currentCosts) yüklüyse tüm kategorileri tara
     if (currentCosts) {
-        if (categoryId) {
-            // Sadece belirli bir kategoride ara (daha hızlı)
-            const cat = currentCosts.find(c => c.id === categoryId);
-            const item = cat?.items.find(i => i.name === itemName);
+        for (const cat of currentCosts) {
+            const item = cat.items.find(i => i.name === itemName);
             if (item) {
                 return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
-            }
-        } else {
-            // Tüm kategorileri tara
-            for (const cat of currentCosts) {
-                const item = cat.items.find(i => i.name === itemName);
-                if (item) {
-                    return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
-                }
             }
         }
     }
@@ -712,14 +701,6 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts }) => {
         const totalApartments = aggregatedUnitStats['calc_unit_count'] || 1;
-        const getWixPrice = (itemName: string, fallback: number) => {
-            if (!currentCosts) return fallback;
-            for (const cat of currentCosts) {
-                const match = cat.items.find(i => i.name === itemName);
-                if (match) return match.unit_price;
-            }
-            return fallback;
-        };
 
         const verticalPipePrice = getGlobalPrice(currentCosts, "Doğalgaz Kolon Hattı (mt) Birim");
         const connectionSetPrice = getGlobalPrice(currentCosts, "Doğalgaz Daire Başı Set Birim");
@@ -777,15 +758,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_soil_investigation': ({ buildingStats, currentCosts }) => {
-        const resmiIdariCat = currentCosts?.find(c => c.id === 'resmi_idari');
-        const getPrice = (name: string, fallback: number) => {
-            return resmiIdariCat?.items.find(i => i.name === name)?.unit_price || fallback;
-        };
+
         const subPrices = {
-            sondaj_mt: getGlobalPrice(currentCosts, "Zemin Sondaj Birim Fiyatı", "resmi_idari"),
-            spt_adet: getGlobalPrice(currentCosts, "SPT Deneyi Birim Fiyatı", "resmi_idari"),
-            presiyometre_adet: getGlobalPrice(currentCosts, "Presiyometre Deneyi Birim Fiyatı", "resmi_idari"),
-            laboratuvar_paket: getGlobalPrice(currentCosts, "Zemin Laboratuvar Paketi", "resmi_idari")
+            sondaj_mt: getGlobalPrice(currentCosts, "Zemin Sondaj Birim Fiyatı"),
+            spt_adet: getGlobalPrice(currentCosts, "SPT Deneyi Birim Fiyatı"),
+            presiyometre_adet: getGlobalPrice(currentCosts, "Presiyometre Deneyi Birim Fiyatı"),
+            laboratuvar_paket: getGlobalPrice(currentCosts, "Zemin Laboratuvar Paketi")
         };
         const groundArea = buildingStats.groundFloorArea || 0;
         return calculateSoilInvestigationPackage(groundArea, subPrices);
@@ -961,13 +939,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_utilities_subscription': ({ currentCosts, totalConstructionArea }) => {
-        const getPrice = (name: string, fallback: number) => {
-            const helper = currentCosts?.find(c => c.id === 'santiye_hafriyat')?.items.find(i => i.name === name);
-            return helper?.unit_price || fallback;
-        };
 
-        const unitGuvenlikBedeli = getPrice("Elektrik Güvence Birim Bedeli", 746);
-        const waterAndOtherFees = getPrice("Su Abonelik Paket Bedeli", 6500);
+        const unitGuvenlikBedeli = getGlobalPrice(currentCosts, "Elektrik Güvence Birim Bedeli");
+        const waterAndOtherFees = getGlobalPrice(currentCosts, "Su Abonelik Paket Bedeli");
 
         const estimatedPowerKW = (totalConstructionArea / 1000) * 12.5;
         const electricityGuvence = estimatedPowerKW * unitGuvenlikBedeli;
