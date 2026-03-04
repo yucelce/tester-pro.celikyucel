@@ -1,7 +1,36 @@
 import { UnitType, BuildingStats, WallMaterial, RoomType } from '../types';
 import { CostCategory, CostItem } from '../cost_data';
 import { calculateWasteFactor } from './geometry';
-import { DEFAULT_PRICES} from '../constants';
+import { DEFAULT_PRICES } from '../constants';
+
+export const getGlobalPrice = (
+    currentCosts: CostCategory[] | undefined,
+    itemName: string,
+    categoryId?: string // Opsiyonel: Sadece belirli bir kategoride aramak için
+): number => {
+    // 1. Sistemde maliyetler (currentCosts) yüklüyse içinde ara
+    if (currentCosts) {
+        if (categoryId) {
+            // Sadece belirli bir kategoride ara (daha hızlı)
+            const cat = currentCosts.find(c => c.id === categoryId);
+            const item = cat?.items.find(i => i.name === itemName);
+            if (item) {
+                return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
+            }
+        } else {
+            // Tüm kategorileri tara
+            for (const cat of currentCosts) {
+                const item = cat.items.find(i => i.name === itemName);
+                if (item) {
+                    return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
+                }
+            }
+        }
+    }
+
+    // 2. Eğer güncel listede bulunamazsa veya currentCosts tanımsızsa DEFAULT_PRICES'tan al
+    return DEFAULT_PRICES[itemName] || 0;
+};
 
 export const getIronCoefficient = (
     zone?: number,
@@ -692,8 +721,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return fallback;
         };
 
-        const verticalPipePrice = getWixPrice("Doğalgaz Kolon Hattı (mt) Birim", 2200);
-        const connectionSetPrice = getWixPrice("Doğalgaz Daire Başı Set Birim", 3800);
+        const verticalPipePrice = getGlobalPrice(currentCosts, "Doğalgaz Kolon Hattı (mt) Birim");
+        const connectionSetPrice = getGlobalPrice(currentCosts, "Doğalgaz Daire Başı Set Birim");
         const horizontalPipePrice = verticalPipePrice * 0.636;
 
         const verticalHeight =
@@ -753,10 +782,10 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return resmiIdariCat?.items.find(i => i.name === name)?.unit_price || fallback;
         };
         const subPrices = {
-            sondaj_mt: getPrice("Zemin Sondaj Birim Fiyatı"),
-            spt_adet: getPrice("SPT Deneyi Birim Fiyatı"),
-            presiyometre_adet: getPrice("Presiyometre Deneyi Birim Fiyatı", 900),
-            laboratuvar_paket: getPrice("Zemin Laboratuvar Paketi", 3500)
+            sondaj_mt: getGlobalPrice(currentCosts, "Zemin Sondaj Birim Fiyatı", "resmi_idari"),
+            spt_adet: getGlobalPrice(currentCosts, "SPT Deneyi Birim Fiyatı", "resmi_idari"),
+            presiyometre_adet: getGlobalPrice(currentCosts, "Presiyometre Deneyi Birim Fiyatı", "resmi_idari"),
+            laboratuvar_paket: getGlobalPrice(currentCosts, "Zemin Laboratuvar Paketi", "resmi_idari")
         };
         const groundArea = buildingStats.groundFloorArea || 0;
         return calculateSoilInvestigationPackage(groundArea, subPrices);
@@ -1932,7 +1961,7 @@ export const calculateDynamicUnitPrice = (
 
     if (item.name === "Özel Havuz (Hafriyat, İzolasyon ve Beton)" && buildingStats && currentCosts) {
         const poolArea = buildingStats.poolArea || 0;
-        
+
         if (poolArea > 0) {
             const getPrice = (catId: string, itemName: string, fallback: number) => {
                 const cat = currentCosts.find(c => c.id === catId);
@@ -1955,27 +1984,27 @@ export const calculateDynamicUnitPrice = (
             const perimeter = 4 * Math.sqrt(poolArea);
             const wallArea = perimeter * depth;
             const innerSurfaceArea = poolArea + wallArea;
-            
+
             // Hassas Metrajlar
             const excavationVol = (poolArea + perimeter * 0.5) * (depth + 0.3);
             const concreteVol = (poolArea * 0.20) + (wallArea * 0.20);
             const ironTon = concreteVol * 0.120;
             const formworkArea = wallArea * 2;
-            
+
             // Tutar Hesaplamaları
             const costExcavation = excavationVol * p_excavation;
             const costConcrete = concreteVol * p_concrete;
             const costIron = ironTon * p_iron;
             const costFormwork = formworkArea * p_formwork;
-            const costInsulation = innerSurfaceArea * p_insulation * 1.5; 
+            const costInsulation = innerSurfaceArea * p_insulation * 1.5;
             const costCeramic = innerSurfaceArea * p_ceramic;
-            const costAdhesive = innerSurfaceArea * 5 * p_ceramic_adhesive; 
-            const costFiller = innerSurfaceArea * 0.5 * p_joint_filler; 
-            
+            const costAdhesive = innerSurfaceArea * 5 * p_ceramic_adhesive;
+            const costFiller = innerSurfaceArea * 0.5 * p_joint_filler;
+
             const totalPoolMaterialCost = costExcavation + costConcrete + costIron + costFormwork + costInsulation + costCeramic + costAdhesive + costFiller;
-            
+
             const calculatedUnitPrice = totalPoolMaterialCost / poolArea;
-            
+
             return Math.round(calculatedUnitPrice * 1.10);
         }
     }
