@@ -21,6 +21,13 @@ export const getGlobalPrice = (
     return DEFAULT_PRICES[itemName] || 0;
 };
 
+export const calculateEstimatedRaftHeight = (totalFloors: number): number => {
+    if (totalFloors >= 20) return 2.00;
+    if (totalFloors >= 4) return 0.40 + (totalFloors - 4) * 0.10;
+    if (totalFloors >= 3) return 0.40;
+    return 0.30;
+};
+
 export const getIronCoefficient = (
     zone?: number,
     averageFloorArea: number = 200,
@@ -679,12 +686,13 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts }) => {
         const totalUnits = aggregatedUnitStats['calc_unit_count'] || (totalConstructionArea / 100);
         return calculateTapuNoterFees(
-            totalUnits,
-            buildingStats.province,
-            buildingStats.constructionModel,
-            buildingStats.isUrbanTransformation,
-            currentCosts
-        );
+        totalUnits,
+        buildingStats.province,
+        buildingStats.constructionModel,
+        buildingStats.isUrbanTransformation,
+        0, 
+        currentCosts
+    );
     },
 
     'calc_acoustic': ({ totalConstructionArea, item }) => {
@@ -768,10 +776,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         const vTemel = (foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2))) * raftHeight;
@@ -832,10 +837,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        // Eski hali yerine:
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         // Ampatmanlı izdüşüm alanını hesapla
@@ -844,16 +847,16 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return vTemelArea * 0.10; // 10 cm grobeton kalınlığı varsayımı
     },
 
+
+
     'calc_foundation_xps': ({ buildingStats, totalFloors }) => {
         let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
         let basePerim = buildingStats.basementFloorCount > 0
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        // Eski hali yerine:
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         const foundationPerimeter = basePerim + (8 * ampatman);
@@ -1061,10 +1064,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        // Eski hali yerine:
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         const vTemel = (foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2))) * raftHeight;
@@ -1274,10 +1275,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         const extendedPerimeter = basePerim + (8 * ampatman);
@@ -1604,10 +1602,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
             : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
 
-        let raftHeight = 0.30;
-        if (totalFloors >= 20) raftHeight = 2.00;
-        else if (totalFloors >= 4) raftHeight = 0.40 + (totalFloors - 4) * 0.10;
-        else if (totalFloors >= 3) raftHeight = 0.40;
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
 
         const ampatman = raftHeight * 1.5;
         const foundationPerimeter = basePerim + (8 * ampatman);
@@ -2072,7 +2067,15 @@ export const calculateDynamicUnitPrice = (
                 case 4: zoneMultiplier = 1.50; break; // 4. Bölge (Örn: Erzurum) -> Çok Kalın XPS / Taşyünü (8-10 cm)
             }
 
-            let calculatedPrice = item.unit_price * zoneMultiplier;
+            let calculatedPrice = item.unit_price;
+
+            if (item.name === "Mantolama Malzemesi") {
+                // Malzeme iklimden tam etkilenir (Kalınlık ve yoğunluk farkı)
+                calculatedPrice = item.unit_price * zoneMultiplier;
+            } else if (item.name === "Mantolama İşçiliği") {
+                // İşçilik iklimden bağımsızdır veya sadece %5'lik bir "kalın malzeme" farkı eklenir
+                calculatedPrice = item.unit_price * 1.05;
+            }
 
             // Çakışmayı önlemek için: Eğer bina tipi villa ise, aşağıdaki "structuralPremium" katsayısını 
             // manuel olarak iklimsel fiyata da yansıtıp doğrudan döndürüyoruz.
@@ -2144,11 +2147,11 @@ export const calculateTapuNoterFees = (
     // SENARYO 1: KENTSEL DÖNÜŞÜM (6306 Sayılı Kanun)
     if (isUrbanTransformation) {
         // Kentsel Dönüşüm maktu evrak tahmini bedelini sistemden çek, bulamazsa 950 kullan
-        const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti")/2 ;
-        
+        const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti") / 2;
+
         // MUAFİYET: Damga Vergisi, Noter Harcı ve Tapu Harcı alınmaz.
         // Sadece maktu kağıt ücreti ve cüzi işlem masrafı.
-        return baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli); 
+        return baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
     }
 
     // SENARYO 2: KAT KARŞILIĞI İNŞAAT SÖZLEŞMESİ (Kentsel Dönüşüm YOKSA)
