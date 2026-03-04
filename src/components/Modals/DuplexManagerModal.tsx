@@ -20,7 +20,7 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
         if (!selectedLowerUnit) return [];
 
         return units.filter(u => {
-            // Bir tip kendisiyle eşleşemez
+            // Bir tip kendisiyle eşleşemez dd
             if (u.id === lowerId) return false;
 
             const lowerType = selectedLowerUnit.floorType;
