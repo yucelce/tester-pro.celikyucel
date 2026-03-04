@@ -73,6 +73,9 @@ export class GeometryAnalyzer {
         } else if (unit.floorType === 'basement') {
             defaultFloorHeight = buildingStats.basementFloorHeight;
             defaultFloorArea = buildingStats.basementFloorArea;
+        } else if (unit.floorType === 'roof') {
+            defaultFloorHeight = buildingStats.roofFloorHeight || 1.8;
+            defaultFloorArea = buildingStats.roofFloorArea || 0;
         }
 
         let totalSlabArea = 0;

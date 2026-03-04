@@ -280,6 +280,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [costs, setCosts] = useState<CostCategory[]>(INITIAL_COSTS);
 
     const [buildingStats, setBuildingStatsState] = useState<BuildingStats>({
+        buildingType: 'apartment',
         province: 'İstanbul', district: 'Kadıköy', landArea: 500, heatZone: 2, earthquakeZone: 1,
         normalFloorCount: 5, basementFloorCount: 1,
         normalFloorHeight: 2.9, groundFloorHeight: 3.5, basementFloorHeight: 3.0,
@@ -578,7 +579,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     useEffect(() => {
         let validationResult: AreaValidationResult | null = null;
-        const floorTypes: UnitFloorType[] = ['normal', 'ground', 'basement'];
+        const floorTypes: UnitFloorType[] =['normal', 'ground', 'basement', 'roof'];
 
         for (const floorType of floorTypes) {
             let declaredArea = 0;
@@ -609,6 +610,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 safeFloorCount = Math.max(1, buildingStats.basementFloorCount);
                 hallArea = buildingStats.basementFloorHallArea || 0;
                 floorLabel = "Bodrum Kat";
+            } else if (floorType === 'roof') {
+                if (!buildingStats.hasRoofFloor) continue;
+                declaredArea = buildingStats.roofFloorArea || 0;
+                floorHeight = buildingStats.roofFloorHeight || 1.8;
+                floorCount = 1;
+                safeFloorCount = 1;
+                hallArea = 0;
+                floorLabel = "Çatı Katı";
             }
 
             // Kat sayısı 0 veya alan 0 ise bu kat tipini atla

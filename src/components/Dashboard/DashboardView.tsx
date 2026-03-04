@@ -559,6 +559,9 @@ export const DashboardView: React.FC = () => {
                                                     <option value="normal">Normal ({buildingStats.normalFloorHeight}m)</option>
                                                     <option value="ground">Zemin ({buildingStats.groundFloorHeight}m)</option>
                                                     <option value="basement">Bodrum ({buildingStats.basementFloorHeight}m)</option>
+                                                    {buildingStats.hasRoofFloor && (
+                                                        <option value="roof">Çatı ({buildingStats.roofFloorHeight || 1.8}m)</option>
+                                                    )}
                                                 </select>
                                             </div>
                                             <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
@@ -707,6 +710,9 @@ export const DashboardView: React.FC = () => {
                                                     <option value="normal">Normal Kat ({buildingStats.normalFloorHeight}m)</option>
                                                     <option value="ground">Zemin Kat ({buildingStats.groundFloorHeight}m)</option>
                                                     <option value="basement">Bodrum Kat ({buildingStats.basementFloorHeight}m)</option>
+                                                    {buildingStats.hasRoofFloor && (
+                                                        <option value="roof">Çatı Katı ({buildingStats.roofFloorHeight || 1.8}m)</option>
+                                                    )}
                                                 </select>
                                             </div>
                                             <div className="text-right">

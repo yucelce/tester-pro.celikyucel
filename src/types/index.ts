@@ -2,7 +2,7 @@
 export type Point = { x: number; y: number };
 export type RoomType = 'living' | 'bedroom' | 'kitchen' | 'bath' | 'wc' | 'hallway' | 'dressing' | 'balcony' | 'storage' | 'other' | null;
 export type WallMaterial = 'gazbeton' | 'tugla' | 'bims';
-export type UnitFloorType = 'normal' | 'ground' | 'basement';
+export type UnitFloorType = 'normal' | 'ground' | 'basement' | 'roof';
 
 export interface RoomProperties {
     ceilingHeight?: number; // Optional: if undefined, use floor height

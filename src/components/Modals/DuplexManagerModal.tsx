@@ -1,5 +1,5 @@
 // src/components/Modals/DuplexManagerModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 
 interface DuplexManagerModalProps {
@@ -12,9 +12,41 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
     const [upperId, setUpperId] = useState('');
     const [count, setCount] = useState(1);
 
+    // --- YENİ: Dinamik Eşleşme Mantığı ---
+    const availableUpperUnits = useMemo(() => {
+        if (!lowerId) return []; // Önce giriş katı seçilmeli
+        
+        const selectedLowerUnit = units.find(u => u.id === lowerId);
+        if (!selectedLowerUnit) return [];
+
+        return units.filter(u => {
+            // Bir tip kendisiyle eşleşemez
+            if (u.id === lowerId) return false;
+
+            const lowerType = selectedLowerUnit.floorType;
+            const upperType = u.floorType;
+
+            // Kural 1: Giriş Bodrum ise, diğeri sadece Zemin olabilir
+            if (lowerType === 'basement') return upperType === 'ground';
+            
+            // Kural 2: Giriş Zemin ise, diğeri Bodrum (Ters Dubleks) veya Normal Kat olabilir
+            if (lowerType === 'ground') return upperType === 'basement' || upperType === 'normal';
+            
+            // Kural 3: Giriş Normal Kat ise, diğeri Zemin veya başka bir Normal Kat olabilir (Bodrum Olamaz)
+            if (lowerType === 'normal') return upperType === 'ground' || upperType === 'normal' || upperType === 'roof';
+
+            return true;
+        });
+    }, [lowerId, units]);
+
+    // Giriş katı değiştiğinde 2. kat seçimini sıfırla
+    const handleLowerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setLowerId(e.target.value);
+        setUpperId(''); 
+    };
+
     const handleAdd = () => {
-        if (!lowerId || !upperId) return alert('Lütfen alt ve üst kat tiplerini seçin.');
-        if (lowerId === upperId) return alert('Alt ve üst kat aynı tip olamaz.');
+        if (!lowerId || !upperId) return alert('Lütfen eşleştirilecek iki kat tipini de seçin.');
         
         const lowerUnit = units.find(u => u.id === lowerId);
         const upperUnit = units.find(u => u.id === upperId);
@@ -34,6 +66,9 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
 
     const getUnitName = (id: string) => units.find(u => u.id === id)?.name || 'Bilinmeyen Tip';
 
+    // Kat tipini Türkçeleştiren yardımcı fonksiyon
+    const getFloorLabel = (type: string) => type === 'basement' ? 'Bodrum' : type === 'ground' ? 'Zemin' : type === 'roof' ? 'Çatı' : 'Normal';
+
     return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex justify-center items-center backdrop-blur-sm p-4 animate-fadeIn">
             <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
@@ -48,27 +83,27 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
                 <div className="p-4 border-b border-slate-700 bg-slate-800/30">
                     <div className="flex flex-col md:flex-row gap-3 items-end">
                         <div className="flex-1 w-full">
-                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Giriş / Alt Kat Tipi</label>
-                            <select value={lowerId} onChange={e => setLowerId(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-indigo-500 outline-none">
-                                <option value="">Seçiniz...</option>
-                                {units.map(u => <option key={u.id} value={u.id}>{u.name} ({u.count} Adet)</option>)}
+                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Giriş Katı (1. Seçim)</label>
+                            <select value={lowerId} onChange={handleLowerChange} className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-indigo-500 outline-none">
+                                <option value="">Önce bu katı seçiniz...</option>
+                                {units.map(u => <option key={u.id} value={u.id}>{u.name} - [{getFloorLabel(u.floorType)}]</option>)}
                             </select>
                         </div>
                         <div className="flex items-center justify-center pb-2 px-2 hidden md:block">
                             <i className="fas fa-plus text-slate-500 text-sm"></i>
                         </div>
                         <div className="flex-1 w-full">
-                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Üst / Çatı Katı Tipi</label>
-                            <select value={upperId} onChange={e => setUpperId(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-indigo-500 outline-none">
-                                <option value="">Seçiniz...</option>
-                                {units.map(u => <option key={u.id} value={u.id}>{u.name} ({u.count} Adet)</option>)}
+                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Eşleşen Diğer Kat (2. Seçim)</label>
+                            <select value={upperId} onChange={e => setUpperId(e.target.value)} disabled={!lowerId || availableUpperUnits.length === 0} className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-indigo-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+                                <option value="">{lowerId ? (availableUpperUnits.length > 0 ? 'Seçiniz...' : 'Uygun eşleşme yok') : 'Önce giriş katını seçin'}</option>
+                                {availableUpperUnits.map(u => <option key={u.id} value={u.id}>{u.name} - [{getFloorLabel(u.floorType)}]</option>)}
                             </select>
                         </div>
                         <div className="w-full md:w-24">
-                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Eşleşen Adet</label>
+                            <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Adet</label>
                             <input type="number" min="1" value={count} onChange={e => setCount(parseInt(e.target.value) || 1)} className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-indigo-500 outline-none text-center" />
                         </div>
-                        <button onClick={handleAdd} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold text-sm transition">
+                        <button onClick={handleAdd} disabled={!lowerId || !upperId} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-white px-4 py-2 rounded font-bold text-sm transition">
                             Eşleştir
                         </button>
                     </div>
@@ -81,49 +116,52 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {duplexPairs.map(pair => (
-                                <div key={pair.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4 flex-1 w-full">
-                                        <div className="bg-slate-900 border border-slate-600 rounded p-2 flex-1 text-center">
-                                            <div className="text-[10px] text-slate-500 mb-1">Alt Kat (Giriş)</div>
-                                            <div className="text-sm font-bold text-white truncate" title={getUnitName(pair.lowerUnitId)}>{getUnitName(pair.lowerUnitId)}</div>
+                            {duplexPairs.map(pair => {
+                                const lUnit = units.find(u => u.id === pair.lowerUnitId);
+                                const uUnit = units.find(u => u.id === pair.upperUnitId);
+                                return (
+                                    <div key={pair.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4 flex-1 w-full">
+                                            <div className="bg-slate-900 border border-slate-600 rounded p-2 flex-1 text-center relative overflow-hidden">
+                                                <div className="text-[10px] text-slate-400 font-bold mb-1">GİRİŞ KATI</div>
+                                                <div className="text-sm font-bold text-white truncate" title={getUnitName(pair.lowerUnitId)}>{getUnitName(pair.lowerUnitId)}</div>
+                                                <div className="text-[9px] text-indigo-400 mt-1">[{lUnit ? getFloorLabel(lUnit.floorType) : '?'}]</div>
+                                            </div>
+                                            <i className="fas fa-link text-indigo-400 text-lg"></i>
+                                            <div className="bg-slate-900 border border-slate-600 rounded p-2 flex-1 text-center relative overflow-hidden">
+                                                <div className="text-[10px] text-slate-400 font-bold mb-1">EŞLEŞEN KAT</div>
+                                                <div className="text-sm font-bold text-white truncate" title={getUnitName(pair.upperUnitId)}>{getUnitName(pair.upperUnitId)}</div>
+                                                <div className="text-[9px] text-indigo-400 mt-1">[{uUnit ? getFloorLabel(uUnit.floorType) : '?'}]</div>
+                                            </div>
                                         </div>
-                                        <i className="fas fa-link text-indigo-400"></i>
-                                        <div className="bg-slate-900 border border-slate-600 rounded p-2 flex-1 text-center">
-                                            <div className="text-[10px] text-slate-500 mb-1">Üst Kat (Çatı)</div>
-                                            <div className="text-sm font-bold text-white truncate" title={getUnitName(pair.upperUnitId)}>{getUnitName(pair.upperUnitId)}</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                                        <div className="flex items-center gap-2">
-                                            <input 
-                                                type="number" 
-                                                value={pair.count} 
-                                                onChange={e => {
-                                                    const newCount = Math.max(1, parseInt(e.target.value) || 1);
-                                                    const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
-                                                    const upperUnit = units.find(u => u.id === pair.upperUnitId);
-                                                    
-                                                    if (lowerUnit && upperUnit) {
-                                                        const maxPossible = Math.min(lowerUnit.count, upperUnit.count);
-                                                        if (newCount > maxPossible) {
-                                                            alert(`Adet, seçili tiplerin mevcut adetlerinden (${maxPossible}) fazla olamaz.`);
-                                                            updateDuplexPair(pair.id, maxPossible);
-                                                        } else {
-                                                            updateDuplexPair(pair.id, newCount);
+                                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="number" 
+                                                    value={pair.count} 
+                                                    onChange={e => {
+                                                        const newCount = Math.max(1, parseInt(e.target.value) || 1);
+                                                        if (lUnit && uUnit) {
+                                                            const maxPossible = Math.min(lUnit.count, uUnit.count);
+                                                            if (newCount > maxPossible) {
+                                                                alert(`Adet, seçili tiplerin mevcut adetlerinden (${maxPossible}) fazla olamaz.`);
+                                                                updateDuplexPair(pair.id, maxPossible);
+                                                            } else {
+                                                                updateDuplexPair(pair.id, newCount);
+                                                            }
                                                         }
-                                                    }
-                                                }} 
-                                                className="w-16 bg-slate-950 border border-slate-600 rounded p-1.5 text-center text-white font-bold text-sm outline-none focus:border-indigo-500" 
-                                            />
-                                            <span className="text-xs text-slate-400">Adet</span>
+                                                    }} 
+                                                    className="w-16 bg-slate-950 border border-slate-600 rounded p-1.5 text-center text-white font-bold text-sm outline-none focus:border-indigo-500" 
+                                                />
+                                                <span className="text-xs text-slate-400">Adet</span>
+                                            </div>
+                                            <button onClick={() => removeDuplexPair(pair.id)} className="text-slate-400 hover:text-red-500 transition bg-slate-900 w-8 h-8 rounded flex items-center justify-center border border-slate-700 hover:border-red-500">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
                                         </div>
-                                        <button onClick={() => removeDuplexPair(pair.id)} className="text-slate-400 hover:text-red-500 transition bg-slate-900 w-8 h-8 rounded flex items-center justify-center border border-slate-700 hover:border-red-500">
-                                            <i className="fas fa-trash"></i>
-                                        </button>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </div>
