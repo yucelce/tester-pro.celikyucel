@@ -664,14 +664,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             }
         }
 
-        let classUnitPrice = 19800;
-        if (currentCosts) {
-            const resmiIdariCat = currentCosts.find(c => c.id === 'resmi_idari');
-            if (resmiIdariCat) {
-                const classItem = resmiIdariCat.items.find(i => i.name === buildingClass);
-                if (classItem) classUnitPrice = classItem.unit_price;
-            }
-        }
+        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
 
         let serviceRate = 1.43;
         if (constructionDuration <= 12) serviceRate = 1.43;
@@ -1034,14 +1027,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_demolition_supervisor': ({ buildingStats, currentCosts }) => {
         if (buildingStats.hasExistingBuilding) {
-            let siteChiefMonthlyFee = 90000;
-            if (currentCosts) {
-                const idariCat = currentCosts.find(c => c.id === 'resmi_idari');
-                const chiefItem = idariCat?.items.find(i => i.name === 'Şantiye Şefi (Aylık)');
-                if (chiefItem) {
-                    siteChiefMonthlyFee = chiefItem.unit_price;
-                }
-            }
+           let siteChiefMonthlyFee = getGlobalPrice(currentCosts, "Şantiye Şefi (Aylık)");
             return siteChiefMonthlyFee / 5;
         }
         return 0;
