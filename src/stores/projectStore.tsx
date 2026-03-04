@@ -746,7 +746,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const maxEndWeek = Math.max(...schedule.map(s => s.endWeek));
 
         // 3. Haftayı aya çevir (4 hafta = 1 ay kabulüyle)
-        const calculatedMonths = Math.ceil(maxEndWeek / 4.33);
+        const calculatedMonths = Number((maxEndWeek / 4.33).toFixed(2));
 
         // 4. 12 aydan az olmamak şartı
         return Math.max(12, calculatedMonths);
