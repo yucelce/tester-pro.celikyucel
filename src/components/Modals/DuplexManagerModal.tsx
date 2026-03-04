@@ -99,7 +99,21 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
                                             <input 
                                                 type="number" 
                                                 value={pair.count} 
-                                                onChange={e => updateDuplexPair(pair.id, parseInt(e.target.value) || 1)} 
+                                                onChange={e => {
+                                                    const newCount = Math.max(1, parseInt(e.target.value) || 1);
+                                                    const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
+                                                    const upperUnit = units.find(u => u.id === pair.upperUnitId);
+                                                    
+                                                    if (lowerUnit && upperUnit) {
+                                                        const maxPossible = Math.min(lowerUnit.count, upperUnit.count);
+                                                        if (newCount > maxPossible) {
+                                                            alert(`Adet, seçili tiplerin mevcut adetlerinden (${maxPossible}) fazla olamaz.`);
+                                                            updateDuplexPair(pair.id, maxPossible);
+                                                        } else {
+                                                            updateDuplexPair(pair.id, newCount);
+                                                        }
+                                                    }
+                                                }} 
                                                 className="w-16 bg-slate-950 border border-slate-600 rounded p-1.5 text-center text-white font-bold text-sm outline-none focus:border-indigo-500" 
                                             />
                                             <span className="text-xs text-slate-400">Adet</span>

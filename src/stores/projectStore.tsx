@@ -107,8 +107,8 @@ interface ProjectContextType {
     globalWallMaterial: WallMaterial;
     globalWallThickness: number;
 
-    reportSettings: import('../types').ReportSettings;
-    updateReportSettings: (settings: Partial<import('../types').ReportSettings>) => void;
+    reportSettings: ReportSettings;
+updateReportSettings: (settings: Partial<ReportSettings>) => void;
 
     // Derived Data
     projectCostDetails: ProjectCostDetail[];
@@ -162,9 +162,9 @@ interface ProjectContextType {
 
     isPriceFetchError: boolean;
     // ProjectContextType içine eklenecekler (diğer tanımların arasına):
-    financialSettings: import('../types').FinancialSettings;
-    updateFinancialSettings: (settings: Partial<import('../types').FinancialSettings>) => void;
-    addSale: (sale: import('../types').SalePlan) => void;
+    financialSettings: FinancialSettings;
+updateFinancialSettings: (settings: Partial<FinancialSettings>) => void;
+addSale: (sale: SalePlan) => void;
     removeSale: (id: string) => void;
     startNewProject: (type: 'apartment' | 'villa') => void;
 
@@ -853,15 +853,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Üst katlarda çelik kapı, pano, diafon vb. olmaz. Bunları toplam sayıdan düşüyoruz.
         duplexPairs.forEach(pair => {
-            const c = pair.count;
-            if (aggregatedUnitStats['calc_steel_door']) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
-            if (aggregatedUnitStats['calc_combi_count']) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
-            if (aggregatedUnitStats['calc_heat_pump']) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
-            if (aggregatedUnitStats['calc_sub_panel_count']) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
-            if (aggregatedUnitStats['calc_unit_count']) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+            // GÜVENLİK: Tiplerin güncel hallerini bul
+            const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
+            const upperUnit = units.find(u => u.id === pair.upperUnitId);
             
-            // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
-            aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
+            if (lowerUnit && upperUnit) {
+                // Asla sahip olunan daire sayısından fazla dubleks düşümü yapma
+                const c = Math.min(pair.count, lowerUnit.count, upperUnit.count);
+                
+                if (aggregatedUnitStats['calc_steel_door']) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
+                if (aggregatedUnitStats['calc_combi_count']) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
+                if (aggregatedUnitStats['calc_heat_pump']) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
+                if (aggregatedUnitStats['calc_sub_panel_count']) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
+                if (aggregatedUnitStats['calc_unit_count']) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+                
+                // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
+                aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
+            }
         });
 
         const details = costs.map(cat => {
@@ -1111,6 +1119,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setStructuralUnits(structuralUnits.filter(u => u.id !== id));
         } else {
             setUnits(units.filter(u => u.id !== id));
+            // YENİ: Silinen dairenin dahil olduğu dubleks eşleşmelerini de temizle
+            setDuplexPairs(prev => prev.filter(p => p.lowerUnitId !== id && p.upperUnitId !== id));
         }
         setIsDataDirty(true);
     };
@@ -1127,8 +1137,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const updateUnitCount = (id: string, count: number, isStructural: boolean) => {
         if (count < 1) return;
-        if (isStructural) setStructuralUnits(prev => prev.map(u => u.id === id ? { ...u, count } : u));
-        else setUnits(prev => prev.map(u => u.id === id ? { ...u, count } : u));
+        if (isStructural) {
+            setStructuralUnits(prev => prev.map(u => u.id === id ? { ...u, count } : u));
+        } else {
+            setUnits(prev => prev.map(u => u.id === id ? { ...u, count } : u));
+            // YENİ: Dubleks eşleşmelerinin sayısı, güncellenen daire sayısını aşıyorsa aşağı çek
+            setDuplexPairs(prev => prev.map(p => {
+                if (p.lowerUnitId === id || p.upperUnitId === id) {
+                    if (p.count > count) return { ...p, count };
+                }
+                return p;
+            }));
+        }
         setIsDataDirty(true);
     };
 
