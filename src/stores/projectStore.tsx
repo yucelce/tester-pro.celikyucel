@@ -11,7 +11,8 @@ import {
     calculateConstructionDuration,
     calculateComplexGlobalQuantity,
     calculateDynamicUnitPrice,
-    calculateStairWellArea
+    calculateStairWellArea,
+    getGlobalPrice
 } from '../utils/calculations';
 import { ScheduleItem } from '../utils/scheduleCalculator'; // Üste ekleyin
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
@@ -165,7 +166,7 @@ interface ProjectContextType {
     updateFinancialSettings: (settings: Partial<import('../types').FinancialSettings>) => void;
     addSale: (sale: import('../types').SalePlan) => void;
     removeSale: (id: string) => void;
-    startNewProject: (type: 'apartment' | 'villa') => void; 
+    startNewProject: (type: 'apartment' | 'villa') => void;
 
     bulkUpdatePrices: (newPrices: { itemName: string, price: number }[]) => void;
 }
@@ -443,17 +444,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 if (laborItem) laborPriceM2 = laborItem.unit_price;
                             }
                             // --- YENİ EKLENEN KISIM: Çimento ve Kum fiyatlarını bularak harç m3 fiyatını hesapla ---
-                            let cementPrice = 3; // Varsayılan kg fiyatı
-                            let sandPrice = 500; // Varsayılan m3 fiyatı
+                            const cementPrice = getGlobalPrice(updatedCosts, "Çimento (kg)") || 3;
+                            const sandPrice = getGlobalPrice(updatedCosts, "Kum (m3)") || 500;
 
-                            updatedCosts.forEach(cat => {
-                                cat.items.forEach(item => {
-                                    if (item.name === "Çimento (kg)") cementPrice = item.unit_price;
-                                    if (item.name === "Kum (m3)") sandPrice = item.unit_price;
-                                });
-                            });
-
-                            // 1 m3 Harç = 1 m3 Kum + 250 kg Çimento (Dilerseniz 250 değerini değiştirebilirsiniz)
+                            // 1 m3 Harç = 1 m3 Kum + 250 kg Çimento
                             const mortarPriceM3 = sandPrice + (cementPrice * 250);
 
                             return updatedCosts.map(cat => {
@@ -675,16 +669,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 const laborItemName = material === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
                     material === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
-                const matItem = wallCat.items.find(i => i.name === matItemName);
-                const laborItem = wallCat.items.find(i => i.name === laborItemName);
-
-                if (matItem) rawMaterialPriceM3 = matItem.unit_price;
-                if (laborItem) laborPriceM2 = laborItem.unit_price;
-            }
-
-            // Eğer bulamadıysa (fetch henüz bitmemişse) varsayılanları kullan (Güvenlik)
-            if (rawMaterialPriceM3 === 0) rawMaterialPriceM3 = material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843;
-            if (laborPriceM2 === 0) laborPriceM2 = 250;
+                let rawMaterialPriceM3 = getGlobalPrice(prevCosts, matItemName) || (material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843);
+        let laborPriceM2 = getGlobalPrice(prevCosts, laborItemName) || 250;
 
             return prevCosts.map(cat => {
                 if (cat.id === 'duvar_tavan') {
@@ -993,7 +979,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // --- ACTIONS ---
     const startNewProject = (type: 'apartment' | 'villa') => {
         const isVilla = type === 'villa';
-        
+
         // Yapı İstatistiklerini Güncelle
         setBuildingStatsState(prev => ({
             ...prev,
@@ -1003,7 +989,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             groundFloorHeight: isVilla ? 3.2 : 3.0,
             normalFloorHeight: isVilla ? 3.0 : 2.8,
         }));
-        
+
         // Daire/Villa Tiplerini Sıfırla
         setUnits([
             {
@@ -1015,7 +1001,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 structuralWallSource: 'global_calculated', structuralConcreteSource: 'global_calculated'
             }
         ]);
-        
+
         // Diğer verileri sıfırla
         setStructuralUnits([]);
         setCustomCosts([]);
@@ -1198,7 +1184,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
         }
     };
- 
+
     const saveProject = async (projectName: string): Promise<{ success: boolean, message: string }> => {
 
         // --- 1. BASE64 RESİMLERİ WIX'E YÜKLEYİP URL'E ÇEVİREN YARDIMCI FONKSİYON ---
@@ -1418,7 +1404,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale,startNewProject, bulkUpdatePrices
+            removeSale, startNewProject, bulkUpdatePrices
         }}>
             {children}
         </ProjectContext.Provider>

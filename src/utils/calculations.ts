@@ -944,13 +944,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_land_tax': ({ currentCosts, buildingStats, constructionDuration }) => {
-        let landValue = 0;
-        const arsaCat = currentCosts?.find(c => c.id === 'arsa_finansman');
-        const arsaItem = arsaCat?.items.find(i => i.name === "Arsa Rayiç Bedeli (Maliyet)");
-
-        if (arsaItem) {
-            landValue = arsaItem.manualPrice !== undefined ? arsaItem.manualPrice : arsaItem.unit_price;
-        }
+        const landValue = getGlobalPrice(currentCosts, "Arsa Rayiç Bedeli (Maliyet)");
 
         if (landValue <= 0) return 0;
 
@@ -969,17 +963,13 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_fire_escape': ({ currentCosts, regulationHeight, buildingStats }) => {
-        const ironItem = currentCosts?.find(c => c.id === 'kaba_insaat')?.items.find(i => i.name === "İnşaat Demiri");
-        const ironPricePerTon = ironItem?.unit_price || 30000;
-
         if (regulationHeight <= 21.50) return 0;
+
+        const ironPricePerTon = getGlobalPrice(currentCosts, "İnşaat Demiri")
+        const fireDoorPrice = getGlobalPrice(currentCosts, "Yangın Kapısı (Adet)")
 
         const steelWeightPerFloor = 1.5;
         const workmanshipFactor = 1.45;
-
-        const fireDoorItem = currentCosts?.find(c => c.id === 'dis_cephe')?.items.find(i => i.name === "Yangın Kapısı (Adet)");
-        const fireDoorPrice = fireDoorItem?.unit_price || 18000;
-
         const costPerFloor = (ironPricePerTon * steelWeightPerFloor * workmanshipFactor) + fireDoorPrice;
         const totalFloorsForEscape = buildingStats.normalFloorCount + 1;
 
@@ -1027,7 +1017,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_demolition_supervisor': ({ buildingStats, currentCosts }) => {
         if (buildingStats.hasExistingBuilding) {
-           let siteChiefMonthlyFee = getGlobalPrice(currentCosts, "Şantiye Şefi (Aylık)");
+            let siteChiefMonthlyFee = getGlobalPrice(currentCosts, "Şantiye Şefi (Aylık)");
             return siteChiefMonthlyFee / 5;
         }
         return 0;
@@ -1763,11 +1753,8 @@ export const calculateDynamicUnitPrice = (
             const laborItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
                 globalWallMaterial === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
-            const matItem = wallCat?.items.find(i => i.name === matItemName);
-            const laborItem = wallCat?.items.find(i => i.name === laborItemName);
-
-            const baseMatPrice = matItem ? matItem.unit_price : 2650;
-            const baseLaborPrice = laborItem ? laborItem.unit_price : 250;
+            const baseMatPrice = getGlobalPrice(currentCosts, matItemName)
+            const baseLaborPrice = getGlobalPrice(currentCosts, laborItemName) 
 
             if (item.name.startsWith("Duvar Malzemesi")) {
                 // Kalınlığı (cm) metreye çevirerek m3 fiyatı ile çarpıp m2 fiyatı buluyoruz.
@@ -1789,23 +1776,9 @@ export const calculateDynamicUnitPrice = (
     }
 
     if (item.name === "İnşaat Çivisi (kg)" || item.name === "Bağ Teli (kg)") {
-        if (currentCosts) {
-            // Kaba inşaat kategorisinden donatı fiyatını bul
-            const kabaInsaatCat = currentCosts.find(c => c.id === 'kaba_insaat');
-            const ironItem = kabaInsaatCat?.items.find(i => i.name === "İnşaat Demiri");
-
-            if (ironItem) {
-                // Ton fiyatını kg fiyatına çevir (Örn: 32.000 TL / 1000 = 32 TL/kg)
-                const ironKgPrice = (ironItem.manualPrice !== undefined ? ironItem.manualPrice : ironItem.unit_price) / 1000;
-
-                // Piyasa Katsayıları:
-                // Bağ teli donatının ~2.0 katıdır (İnce çekim ve ısıl işlem nedeniyle)
-                // İnşaat çivisi donatının ~1.6 katıdır
-                const ratio = item.name === "Bağ Teli (kg)" ? 2.0 : 1.6;
-
-                return Math.round(ironKgPrice * ratio);
-            }
-        }
+        const ironKgPrice = getGlobalPrice(currentCosts, "İnşaat Demiri") / 1000;
+        const ratio = item.name === "Bağ Teli (kg)" ? 2.0 : 1.6;
+        return Math.round(ironKgPrice * ratio);
     }
 
 
@@ -1817,12 +1790,7 @@ export const calculateDynamicUnitPrice = (
         const areaBasedCost = areaConsumption * kwPrice;
 
         // Alt limit için Personel maliyetini bul
-        let personelMonthlyCost = 35000; // Varsayılan
-        if (currentCosts) {
-            const santiyeCat = currentCosts.find(c => c.id === 'santiye_hafriyat');
-            const personelItem = santiyeCat?.items.find(i => i.name === 'Şantiye Personel Giderleri (Bekçi vb.)');
-            if (personelItem) personelMonthlyCost = personelItem.unit_price;
-        }
+        const personelMonthlyCost = getGlobalPrice(currentCosts, "Şantiye Personel Giderleri (Bekçi vb.)") 
 
         // Formülünüz: Personel Günlük Maliyeti * 1.8
         const lowerBound = (personelMonthlyCost / 30) * 1.8;
@@ -1923,7 +1891,7 @@ export const calculateDynamicUnitPrice = (
         const poolArea = buildingStats.poolArea || 0;
 
         if (poolArea > 0) {
-          
+
             // Sadece fiyatlar constants dosyasından (merkezden) çekiliyor
             const p_excavation = getGlobalPrice(currentCosts, "Hafriyat (Kazı ve Döküm)");
             const p_concrete = getGlobalPrice(currentCosts, "Betonarme Betonu");
@@ -1964,15 +1932,9 @@ export const calculateDynamicUnitPrice = (
         }
     }
 
-    if (item.name === "Grobeton") {
-        if (currentCosts) {
-            const kabaInsaatCat = currentCosts.find(c => c.id === 'kaba_insaat');
-            const c30Item = kabaInsaatCat?.items.find(i => i.name === "Betonarme Betonu");
-            if (c30Item) {
-                const c30Price = c30Item.manualPrice !== undefined ? c30Item.manualPrice : c30Item.unit_price;
-                return Math.round(c30Price * 0.85); // Grobeton fiyatı C30'un %85'i olarak hesaplanıyor
-            }
-        }
+   if (item.name === "Grobeton") {
+        const c30Price = getGlobalPrice(currentCosts, "Betonarme Betonu") || 2500;
+        return Math.round(c30Price * 0.85); 
     }
 
     if (item.name === "Elektrik Tesisatı Malzeme" || item.name === "Elektrik Tesisatı İşçilik") {
@@ -2155,7 +2117,7 @@ export const calculateTapuNoterFees = (
     currentCosts?: CostCategory[]
 ): number => {
 
-    
+
     // 1. BÜYÜKŞEHİR VE YÖRESEL KATSAYI (Tapu Döner Sermaye ve Arsa Rayiçleri İçin)
     const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
     const mediumCostCities = ['Kocaeli', 'Adana', 'Mersin', 'Gaziantep', 'Konya', 'Kayseri', 'Eskişehir', 'Sakarya', 'Tekirdağ', 'Aydın'];
