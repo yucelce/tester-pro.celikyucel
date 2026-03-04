@@ -279,7 +279,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         normalFloorCount: 5, basementFloorCount: 1,
         normalFloorHeight: 2.9, groundFloorHeight: 3.5, basementFloorHeight: 3.0,
         normalFloorArea: 250, groundFloorArea: 250, basementFloorArea: 300,
-        normalFloorHallArea: 3, groundFloorHallArea: 6, basementFloorHallArea: 3, isHallManual: false,
+        normalFloorHallArea: 3, groundFloorHallArea: 6, basementFloorHallArea: 3, totalArea: 1550,
+        isHallManual: false,
 
         normalFloorPerimeter: 63.25, // Math.sqrt(250) * 4
         groundFloorPerimeter: 63.25, // Math.sqrt(250) * 4
@@ -287,6 +288,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isNormalPerimeterManual: false,
         isGroundPerimeterManual: false,
         isBasementPerimeterManual: false,
+        
 
         heatingSystem: 'radiator',
         constructionModel: 'standard', // Varsayılan: Kendin Yap / Taahhüt
@@ -669,8 +671,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 const laborItemName = material === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
                     material === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
-                let rawMaterialPriceM3 = getGlobalPrice(prevCosts, matItemName) || (material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843);
-        let laborPriceM2 = getGlobalPrice(prevCosts, laborItemName) || 250;
+                // DÜZELTME: let kullanılmadan dışarıdaki değişkenler güncellendi
+                rawMaterialPriceM3 = getGlobalPrice(prevCosts, matItemName) || (material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843);
+                laborPriceM2 = getGlobalPrice(prevCosts, laborItemName) || 250;
+            } // DÜZELTME: Eksik olan kapatma parantezi eklendi
 
             return prevCosts.map(cat => {
                 if (cat.id === 'duvar_tavan') {
