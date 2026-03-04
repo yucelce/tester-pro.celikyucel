@@ -1178,8 +1178,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         else if (totalFloorsForExc >= 4) raftHeightExc = 0.40 + (totalFloorsForExc - 4) * 0.10;
         else if (totalFloorsForExc >= 3) raftHeightExc = 0.40;
 
-        const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + 1.0;
-
+        const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
         const getExtendedArea = (baseArea: number, basePerimeter: number, ext: number) => {
             return baseArea + (basePerimeter * ext) + (4 * Math.pow(ext, 2));
         };
@@ -1754,7 +1753,7 @@ export const calculateDynamicUnitPrice = (
                 globalWallMaterial === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
             const baseMatPrice = getGlobalPrice(currentCosts, matItemName);
-            const baseLaborPrice = getGlobalPrice(currentCosts, laborItemName) ;
+            const baseLaborPrice = getGlobalPrice(currentCosts, laborItemName);
 
             if (item.name.startsWith("Duvar Malzemesi")) {
                 // Kalınlığı (cm) metreye çevirerek m3 fiyatı ile çarpıp m2 fiyatı buluyoruz.
@@ -1783,19 +1782,38 @@ export const calculateDynamicUnitPrice = (
 
 
     if (item.name === "Şantiye Elektrik Tüketimi (Aylık)") {
-        const kwPrice = item.unit_price; // Wix'ten gelen 1 kW fiyatı (Örn: 2.5 TL)
+        const kwPrice = item.unit_price; // Wix'ten gelen 1 kW fiyatı
 
-        // Alan bazlı aylık tüketim tahmini (1000m2 başına 500 kW)
-        const areaConsumption = (totalConstructionArea / 1000) * 500;
-        const areaBasedCost = areaConsumption * kwPrice;
+        // 1. Alan bazlı temel aylık tüketim tahmini (1000m2 başına 500 kW)
+        let totalMonthlyKw = (totalConstructionArea / 1000) * 500;
 
-        // Alt limit için Personel maliyetini bul
-        const personelMonthlyCost = getGlobalPrice(currentCosts, "Şantiye Personel Giderleri (Bekçi vb.)") 
+        // 2. KULE VİNÇ KONTROLÜ VE EK TÜKETİM
+        if (buildingStats) {
+            const groundArea = buildingStats.groundFloorArea || 0;
+            const totalFloors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
 
-        // Formülünüz: Personel Günlük Maliyeti * 1.8
+            // needsTowerCrane fonksiyonunuzdaki aynı mantık
+            const hasTowerCrane = totalConstructionArea > 5000 || (groundArea > 650 && totalFloors > 6);
+
+            if (hasTowerCrane) {
+                // Kule vinç varsa aylık ortalama 2000 kWh ekstra yük biner
+                totalMonthlyKw += 1000;
+            }
+        }
+
+        const areaBasedCost = totalMonthlyKw * kwPrice;
+
+        // 3. Alt limit için Personel maliyetini bul (Mevcut mantığınız)
+        let personelMonthlyCost = 35000; // Fallback
+        if (currentCosts) {
+            const santiyeCat = currentCosts.find(c => c.id === 'santiye_hafriyat');
+            const personelItem = santiyeCat?.items.find(i => i.name === 'Şantiye Personel Giderleri (Bekçi vb.)');
+            if (personelItem) personelMonthlyCost = personelItem.unit_price;
+        }
+
         const lowerBound = (personelMonthlyCost / 30) * 1.8;
 
-        // İkisinden büyük olanı "Aylık Elektrik Faturası (Birim Fiyat)" olarak döndür
+        // İkisinden büyük olanı döndür
         return Math.max(areaBasedCost, lowerBound);
     }
 
@@ -1932,9 +1950,9 @@ export const calculateDynamicUnitPrice = (
         }
     }
 
-   if (item.name === "Grobeton") {
+    if (item.name === "Grobeton") {
         const c30Price = getGlobalPrice(currentCosts, "Betonarme Betonu") || 2500;
-        return Math.round(c30Price * 0.85); 
+        return Math.round(c30Price * 0.85);
     }
 
     if (item.name === "Elektrik Tesisatı Malzeme" || item.name === "Elektrik Tesisatı İşçilik") {
@@ -2108,59 +2126,55 @@ export const calculateDynamicUnitPrice = (
     // Diğer tüm kalemler için orijinal fiyatı döndür
     return item.unit_price;
 };
-
 export const calculateTapuNoterFees = (
     unitCount: number,
     province: string,
     constructionModel: 'standard' | 'kat_karsiligi' = 'standard',
     isUrbanTransformation: boolean = false,
+    totalConstructionCost: number = 0, // Kritik: Toplam inşaat maliyeti parametre olarak eklenmeli
     currentCosts?: CostCategory[]
 ): number => {
-
-
-    // 1. BÜYÜKŞEHİR VE YÖRESEL KATSAYI (Tapu Döner Sermaye ve Arsa Rayiçleri İçin)
+    // 1. ŞEHİR KATSAYISI (Döner sermaye vb. maktu giderler için)
     const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
-    const mediumCostCities = ['Kocaeli', 'Adana', 'Mersin', 'Gaziantep', 'Konya', 'Kayseri', 'Eskişehir', 'Sakarya', 'Tekirdağ', 'Aydın'];
+    let cityMultiplier = highCostCities.includes(province) ? 2.5 : 1.5;
 
-    let cityMultiplier = 1.0;
-    if (highCostCities.includes(province)) {
-        cityMultiplier = 2.5; // Yüksek değerli büyükşehirler
-    } else if (mediumCostCities.includes(province)) {
-        cityMultiplier = 1.5; // Orta-Yüksek değerli büyükşehirler
-    }
-
-    // 2. GÜNCEL BAZ FİYATLAR (Tahmini)
-    // Kat İrtifakı kurulumu için daire başı temel Döner Sermaye bedeli (Yöresel katsayı ile çarpılır)
     const baseTapuDoner = getGlobalPrice(currentCosts, "Tapu Döner Sermaye") * cityMultiplier;
-
-    // Noter Standart Yazı, Suret ve Değerli Kağıt Bedeli
     const baseNoterPaperFee = getGlobalPrice(currentCosts, "Noter Yazı Ücreti");
 
-    // SENARYO 1: KENTSEL DÖNÜŞÜM (6306 Sayılı Kanun Kapsamında Riskli Yapı)
+    // SENARYO 1: KENTSEL DÖNÜŞÜM (6306 Sayılı Kanun)
     if (isUrbanTransformation) {
-        // MUAFİYET: Damga Vergisi, Noter Harcı, Tapu Harcı alınmaz.
-        // Sadece Noter evrak/sayfa başı maktu ücretler ve Tapu'da cüzi işlem masrafları çıkar.
-        const kentselDonusumMasrafi = baseNoterPaperFee + (unitCount * 800);
-        return kentselDonusumMasrafi;
+        // Kentsel Dönüşüm maktu evrak tahmini bedelini sistemden çek, bulamazsa 950 kullan
+        const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti")/2 ;
+        
+        // MUAFİYET: Damga Vergisi, Noter Harcı ve Tapu Harcı alınmaz.
+        // Sadece maktu kağıt ücreti ve cüzi işlem masrafı.
+        return baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli); 
     }
 
     // SENARYO 2: KAT KARŞILIĞI İNŞAAT SÖZLEŞMESİ (Kentsel Dönüşüm YOKSA)
     if (constructionModel === 'kat_karsiligi') {
-        // ÇOK YÜKSEK MALİYET: Sözleşme bedeli/Arsa rayici üzerinden Binde 11.38 Damga Vergisi + Noter Harcı.
-        // Ortalama bir kabulle: Bir dairenin arsa payı değerine göre Noter masrafı (Büyükşehire göre katlanır).
-        // Örn: İstanbul'da daire başı ortalama noter vergi/harç yükü 15.000 TL - 25.000 TL arası tutabilir.
-        const estimatedNotaryTaxPerUnit = baseNoterPaperFee * 3 * cityMultiplier;
-        const totalContractFee = baseNoterPaperFee + (unitCount * estimatedNotaryTaxPerUnit);
+        /**
+         * GERÇEK DÜNYA MANTIĞI:
+         * Nispi Harçlar (Büyük meblağlar buradan gelir):
+         * - Damga Vergisi: %0.948 (Binde 9.48)
+         * - Noter Harcı: %0.113 (Binde 1.13)
+         * Toplam yaklaşık: %1.06 (İnşaat Maliyeti üzerinden)
+         */
+        const stampDutyRate = 0.00948; // Binde 9.48
+        const notaryProportionalRate = 0.00113; // Binde 1.13
 
-        // Tapuda Kat İrtifakı Kurulumu (Döner Sermaye vb.)
+        // Eğer toplam maliyet gelmemişse (fallback), metrekare bazlı kaba bir tahmin yap (Örn: 25.000 TL/m2)
+        const referenceValue = totalConstructionCost > 0 ? totalConstructionCost : (unitCount * 100 * 25000);
+
+        const nispiHarclar = referenceValue * (stampDutyRate + notaryProportionalRate);
+        const maktuGiderler = baseNoterPaperFee * cityMultiplier; // Kağıt, imza, onay ücretleri
+
         const tapuTotal = unitCount * baseTapuDoner;
 
-        return totalContractFee + tapuTotal;
+        return Math.round(nispiHarclar + maktuGiderler + tapuTotal);
     }
 
-    // SENARYO 3: STANDART TAAHHÜT / KENDİ ARSANA YAP (Kentsel Dönüşüm YOKSA)
-    // Arsa sahibi sizsiniz, devir yok. Sadece Müteahhitlik/Taahhüt ve Yapı Denetim sözleşmeleri noterde onaylanır.
-    // Kat irtifakı için Tapu Döner Sermayesi ödenir.
+    // SENARYO 3: STANDART TAAHHÜT
     const baseStandardContract = getGlobalPrice(currentCosts, "Standart Sözleşme Harcı");
     const standardContractFee = baseStandardContract * cityMultiplier;
     const tapuTotal = unitCount * baseTapuDoner;
