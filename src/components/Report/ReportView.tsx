@@ -1,7 +1,9 @@
+// src/components/Report/ReportView.tsx
 import React, { useRef, useMemo, useState } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUIStore } from '../../stores/uiStore';
 import { BRAND_CATEGORIES } from "../../brand_data";
+import { generateProcurementPlan } from '../../utils/materialCalculator'; // EKLENDİ
 
 // --- TARİH YARDIMCI FONKSİYONLARI ---
 const addMonths = (date: Date, months: number) => {
@@ -26,17 +28,14 @@ export const ReportView: React.FC = () => {
     const {
         projectTotalCost, totalConstructionArea, constructionDuration,
         projectCostDetails, reportSettings, updateReportSettings, buildingStats,
-        projectSchedule, financialSettings, units, structuralUnits,duplexPairs
+        projectSchedule, financialSettings, units, duplexPairs, globalStats, costs
     } = useProjectStore();
 
     const { navigateToDashboard } = useUIStore();
     const fileInputRefLogo = useRef<HTMLInputElement>(null);
     const fileInputRefRender = useRef<HTMLInputElement>(null);
-
-    // Ayarlar Menüsü State'i
     const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
-    // --- KAR MARJI HESAPLAMASI ---
     const { finalTotalCost, finalCostDetails } = useMemo(() => {
         const marginMultiplier = 1 + (reportSettings.profitMargin / 100);
         const newTotal = projectTotalCost * marginMultiplier;
@@ -53,71 +52,39 @@ export const ReportView: React.FC = () => {
         return { finalTotalCost: newTotal, finalCostDetails: newDetails };
     }, [projectTotalCost, projectCostDetails, reportSettings.profitMargin]);
 
-    // --- TEDARİK TABLOSU HESAPLAMASI (Dashboard'dan alındı) ---
-    const procurementData = useMemo(() => {
-        const groups: Record<string, { date: Date, taskName: string, items: any[], totalCost: number }> = {};
-        const recurringGroup = { items: [] as any[], totalCost: 0 };
-
-        const getTaskForCategory = (catId: string, itemName: string): string => {
-            const nameLower = itemName.toLowerCase();
-            if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
-            switch (catId) {
-                case 'arsa_finansman': return 'official';
-                case 'resmi_idari': return nameLower.includes('iskan') ? 'handover' : 'official';
-                case 'santiye_hafriyat': return (nameLower.includes('hafriyat') || nameLower.includes('iksa') || nameLower.includes('jcb')) ? 'excavation' : (nameLower.includes('güvenlik ağı') ? 'structure' : 'site_prep');
-                case 'kaba_insaat': return nameLower.includes('çatı') ? 'roof' : 'structure';
-                case 'duvar_tavan': return (nameLower.includes('kartonpiyer') || nameLower.includes('stropiyer') || nameLower.includes('boya')) ? 'paint' : (nameLower.includes('sıva') || nameLower.includes('alçı') ? 'plaster' : 'walls');
-                case 'dis_cephe': return 'facade';
-                case 'zemin_kaplama': return nameLower.includes('şap') ? 'screed' : 'flooring';
-                case 'mobilya_ahsap': return 'joinery';
-                case 'vitrifiye_ankastre': return 'mep_finish';
-                case 'mekanik_tesisat': return (nameLower.includes('altyapı') || nameLower.includes('tesisat')) ? 'mep_rough' : 'mep_finish';
-                case 'elektrik_tesisat': return (nameLower.includes('kablo') || nameLower.includes('sorti') || nameLower.includes('altyapı') || nameLower.includes('boru')) ? 'mep_rough' : 'mep_finish';
-                case 'peyzaj_cevre': return 'landscape';
-                default: return 'structure';
-            }
-        };
-
+    // --- YENİ TEDARİK TABLOSU HESAPLAMASI ---
+    const procurementList = useMemo(() => {
+        const currentQuantities: Record<string, number> = {};
         projectCostDetails.forEach(cat => {
-            cat.items.forEach(item => {
-                if (item.totalPrice > 0) {
-                    if (item.unit === 'Ay') {
-                        recurringGroup.items.push({ name: item.name, unit: item.unit, qty: item.finalQty, totalPrice: item.totalPrice, inputType: item.inputType });
-                        recurringGroup.totalCost += item.totalPrice;
-                    } else {
-                        const taskId = getTaskForCategory(cat.id, item.name);
-                        const task = projectSchedule.find(t => t.id === taskId);
-                        const taskName = task ? task.name : 'Diğer';
-                        const date = task ? task.startDate : new Date();
-                        const dateStr = date.toISOString().split('T')[0];
-                        const key = `${dateStr}_${taskId}`;
-
-                        if (!groups[key]) groups[key] = { date, taskName, items: [], totalCost: 0 };
-                        groups[key].items.push({ name: item.name, unit: item.unit, qty: item.finalQty, totalPrice: item.totalPrice, inputType: item.inputType });
-                        groups[key].totalCost += item.totalPrice;
-                    }
-                }
-            });
+            cat.items.forEach(item => { currentQuantities[item.name] = item.finalQty; });
         });
-        return { timelineGroups: Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime()), recurringGroup };
-    }, [projectCostDetails, projectSchedule]);
+        return generateProcurementPlan(globalStats || {}, currentQuantities, projectSchedule || [], costs, projectCostDetails);
+    }, [globalStats, projectSchedule, costs, projectCostDetails]);
 
-    // --- NAKİT AKIŞI HESAPLAMASI (Sadeleştirilmiş) ---
+    const groupedProcurement = useMemo(() => {
+        const groups: Record<string, { date: Date, taskName: string, items: any[], totalCost: number }> = {};
+        procurementList.forEach(item => {
+            const dateStr = item.deliveryDate.toISOString().split('T')[0];
+            const key = `${dateStr}_${item.taskId}`;
+            if (!groups[key]) groups[key] = { date: item.deliveryDate, taskName: item.taskName, items: [], totalCost: 0 };
+            groups[key].items.push(item);
+            groups[key].totalCost += item.totalPrice;
+        });
+        return Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime());
+    }, [procurementList]);
+
+
     const cashflowTable = useMemo(() => {
         if (!projectTotalCost || projectSchedule.length === 0) return [];
-
         const inflationRate = (financialSettings.monthlyInflationRate || 0) / 100;
         const expensesByMonth: Record<string, number> = {};
         const projectStartMonthDate = new Date((buildingStats.projectStartDate || formatMonth(new Date())) + '-01');
-
-        // Basit Maliyet Dağılımı
-        const totalCostPerTask = projectTotalCost / projectSchedule.length; // Tahmini eşit dağılım
+        const totalCostPerTask = projectTotalCost / projectSchedule.length; 
 
         projectSchedule.forEach(task => {
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
-
             let currentD = new Date(startDate);
             let accumulatedDays = 0;
 
@@ -133,7 +100,6 @@ export const ReportView: React.FC = () => {
                 let costRatio = calculateSCurve(endRatio) - calculateSCurve(startRatio);
                 let monthStr = formatMonth(currentD);
 
-                // Enflasyon Çarpanı
                 let monthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 monthsDiff = Math.max(0, monthsDiff);
                 let inflatedCost = totalCostPerTask * Math.pow(1 + inflationRate, monthsDiff);
@@ -143,7 +109,6 @@ export const ReportView: React.FC = () => {
             }
         });
 
-        // Satışları Ekle
         const salesByMonth: Record<string, number> = {};
         financialSettings.sales.forEach(sale => {
             if (sale.saleDate) salesByMonth[sale.saleDate] = (salesByMonth[sale.saleDate] || 0) + sale.amount;
@@ -166,11 +131,9 @@ export const ReportView: React.FC = () => {
                 balance: cumulativeBalance
             });
         });
-
         return table;
     }, [projectSchedule, projectTotalCost, financialSettings, buildingStats.projectStartDate]);
 
-    // --- Görsel Yükleme ---
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'render') => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -226,8 +189,6 @@ export const ReportView: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 font-sans text-slate-800 print:bg-white relative">
-
-            {/* --- EDİTÖR TEPESİ (Yazdırırken Gizlenir) --- */}
             <div className="print:hidden bg-slate-900 text-white p-4 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center shadow-lg border-b border-slate-700 gap-4">
                 <div className="flex items-center gap-4 w-full md:w-auto">
                     <button onClick={navigateToDashboard} className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition">
@@ -254,7 +215,6 @@ export const ReportView: React.FC = () => {
                     <button onClick={() => fileInputRefLogo.current?.click()} className="hidden sm:block bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-2 rounded text-xs font-bold transition"><i className="fas fa-image mr-2"></i>Logo</button>
                     <button onClick={() => fileInputRefRender.current?.click()} className="hidden sm:block bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-2 rounded text-xs font-bold transition"><i className="fas fa-camera mr-2"></i>Kapak</button>
 
-                    {/* AYARLAR MENÜSÜ AÇMA BUTONU */}
                     <button
                         onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                         className={`px-4 py-2 rounded text-sm font-bold transition flex items-center gap-2 ${showSettingsMenu ? 'bg-blue-600 text-white' : 'bg-slate-800 hover:bg-slate-700 border border-slate-600'}`}
@@ -266,7 +226,6 @@ export const ReportView: React.FC = () => {
                         <i className="fas fa-print"></i> Yazdır / PDF
                     </button>
 
-                    {/* Rapor Ayarları Dropdown Menüsü */}
                     {showSettingsMenu && (
                         <div className="absolute top-12 right-32 w-72 bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 z-[100] overflow-hidden animate-fadeIn text-sm">
                             <div className="bg-slate-100 p-3 border-b border-slate-200">
@@ -311,10 +270,8 @@ export const ReportView: React.FC = () => {
                 <input type="file" ref={fileInputRefRender} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'render')} />
             </div>
 
-            {/* --- RAPOR ALANI (A4 FORMATI) --- */}
             <div className="w-[210mm] mx-auto bg-white shadow-2xl print:shadow-none print:w-full print:m-0 pb-10">
 
-                {/* --- SAYFA 1: KAPAK (STANDART) --- */}
                 <div className="relative w-full h-[297mm] flex flex-col overflow-hidden bg-slate-900 text-white print:break-after-page page-break">
                     <div className="absolute inset-0 z-0">
                         {reportSettings.projectRender ? (
@@ -356,7 +313,6 @@ export const ReportView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* --- SAYFA 2: YÖNETİCİ ÖZETİ (STANDART) --- */}
                 <div className="w-full min-h-[297mm] p-12 bg-white relative print:break-after-page page-break">
                     <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                         <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Proje Özeti</h2><p className="text-slate-500 text-sm mt-1">Genel teknik veriler ve bütçe dağılımı</p></div>
@@ -374,7 +330,6 @@ export const ReportView: React.FC = () => {
                     <div className="mb-4"><h3 className="text-sm font-bold text-slate-900 uppercase mb-4 border-b border-slate-200 pb-2">Bütçe Dağılımı</h3><CostDonutChart /></div>
                 </div>
 
-                {/* --- SAYFA 3: MARKALAR (EĞER VARSA) --- */}
                 {reportSettings.selectedBrands && Object.keys(reportSettings.selectedBrands).length > 0 && (
                     <div className="w-full min-h-[150mm] p-12 bg-slate-50 relative print:break-after-page page-break border-t border-slate-200">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
@@ -398,7 +353,6 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- SAYFA 4: İMALAT DETAYI (STANDART) --- */}
                 <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                     <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                         <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">İmalat Detayı</h2><p className="text-slate-500 text-sm mt-1">İş kalemleri bazında genel döküm</p></div>
@@ -429,8 +383,6 @@ export const ReportView: React.FC = () => {
                     </table>
                 </div>
 
-                {/* --- OPSİYONEL SAYFA 1: BAĞIMSIZ BÖLÜM METRAJLARI --- */}
-                {/* --- OPSİYONEL SAYFA 1: BAĞIMSIZ BÖLÜM METRAJLARI --- */}
                 {reportSettings.showUnitDetails && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
@@ -438,12 +390,10 @@ export const ReportView: React.FC = () => {
                         </div>
 
                         {(() => {
-                            // 1. Dubleksleri birleştirip göstereceğimiz yeni dizi
                             const displayUnits: any[] = [];
                             const availableUnitCounts: Record<string, number> = {};
                             units.forEach(u => availableUnitCounts[u.id] = u.count);
 
-                            // 2. Önce Dubleksleri Yakala ve Birleştir
                             duplexPairs.forEach(pair => {
                                 const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
                                 const upperUnit = units.find(u => u.id === pair.upperUnitId);
@@ -451,40 +401,31 @@ export const ReportView: React.FC = () => {
                                 if (lowerUnit && upperUnit) {
                                     const c = Math.min(pair.count, availableUnitCounts[lowerUnit.id] || 0, availableUnitCounts[upperUnit.id] || 0);
                                     if (c > 0) {
-                                        // Kullanılanları boştaki havuzdan düş
                                         availableUnitCounts[lowerUnit.id] -= c;
                                         availableUnitCounts[upperUnit.id] -= c;
-
-                                        // Odaları isimlerine Alt/Üst kat ibaresi ekleyerek birleştir
                                         const combinedRooms = [
                                             ...lowerUnit.rooms.map(r => ({ ...r, name: `${r.name} (Giriş)` })),
                                             ...upperUnit.rooms.map(r => ({ ...r, name: `${r.name} (Üst Kat)` }))
                                         ];
-
                                         displayUnits.push({
                                             id: `duplex-${pair.id}`,
                                             name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
                                             count: c,
-                                            scale: lowerUnit.scale, // Referans olarak alt katın ölçeği
+                                            scale: lowerUnit.scale,
                                             rooms: combinedRooms
                                         });
                                     }
                                 }
                             });
 
-                            // 3. Kalan Standart (Tek Katlı) Daireleri Ekle
                             units.forEach(u => {
                                 if (availableUnitCounts[u.id] > 0) {
-                                    displayUnits.push({
-                                        ...u,
-                                        count: availableUnitCounts[u.id]
-                                    });
+                                    displayUnits.push({ ...u, count: availableUnitCounts[u.id] });
                                 }
                             });
 
                             if (displayUnits.length === 0) return <p className="text-slate-500 italic">Tanımlı daire tipi bulunamadı.</p>;
 
-                            // 4. Ekrana Bas
                             return displayUnits.map(u => (
                                 <div key={u.id} className="mb-8 border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
                                     <div className="bg-slate-800 text-white p-3 flex justify-between items-center">
@@ -512,7 +453,6 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- OPSİYONEL SAYFA 2: İŞ ZAMAN PROGRAMI --- */}
                 {reportSettings.includeSchedule && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
@@ -536,24 +476,24 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- OPSİYONEL SAYFA 3: TEDARİK PLANI --- */}
+                {/* --- Rapor Görünümü Tedarik Kısmı --- */}
                 {reportSettings.includeProcurement && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
-                            <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Tedarik ve Sevkiyat Planı</h2><p className="text-slate-500 text-sm mt-1">İş programına göre sahaya sevk edilecek malzeme listesi</p></div>
+                            <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Malzeme Tedarik Planı</h2><p className="text-slate-500 text-sm mt-1">İş programına göre sahaya sevk edilecek malzeme listesi</p></div>
                         </div>
-                        {procurementData.timelineGroups.map((group, idx) => (
+                        {groupedProcurement.map((group, idx) => (
                             <div key={idx} className="mb-6 break-inside-avoid">
-                                <div className="bg-slate-100 p-2 border-l-4 border-blue-500 font-bold text-sm text-slate-800 mb-2 flex justify-between">
+                                <div className="bg-slate-100 p-2 border-l-4 border-emerald-500 font-bold text-sm text-slate-800 mb-2 flex justify-between">
                                     <span>{group.date.toLocaleDateString('tr-TR')} - {group.taskName}</span>
-                                    <span className="text-blue-700">{group.totalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                    <span className="text-emerald-700">{group.totalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                                 </div>
                                 <table className="w-full text-[11px]">
                                     <tbody>
                                         {group.items.map((item, i) => (
                                             <tr key={i} className="border-b border-slate-100">
                                                 <td className="p-1.5 text-slate-600">{item.name}</td>
-                                                <td className="p-1.5 text-right font-mono">{item.inputType === 'manual_total' ? '1 Paket' : `${item.qty.toLocaleString('tr-TR')} ${item.unit}`}</td>
+                                                <td className="p-1.5 text-right font-mono">{item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR')} ${item.unit}`}</td>
                                                 <td className="p-1.5 text-right font-mono font-bold text-slate-900">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
                                         ))}
@@ -564,7 +504,6 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- OPSİYONEL SAYFA 4: NAKİT AKIŞI --- */}
                 {reportSettings.includeCashflow && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
@@ -588,7 +527,6 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- OPSİYONEL SAYFA 5: RİSK VE ENFLASYON ÖZETİ --- */}
                 {reportSettings.includeRiskAnalysis && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-auto page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
@@ -620,7 +558,6 @@ export const ReportView: React.FC = () => {
 
             </div>
 
-            {/* Yazdırma Modu Stilleri */}
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@700&display=swap');
                 .font-serif { font-family: 'Playfair Display', serif; }

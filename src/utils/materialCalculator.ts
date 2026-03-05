@@ -1,131 +1,181 @@
+// src/utils/materialCalculator.ts
 import { ScheduleItem } from './scheduleCalculator';
-import { CostCategory } from '../cost_data'; // EKLENDİ
-import { getGlobalPrice } from './calculations'; // EKLENDİ
+import { CostCategory } from '../cost_data';
+import { getGlobalPrice } from './calculations';
 
-export interface RawMaterialDetail {
-    taskId: string;
-    taskName: string;
-    quantity: number;
-    startDate: Date;
-    endDate: Date;
-}
-
-export interface RawMaterial {
+export interface ProcurementItem {
     id: string;
     name: string;
     unit: string;
-    totalQuantity: number;
-    unitPrice: number; // EKLENDİ
-    estimatedCost: number; // EKLENDİ
-    details: RawMaterialDetail[];
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    taskId: string;
+    taskName: string;
+    deliveryDate: Date;
 }
 
-export const calculateRawMaterials = (
+export const generateProcurementPlan = (
     stats: any,
     quantities: Record<string, number>,
     schedule: ScheduleItem[],
-    costs: CostCategory[] // EKLENDİ
-): RawMaterial[] => {
-    const materials = new Map<string, RawMaterial>();
+    costs: CostCategory[],
+    projectCostDetails: any[]
+): ProcurementItem[] => {
+    const procurementList: ProcurementItem[] = [];
 
-    // Maliyet listesinden fiyat bulma fonksiyonu
-    const getPrice = (itemName: string, fallback: number) => {
-        for (const cat of costs) {
-            const item = cat.items.find(i => i.name === itemName);
-            if (item) return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
+    // Hangi kategorinin hangi iş programı kalemine (task) denk geldiği
+    const getTaskForCategory = (catId: string, itemName: string): string => {
+        const nameLower = itemName.toLowerCase();
+        if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
+        switch (catId) {
+            case 'kaba_insaat': return nameLower.includes('çatı') ? 'roof' : 'structure';
+            case 'duvar_tavan': return (nameLower.includes('boya') || nameLower.includes('kartonpiyer')) ? 'paint' : (nameLower.includes('sıva') || nameLower.includes('alçı') ? 'plaster' : 'walls');
+            case 'dis_cephe': return 'facade';
+            case 'zemin_kaplama': return nameLower.includes('şap') ? 'screed' : 'flooring';
+            case 'mobilya_ahsap': return 'joinery';
+            case 'vitrifiye_ankastre': return 'mep_finish';
+            case 'mekanik_tesisat': return (nameLower.includes('altyapı') || nameLower.includes('tesisat') || nameLower.includes('boru')) ? 'mep_rough' : 'mep_finish';
+            case 'elektrik_tesisat': return (nameLower.includes('kablo') || nameLower.includes('sorti') || nameLower.includes('altyapı')) ? 'mep_rough' : 'mep_finish';
+            case 'peyzaj_cevre': return 'landscape';
+            default: return 'structure';
         }
-        return fallback;
     };
 
-    // Fiyatları Çek (Sistemdeki güncel fiyatlar)
+    // Güncel fiyatları sistemden çek
     const prices = {
         cement: getGlobalPrice(costs, "Çimento (kg)"),
         sand: getGlobalPrice(costs, "Kum (m3)"),
-        lime: getGlobalPrice(costs, "Kireç (kg)"), // YENİ EKLENDİ
-        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000,
+        lime: getGlobalPrice(costs, "Kireç (kg)"),
+        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000, // Ton fiyatını kg'a çevir
         concrete: getGlobalPrice(costs, "Betonarme Betonu"),
         adhesive: getGlobalPrice(costs, "Gazbeton Yapıştırıcısı"),
         ceramicTile: getGlobalPrice(costs, "Seramik Kaplama"),
         ceramicAdhesive: getGlobalPrice(costs, "Seramik Yapıştırıcısı"),
         jointFiller: getGlobalPrice(costs, "Seramik Derz Dolgusu"),
-
         civi: getGlobalPrice(costs, "İnşaat Çivisi (kg)"),
         kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
         kereste: getGlobalPrice(costs, "Kereste (m3)"),
         bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
-        sivaAlcisi: getGlobalPrice(costs, "Sıva Alçısı (kg)"),
-        satenAlci: getGlobalPrice(costs, "Saten Alçı (kg)"),
-        astarBoya: getGlobalPrice(costs, "Astar Boya (kg)"),
-        icCepheBoya: getGlobalPrice(costs, "İç Cephe Boyası (kg)")
+        sivaAlcisi: getGlobalPrice(costs, "Sıva Alçısı (Torba)") || 140, 
+        satenAlci: getGlobalPrice(costs, "Saten Alçı (Torba)") || 160,
+        astarBoya: getGlobalPrice(costs, "Astar Boya (Kova)") || 950,
+        icCepheBoya: getGlobalPrice(costs, "İç Cephe Boyası (Kova)") || 2100
     };
 
-    const addMaterial = (id: string, name: string, unit: string, qty: number, taskId: string, unitPrice: number) => {
-        // ... mevcut addMaterial fonksiyonu içeriği aynen kalıyor ...
+    // Listeye Ekleme Fonksiyonu
+    const addCalculatedMaterial = (id: string, name: string, unit: string, qty: number, taskId: string, unitPrice: number) => {
         if (qty <= 0) return;
         const task = schedule.find(s => s.id === taskId);
-        if (!task) return;
-        if (!materials.has(id)) {
-            materials.set(id, { id, name, unit, totalQuantity: 0, unitPrice: unitPrice, estimatedCost: 0, details: [] });
-        }
-        const mat = materials.get(id)!;
-        mat.totalQuantity += qty;
-        mat.estimatedCost = mat.totalQuantity * mat.unitPrice;
-        const existingDetail = mat.details.find(d => d.taskId === taskId);
-        if (existingDetail) {
-            existingDetail.quantity += qty;
+        
+        const existing = procurementList.find(p => p.id === id && p.taskId === taskId);
+        if (existing) {
+            existing.quantity += qty;
+            existing.totalPrice = existing.quantity * existing.unitPrice;
         } else {
-            mat.details.push({ taskId: task.id, taskName: task.name, quantity: qty, startDate: task.startDate, endDate: task.endDate });
+            procurementList.push({
+                id,
+                name,
+                unit,
+                quantity: qty,
+                unitPrice: unitPrice,
+                totalPrice: qty * unitPrice,
+                taskId: task ? task.id : 'other',
+                taskName: task ? task.name : 'Genel',
+                // Şantiye dinamiği: Malzeme iş başlamadan 3 gün önce sahaya insin
+                deliveryDate: task ? new Date(task.startDate.getTime() - 3 * 24 * 60 * 60 * 1000) : new Date() 
+            });
         }
     };
 
+    // --- 1. AŞAMA: KABA YAPI VE İNCE İŞLER SARFİYATLARI (ÇÖZÜMLEME) ---
     const formworkArea = quantities["Kalıp İşçiliği & Malzeme"] || 0;
-    addMaterial('civi_kalip', 'İnşaat Çivisi (5-10 cm)', 'kg', formworkArea * 0.20, 'structure', prices.civi);
-    addMaterial('kalip_yagi', 'Kalıp Ayırıcı Yağ', 'Litre', formworkArea * 0.15, 'structure', prices.kalipYagi);
-    addMaterial('kereste', 'Kalıplık Kereste / Plywood', 'm³', formworkArea * 0.025, 'structure', prices.kereste);
+    addCalculatedMaterial('civi_kalip', 'İnşaat Çivisi (5-10 cm)', 'kg', formworkArea * 0.20, 'structure', prices.civi);
+    addCalculatedMaterial('kalip_yagi', 'Kalıp Ayırıcı Yağ', 'Litre', formworkArea * 0.15, 'structure', prices.kalipYagi);
+    addCalculatedMaterial('kereste', 'Kalıplık Kereste / Plywood', 'm³', formworkArea * 0.025, 'structure', prices.kereste);
 
     const ironTon = quantities["İnşaat Demiri"] || 0;
-    addMaterial('bag_teli', 'Demir Bağ Teli', 'kg', ironTon * 12, 'structure', prices.bagTeli);
-    addMaterial('demir_8_12', 'İnce Çaplı Demir (Ø8 - Ø12)', 'Ton', ironTon * 0.30, 'structure', prices.iron * 1000);
-    addMaterial('demir_14_22', 'Kalın Çaplı Demir (Ø14 - Ø22)', 'Ton', ironTon * 0.70, 'structure', prices.iron * 1000);
+    addCalculatedMaterial('bag_teli', 'Demir Bağ Teli', 'kg', ironTon * 12, 'structure', prices.bagTeli);
+    addCalculatedMaterial('demir_8_12', 'İnce Çaplı Demir (Ø8 - Ø12)', 'Ton', ironTon * 0.30, 'structure', prices.iron * 1000);
+    addCalculatedMaterial('demir_14_22', 'Kalın Çaplı Demir (Ø14 - Ø22)', 'Ton', ironTon * 0.70, 'structure', prices.iron * 1000);
 
     const concrete = quantities["Betonarme Betonu"] || 0;
-    addMaterial('hazir_beton', 'Hazır Beton (C30)', 'm³', concrete, 'structure', prices.concrete);
+    addCalculatedMaterial('hazir_beton', 'Hazır Beton (C30)', 'm³', concrete, 'structure', prices.concrete);
 
     const mortarVolume = stats.mortar_volume || 0;
     const adhesiveWeight = stats.adhesive_weight || 0;
-
-    addMaterial('cimento_duvar', 'Çimento (Duvar Harcı)', 'Torba (50kg)', (mortarVolume * 200) / 50, 'walls', prices.cement * 50);
-    addMaterial('kirec_duvar', 'Kireç (Duvar Harcı)', 'Torba (25kg)', (mortarVolume * 100) / 25, 'walls', prices.lime * 25);
-    addMaterial('kum_duvar', 'İnce Kum (Duvar Harcı)', 'm³', mortarVolume * 1.0, 'walls', prices.sand);
-
-    addMaterial('gazbeton_tutkal', 'Gazbeton Tutkalı', 'Torba (25kg)', adhesiveWeight / 25, 'walls', prices.adhesive * 25);
+    addCalculatedMaterial('cimento_duvar', 'Çimento (Duvar Harcı)', 'Torba (50kg)', (mortarVolume * 200) / 50, 'walls', prices.cement * 50);
+    addCalculatedMaterial('kirec_duvar', 'Kireç (Duvar Harcı)', 'Torba (25kg)', (mortarVolume * 100) / 25, 'walls', prices.lime * 25);
+    addCalculatedMaterial('kum_duvar', 'İnce Kum (Duvar Harcı)', 'm³', mortarVolume * 1.0, 'walls', prices.sand);
+    addCalculatedMaterial('gazbeton_tutkal', 'Gazbeton Tutkalı', 'Torba (25kg)', adhesiveWeight / 25, 'walls', prices.adhesive * 25);
 
     const plasterArea = stats.calc_rough_plaster_area || 0;
-    addMaterial('cimento_siva', 'Çimento (Kara Sıva)', 'Torba (50kg)', (plasterArea * 7.5) / 50, 'plaster', prices.cement * 50);
-    addMaterial('kum_siva', 'Sıva Kumu', 'm³', plasterArea * 0.025, 'plaster', prices.sand);
+    addCalculatedMaterial('cimento_siva', 'Çimento (Kara Sıva)', 'Torba (50kg)', (plasterArea * 7.5) / 50, 'plaster', prices.cement * 50);
+    addCalculatedMaterial('kum_siva', 'Sıva Kumu', 'm³', plasterArea * 0.025, 'plaster', prices.sand);
 
     const screedArea = stats.total_area || 0;
-    addMaterial('cimento_sap', 'Çimento (Şap)', 'Torba (50kg)', (screedArea * 15) / 50, 'screed', prices.cement * 50);
-    addMaterial('kum_sap', 'Şap Kumu', 'm³', screedArea * 0.05, 'screed', prices.sand);
+    addCalculatedMaterial('cimento_sap', 'Çimento (Şap)', 'Torba (50kg)', (screedArea * 15) / 50, 'screed', prices.cement * 50);
+    addCalculatedMaterial('kum_sap', 'Şap Kumu', 'm³', screedArea * 0.05, 'screed', prices.sand);
 
     const paintArea = (stats.calc_paint_wall_area || 0) + (stats.calc_ceiling_paint_area || 0);
-
-    addMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'kg', paintArea * 3, 'plaster', prices.sivaAlcisi);
-    addMaterial('saten_alci', 'Saten Perdah Alçısı', 'kg', paintArea * 1, 'plaster', prices.satenAlci);
-    addMaterial('astar_boya', 'İç Cephe Astarı', 'kg', paintArea * 0.15, 'paint', prices.astarBoya);
-    addMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'kg', paintArea * 0.45, 'paint', prices.icCepheBoya);
+    addCalculatedMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'Torba (35kg)', (paintArea * 3)/35, 'plaster', prices.sivaAlcisi);
+    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1)/25, 'plaster', prices.satenAlci);
+    addCalculatedMaterial('astar_boya', 'İç Cephe Astarı', 'Kova (20kg)', (paintArea * 0.15)/20, 'paint', prices.astarBoya);
+    addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45)/20, 'paint', prices.icCepheBoya);
+    
     const wetArea = stats.wet_area || 0;
-    const netWetArea = stats.net_wet_area || wetArea; // Fallback
+    const netWetArea = stats.net_wet_area || wetArea;
+    addCalculatedMaterial('seramik_karo', 'Seramik / Fayans', 'm²', wetArea, 'flooring', prices.ceramicTile * 0.7);
+    addCalculatedMaterial('seramik_yapis', 'Seramik Yapıştırıcısı', 'Torba (25kg)', (netWetArea * 5) / 25, 'flooring', prices.ceramicAdhesive * 25);
+    addCalculatedMaterial('derz_dolgu', 'Derz Dolgusu', 'kg', netWetArea * 0.5, 'flooring', prices.jointFiller);
 
-    addMaterial('seramik_yapis', 'Seramik Yapıştırıcısı', 'Torba (25kg)', (netWetArea * 5) / 25, 'flooring', prices.ceramicAdhesive * 25);
-    addMaterial('derz_dolgu', 'Derz Dolgusu', 'kg', netWetArea * 0.5, 'flooring', prices.jointFiller);
-    addMaterial(
-        'seramik_karo',
-        'Seramik / Fayans',
-        'm²',
-        wetArea,                   // Miktara geometrik fire payı zaten dahil olduğu için ek 1.1 çarpanı kaldırıldı
-        'flooring',
-        prices.ceramicTile * 0.7   // Malzeme payı %70
-    );
-    return Array.from(materials.values()).sort((a, b) => b.estimatedCost - a.estimatedCost);
+    // --- 2. AŞAMA: PROJEDEKİ DİĞER "FİZİKSEL" MALZEMELERİN EKLENMESİ ---
+    
+    // Zaten üstte sarfiyata çevirdiğimiz montajlı paket isimleri listeye tekrar girmesin diye süzüyoruz
+    const brokenDownItems = [
+        "betonarme betonu", "inşaat demiri", "kalıp işçiliği & malzeme", "duvar örme harcı", "gazbeton yapıştırıcısı",
+        "iç sıva", "alçı sıva", "iç cephe boyası", "tavan boyası", "şap malzemesi", "şap işçiliği", 
+        "seramik yapıştırıcısı", "seramik derz dolgusu", "seramik kaplama"
+    ];
+
+    // Şantiyeye gelmeyen soyut hizmet, harç ve işçilik kelimeleri
+    const nonPhysicalKeywords = [
+        "işçiliği", "işçilik", "harcı", "harçları", "proje", "etüdü", "rapor", "hizmet bedeli",
+        "abonelik", "tüketimi", "personel", "şefi", "kira", "kurulum", "söküm", "sgk", "sigorta",
+        "noter", "tapu", "vergi", "makinesi", "vinç", "hafriyat", "yıkım", "osgb", "yardımı", "bedeli", "giderleri"
+    ];
+
+    projectCostDetails.forEach(cat => {
+        // Tamamen hizmet veya finansman olan kategorileri atla
+        if (['arsa_finansman', 'resmi_idari', 'santiye_hafriyat'].includes(cat.id)) return;
+
+        cat.items.forEach((item: any) => {
+            if (item.totalPrice <= 0) return;
+
+            const nameLower = item.name.toLowerCase();
+            
+            const isBrokenDown = brokenDownItems.some(kw => nameLower.includes(kw));
+            const isNonPhysical = nonPhysicalKeywords.some(kw => nameLower.includes(kw));
+
+            // Eğer malzeme parçalanmamış bir fiziksel ürüneyse (Örn: Kapı, Pencere, Kombi, Radyatör)
+            if (!isBrokenDown && !isNonPhysical && item.unit !== 'Ay') {
+                const taskId = getTaskForCategory(cat.id, item.name);
+                const task = schedule.find(t => t.id === taskId);
+                
+                procurementList.push({
+                    id: item.name,
+                    name: item.name,
+                    unit: item.inputType === 'manual_total' ? 'Adet/Paket' : item.unit,
+                    quantity: item.inputType === 'manual_total' ? 1 : item.finalQty,
+                    unitPrice: item.unit_price,
+                    totalPrice: item.totalPrice,
+                    taskId: task ? task.id : 'other',
+                    taskName: task ? task.name : 'Genel',
+                    deliveryDate: task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date() // Montajdan 1 hafta önce
+                });
+            }
+        });
+    });
+
+    return procurementList.sort((a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime());
 };

@@ -7,7 +7,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { UnitFloorType, WallMaterial } from '../../types';
 import { ProjectSchedulePanel } from './ProjectSchedulePanel';
 import { NumericInput } from '../Shared/NumericInput';
-import { calculateRawMaterials, RawMaterial } from '../../utils/materialCalculator';
+import { generateProcurementPlan } from '../../utils/materialCalculator';
 import { useMemo, useState } from 'react';
 import { FinancialAnalysisPanel } from './FinancialAnalysisPanel';
 import { ProcurementModal } from '../Modals/ProcurementModal';
@@ -19,14 +19,9 @@ export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
     const [showAreaErrorModal, setShowAreaErrorModal] = React.useState(false);
     const { startTutorial } = useUIStore();
-
-    // --- YENİ EKLENEN: Detaylı Mod Uyarı State'i ---
     const [showDetailedModeInfo, setShowDetailedModeInfo] = useState(false);
-
-    // --- YENİ EKLENEN: Sabit Header/Toplam Maliyet Görünürlüğü State'i ---
     const [isHeaderPinned, setIsHeaderPinned] = useState(false);
 
-    // --- YENİ EKLENEN: Mod Geçiş ve Uyarı Kontrol Fonksiyonları ---
     const handleWallModeClick = (targetMode: 'auto' | 'detailed') => {
         if (globalWallMode !== targetMode) {
             if (targetMode === 'detailed' && !sessionStorage.getItem('detailedModeWarningShown')) {
@@ -49,7 +44,6 @@ export const DashboardView: React.FC = () => {
         }
     };
 
-    // Store'dan gerekli verileri ve YENİ EKLENEN fonksiyonları çekiyoruz
     const {
         projectTotalCost, buildingStats, totalConstructionArea, constructionDuration, globalStructuralCost, interiorFitoutCost,
         projectCostDetails, units, structuralUnits, globalWallMode, globalConcreteMode, globalWallMaterial,
@@ -59,9 +53,6 @@ export const DashboardView: React.FC = () => {
         globalStats, costs, bulkUpdatePrices, duplexPairs
     } = useProjectStore();
 
-    // YENİ: Alan hatası detayını göstermek için state
-    const [showAreaErrorDetail, setShowAreaErrorDetail] = React.useState(false);
-
     const [showDuplexModal, setShowDuplexModal] = useState(false);
 
     const {
@@ -69,147 +60,44 @@ export const DashboardView: React.FC = () => {
         navigateToReport
     } = useUIStore();
 
-    // Calculate Data for Charts
-    const maxCategoryCost = Math.max(...projectCostDetails.map(c => c.totalCategoryCost));
-    // Tüm kalemler içinde manuel müdahale var mı kontrolü
     const hasManualOverrides = projectCostDetails.some(cat =>
         cat.items.some(item => item.manualQuantity !== undefined || item.manualPrice !== undefined)
     );
 
-    // Flatten all items to get top materials for procurement list
-    const allMaterials = projectCostDetails.flatMap(cat =>
-        cat.items.filter(i => i.totalPrice > 0).map(i => ({ ...i, categoryTitle: cat.title }))
-    ).sort((a, b) => b.totalPrice - a.totalPrice);
-
-    // YENİ: Gerçek Sarf Malzeme Hesaplaması ve Maliyet Entegrasyonu
-    const rawMaterials = useMemo(() => {
+    // --- YENİ TEDARİK HESAPLAMASI VE GRUPLAMA ---
+    const procurementList = useMemo(() => {
         const currentQuantities: Record<string, number> = {};
         projectCostDetails.forEach(cat => {
             cat.items.forEach(item => {
                 currentQuantities[item.name] = item.finalQty;
             });
         });
+        return generateProcurementPlan(globalStats || {}, currentQuantities, projectSchedule || [], costs, projectCostDetails);
+    }, [globalStats, projectSchedule, costs, projectCostDetails]);
 
-        // Artık MOCK data yok, doğrudan projenin gerçek hesaplanmış istatistiklerini (globalStats) kullanıyoruz
-        return calculateRawMaterials(globalStats || {}, currentQuantities, projectSchedule || [], costs);
-    }, [projectCostDetails, projectSchedule, globalStats, costs]);
+    const groupedProcurement = useMemo(() => {
+        const groups: Record<string, { date: Date, taskName: string, items: any[], totalCost: number }> = {};
+        procurementList.forEach(item => {
+            const dateStr = item.deliveryDate.toISOString().split('T')[0];
+            const key = `${dateStr}_${item.taskId}`;
+            
+            if (!groups[key]) {
+                groups[key] = { date: item.deliveryDate, taskName: item.taskName, items: [], totalCost: 0 };
+            }
+            groups[key].items.push(item);
+            groups[key].totalCost += item.totalPrice;
+        });
+        return Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime());
+    }, [procurementList]);
 
-    // Toplam Sarf Malzeme Maliyeti
-    const totalRawMaterialCost = rawMaterials.reduce((sum, item) => sum + item.estimatedCost, 0);
+    const totalProcurementCost = procurementList.reduce((sum, item) => sum + item.totalPrice, 0);
+    const topProcurementItems = [...procurementList].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 5);
 
-    // Seçili Malzeme Detayı Modalı İçin State
-    const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | null>(null);
-
-    // DETAYLI TEDARİK MODALI STATE VE HESAPLARI
     const [showProcurementModal, setShowProcurementModal] = useState(false);
 
-    // BİRDEN FAZLA DEĞER DÖNECEĞİ İÇİN İSMİNİ procurementData OLARAK DEĞİŞTİRDİK
-    const procurementData = useMemo(() => {
-        const groups: Record<string, { date: Date, taskName: string, items: any[], totalCost: number }> = {};
-
-        // YENİ: AYLIK DÜZENLİ GİDERLER GRUBU
-        const recurringGroup = { items: [] as any[], totalCost: 0 };
-
-        const getTaskForCategory = (catId: string, itemName: string): string => {
-            const nameLower = itemName.toLowerCase();
-
-            // DÜZELTME 2 & 4: Enerji Kimlik Belgesi (EKB), Yeşil Etiket vb. İskan ve Teslim (handover) aşamasına alınır.
-            if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) {
-                return 'handover';
-            }
-
-            switch (catId) {
-                case 'arsa_finansman': return 'official';
-                case 'resmi_idari':
-                    if (nameLower.includes('iskan') || nameLower.includes('i̇skan')) return 'handover';
-                    return 'official';
-                case 'santiye_hafriyat':
-                    if (nameLower.includes('hafriyat') || nameLower.includes('iksa') || nameLower.includes('jcb')) return 'excavation';
-                    // DÜZELTME 3: Dış Cephe Güvenlik Ağı Kaba Yapı (structure) ile beraber kurulur
-                    if (nameLower.includes('güvenlik ağı')) return 'structure';
-                    return 'site_prep';
-                case 'kaba_insaat':
-                    if (nameLower.includes('çatı')) return 'roof';
-                    return 'structure';
-                case 'duvar_tavan':
-                    // DÜZELTME 1: Kartonpiyer/Stropiyer ham duvara değil, boya aşamasına/öncesine konur
-                    if (nameLower.includes('kartonpiyer') || nameLower.includes('stropiyer')) return 'paint';
-                    if (nameLower.includes('sıva') || nameLower.includes('alçı')) return 'plaster';
-                    if (nameLower.includes('boya')) return 'paint';
-                    return 'walls';
-                case 'dis_cephe': return 'facade';
-                case 'zemin_kaplama':
-                    if (nameLower.includes('şap')) return 'screed';
-                    return 'flooring';
-                case 'mobilya_ahsap': return 'joinery';
-                case 'vitrifiye_ankastre': return 'mep_finish';
-                case 'mekanik_tesisat':
-                    if (nameLower.includes('altyapı') || nameLower.includes('tesisat')) return 'mep_rough';
-                    return 'mep_finish';
-                case 'elektrik_tesisat':
-                    if (nameLower.includes('kablo') || nameLower.includes('sorti') || nameLower.includes('altyapı') || nameLower.includes('boru')) return 'mep_rough';
-                    return 'mep_finish';
-                case 'peyzaj_cevre': return 'landscape';
-                case 'ozel_kalemler': return 'handover';
-                default: return 'structure';
-            }
-        };
-
-        projectCostDetails.forEach(cat => {
-            cat.items.forEach(item => {
-                if (item.totalPrice > 0) {
-
-                    // YENİ: BİRİMİ "Ay" OLANLARI AYRI GRUBA ALIYORUZ
-                    if (item.unit === 'Ay') {
-                        recurringGroup.items.push({
-                            name: item.name,
-                            unit: item.unit,
-                            qty: item.finalQty,
-                            totalPrice: item.totalPrice,
-                            monthlyPrice: item.unit_price, // Aylık fiyat
-                            inputType: item.inputType
-                        });
-                        recurringGroup.totalCost += item.totalPrice;
-                    }
-                    // STANDART İŞ ZAMANI KALEMLERİ
-                    else {
-                        const taskId = getTaskForCategory(cat.id, item.name);
-                        const task = projectSchedule.find(t => t.id === taskId);
-                        const taskName = task ? task.name : 'Diğer';
-                        const date = task ? task.startDate : new Date();
-                        const dateStr = date.toISOString().split('T')[0];
-                        const key = `${dateStr}_${taskId}`;
-
-                        if (!groups[key]) {
-                            groups[key] = { date, taskName, items: [], totalCost: 0 };
-                        }
-                        groups[key].items.push({
-                            name: item.name,
-                            unit: item.unit,
-                            qty: item.finalQty,
-                            totalPrice: item.totalPrice,
-                            inputType: item.inputType
-                        });
-                        groups[key].totalCost += item.totalPrice;
-                    }
-                }
-            });
-        });
-
-        // Objeyi iki parça olarak dönüyoruz
-        return {
-            timelineGroups: Object.values(groups).sort((a, b) => a.date.getTime() - b.date.getTime()),
-            recurringGroup
-        };
-    }, [projectCostDetails, projectSchedule]);
-
     const LOCKED_ITEMS = [
-        "Mimari Proje",
-        "Statik Proje",
-        "Mekanik Proje",
-        "Elektrik Projesi",
-        "Yapı Denetim Hizmet Bedeli",
-        "Arsa Rayiç Bedeli (Maliyet)"
+        "Mimari Proje", "Statik Proje", "Mekanik Proje", "Elektrik Projesi", 
+        "Yapı Denetim Hizmet Bedeli", "Arsa Rayiç Bedeli (Maliyet)"
     ];
 
     return (
@@ -217,8 +105,6 @@ export const DashboardView: React.FC = () => {
             className="flex h-screen flex-col bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 overflow-y-auto transition-colors duration-300 relative"
             onScroll={(e) => setIsHeaderPinned(e.currentTarget.scrollTop > 120)}
         >
-            {/* --- FLOATING TOTAL COST (Sticky / Görünümden çıkınca belirir) --- */}
-            {/* DashboardView.tsx - Yüzen Maliyet Barı Değişikliği */}
             <div className={`fixed bottom-0 md:bottom-auto md:top-4 left-0 md:left-auto md:right-4 w-full md:w-auto z-[40] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md md:shadow-lg border-t md:border border-slate-200 dark:border-slate-700 md:rounded-xl p-3 md:p-2 px-4 transition-all duration-300 transform md:pointer-events-none flex justify-between md:flex-col items-center md:items-end ${isHeaderPinned ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 md:-translate-y-12 opacity-0 md:scale-95'}`}>
                 <div className="text-[10px] md:text-[9px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
                 <div className="text-xl md:text-lg font-extrabold text-green-600 dark:text-green-500 tracking-tight leading-tight">
@@ -226,7 +112,6 @@ export const DashboardView: React.FC = () => {
                 </div>
             </div>
 
-            {/* --- Dashboard Header --- */}
             <header id="dashboard-header" className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6 shadow-sm dark:shadow-md z-30 transition-colors duration-300">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0 max-w-6xl mx-auto">
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -287,7 +172,6 @@ export const DashboardView: React.FC = () => {
                 </div>
             )}
 
-            {/* --- VERİ DEĞİŞİKLİĞİ UYARI BARI --- */}
             {isDataDirty && hasManualOverrides && (
                 <div id="dashboard-warnings" className="bg-amber-100 dark:bg-amber-900/40 border-b border-amber-200 dark:border-amber-800 p-3 md:p-4 z-20 animate-fadeIn backdrop-blur-sm shadow-md">
                     <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
@@ -341,7 +225,6 @@ export const DashboardView: React.FC = () => {
                 </div>
             )}
 
-            {/* --- Detaylı Mod Bilgilendirme Toast'u --- */}
             {showDetailedModeInfo && (
                 <div className="fixed top-24 right-4 md:right-8 z-[100] bg-slate-800 text-white p-4 rounded-xl shadow-2xl border-l-4 border-blue-500 animate-fadeIn max-w-sm">
                     <div className="flex justify-between items-start gap-3">
@@ -363,7 +246,6 @@ export const DashboardView: React.FC = () => {
 
             <main id="dashboard-main" className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-6 space-y-6 md:space-y-8 pb-20">
 
-                {/* 1. SECTION: YAPI GENEL BİLGİLERİ */}
                 <section id="tour-building-stats" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg dark:shadow-xl relative overflow-hidden transition-colors duration-300">                    <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-blue-50 dark:bg-blue-600/10 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
                     <div className="flex flex-col md:flex-row justify-between items-start mb-6 relative z-10 gap-4">
                         <div>
@@ -395,8 +277,6 @@ export const DashboardView: React.FC = () => {
                             )}
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-0 rounded-lg border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between overflow-hidden group">
-
-                            {/* ÜST KISIM: İNŞAAT ALANI */}
                             <div className="p-4 pb-2">
                                 <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Toplam İnşaat Alanı</div>
                                 <div className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -404,10 +284,7 @@ export const DashboardView: React.FC = () => {
                                 </div>
                                 <div className="text-[10px] text-slate-500 mt-1">Emsal Dahil</div>
                             </div>
-
-                            {/* ALT KISIM: YAPIM SÜRESİ (AYRI RENK VE DÜZEN) */}
                             <div className="bg-slate-100 dark:bg-slate-800/50 p-3 px-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
-                                {/* Sol Taraf: Etiket ve İkon */}
                                 <div className="flex flex-col">
                                     <span className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Yapım Süresi</span>
                                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -424,8 +301,6 @@ export const DashboardView: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Sağ Taraf: Durum Bildirimi ve Reset Butonu */}
                                 <div className="flex items-center">
                                     {buildingStats.isDurationManual ? (
                                         <button
@@ -458,9 +333,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Maliyet Kutusu */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700/50 flex flex-col justify-center relative">
-                            {/* Mevcut Maliyet Satırları */}
                             <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 pb-2 mb-2">
                                 <span className="text-xs text-slate-500 dark:text-slate-400">Kaba Yapı</span>
                                 <span className="text-sm font-bold text-yellow-600 dark:text-yellow-500">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
@@ -470,7 +343,6 @@ export const DashboardView: React.FC = () => {
                                 <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                             </div>
 
-                            {/* UYARI ALANI */}
                             {areaValidation && areaValidation.hasError && (
                                 <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/50">
                                     <button
@@ -495,7 +367,7 @@ export const DashboardView: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (Structural Floors) */}
+                {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ */}
                 <section id="tour-structural" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg dark:shadow-xl transition-colors duration-300">                    <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -505,7 +377,6 @@ export const DashboardView: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row items-end md:items-center gap-4 w-full md:w-auto">
-                        {/* DUVAR TOGGLE & MATERIAL */}
                         <div className="flex flex-col gap-1 items-start w-full md:w-auto">
                             <span className="text-[10px] text-slate-400 uppercase font-bold">Duvar Malzemesi ve Metraj</span>
                             <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700 w-full md:w-auto">
@@ -522,7 +393,6 @@ export const DashboardView: React.FC = () => {
                                 <button onClick={() => handleWallModeClick('detailed')} className={`px-3 py-1.5 text-xs font-bold rounded transition ${globalWallMode === 'detailed' ? 'bg-blue-600 text-white shadow' : 'text-slate-500'}`}>Detaylı</button>                                </div>
                         </div>
 
-                        {/* BETONARME TOGGLE */}
                         <div className="flex flex-col gap-1 items-start w-full md:w-auto">
                             <span className="text-[10px] text-slate-400 uppercase font-bold">Betonarme</span>
                             <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700 w-full md:w-auto">
@@ -542,7 +412,6 @@ export const DashboardView: React.FC = () => {
                                     <div className="flex items-center gap-4 flex-1">
                                         <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold border border-slate-300 dark:border-slate-600 group-hover:border-orange-500 group-hover:text-orange-500 transition">{unit.name.substring(0, 2)}</div>
                                         <div className="flex-1">
-                                            {/* Renamable Name Input */}
                                             <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3">
                                                 <input
                                                     type="text"
@@ -550,7 +419,6 @@ export const DashboardView: React.FC = () => {
                                                     onChange={(e) => updateUnitName(unit.id, e.target.value, true)}
                                                     className="w-full bg-transparent border-b border-transparent hover:border-slate-400 dark:hover:border-slate-600 focus:border-orange-500 text-slate-900 dark:text-white font-bold text-sm outline-none transition px-0 max-w-md"
                                                 />
-                                                {/* Structural Unit Floor Type Selector */}
                                                 <select
                                                     value={unit.floorType}
                                                     onChange={(e) => updateUnitFloorType(unit.id, e.target.value as UnitFloorType, true)}
@@ -579,7 +447,6 @@ export const DashboardView: React.FC = () => {
                                     </div>
 
                                     <div className="flex items-center gap-2 md:gap-4">
-                                        {/* Count Input for Floors */}
                                         <div className="flex items-center justify-end gap-2">
                                             <input
                                                 type="number"
@@ -617,7 +484,7 @@ export const DashboardView: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ (Apartment Units) */}
+                {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ */}
                 <section id="tour-units">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
                         <div>
@@ -628,7 +495,6 @@ export const DashboardView: React.FC = () => {
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
-                            {/* DUBLEKS EŞLE BUTONU (Sadece apartman modunda ve 1'den fazla tip varsa görünür) */}
                             {buildingStats.buildingType === 'apartment' && units.length > 1 && (
                                 <button onClick={() => setShowDuplexModal(true)} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-indigo-700">
                                     <i className="fas fa-link"></i><span className="hidden md:inline"> Dubleks Eşle</span>
@@ -649,7 +515,6 @@ export const DashboardView: React.FC = () => {
                         )}
 
                         {units.map(unit => {
-                            // Her bir unit için toplam m2 alanını hesapla
                             const totalUnitArea = unit.rooms.reduce((acc, r) => {
                                 const area = r.manualAreaM2 || (unit.scale > 0 ? r.area_px / (unit.scale * unit.scale) : 0);
                                 return acc + area;
@@ -757,7 +622,6 @@ export const DashboardView: React.FC = () => {
 
                         return (
                             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                {/* SOL TARAF: BAŞLIK VE AÇIKLAMA */}
                                 <div className="flex-1">
                                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                                         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -773,10 +637,7 @@ export const DashboardView: React.FC = () => {
                                     </p>
                                 </div>
 
-                                {/* SAĞ TARAF: EXCEL BUTONLARI VE TÜMÜNÜ AÇ/KAPAT */}
                                 <div className="flex flex-wrap items-center justify-start md:justify-end gap-2 w-full md:w-auto mt-2 md:mt-0">
-
-                                    {/* Excel İndir Butonu */}
                                     <button
                                         onClick={() => exportCostsToExcel(projectCostDetails)}
                                         className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-green-200 dark:border-green-800/50 shadow-sm"
@@ -787,7 +648,6 @@ export const DashboardView: React.FC = () => {
                                         <span className="sm:hidden">İndir</span>
                                     </button>
 
-                                    {/* Excel Yükle Butonu */}
                                     <label
                                         className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-blue-200 dark:border-blue-800/50 shadow-sm cursor-pointer mb-0"
                                         title="Excel'de düzenlediğin fiyatları geri yükle"
@@ -808,17 +668,15 @@ export const DashboardView: React.FC = () => {
                                                         } else {
                                                             alert('Excel dosyasında geçerli fiyat verisi bulunamadı. Lütfen dosya formatını değiştirmeyin.');
                                                         }
-                                                        e.target.value = ''; // Aynı dosyayı peş peşe seçebilmek için
+                                                        e.target.value = ''; 
                                                     });
                                                 }
                                             }}
                                         />
                                     </label>
 
-                                    {/* Dikey Ayırıcı Çizgi (Sadece masaüstünde görünür) */}
                                     <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
-                                    {/* Tümünü Aç / Kapat Butonu (Mevcut buton) */}
                                     <button
                                         onClick={() => toggleAllCategories(!isAllExpanded, costCategoryIds)}
                                         className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
@@ -859,7 +717,6 @@ export const DashboardView: React.FC = () => {
                                                     const isLocked = LOCKED_ITEMS.includes(item.name);
                                                     return (
                                                         <div key={item.name} className="flex flex-col gap-2.5 p-3.5 rounded-xl border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
-                                                            {/* Üst Kısım: İsim ve Toplam Tutar */}
                                                             <div className="flex justify-between items-start gap-3">
                                                                 <span className="text-slate-800 dark:text-slate-200 text-sm font-bold leading-tight">
                                                                     {item.name}
@@ -901,7 +758,6 @@ export const DashboardView: React.FC = () => {
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-start gap-2 sm:gap-4 mt-1">
-                                                                    {/* SOL SÜTUN: METRAJ */}
                                                                     <div className="flex-1 min-w-0 flex flex-col">
                                                                         <div className={`flex items-center border rounded-lg relative overflow-hidden ${isLocked ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
                                                                             <NumericInput
@@ -917,7 +773,6 @@ export const DashboardView: React.FC = () => {
                                                                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">{item.unit}</span>
                                                                         </div>
 
-                                                                        {/* Etiketler (Flex-wrap eklendi, taşma önlendi) */}
                                                                         <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1">
                                                                             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
                                                                             {!isLocked && item.manualQuantity !== undefined ? (
@@ -945,12 +800,10 @@ export const DashboardView: React.FC = () => {
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* ÇARPI İŞARETİ (Mobilde ortalanmış) */}
                                                                     <div className="flex items-center justify-center pt-2">
                                                                         <span className="text-slate-300 dark:text-slate-600 text-sm font-bold">x</span>
                                                                     </div>
 
-                                                                    {/* SAĞ SÜTUN: BİRİM FİYAT */}
                                                                     <div className="flex-1 min-w-0 flex flex-col">
                                                                         <div className="flex items-center border rounded-lg relative overflow-hidden bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus-within:border-blue-500">
                                                                             <NumericInput
@@ -963,7 +816,6 @@ export const DashboardView: React.FC = () => {
                                                                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">₺</span>
                                                                         </div>
 
-                                                                        {/* Etiketler */}
                                                                         <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1">
                                                                             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">B.Fiyat</span>
                                                                             {item.manualPrice !== undefined && (
@@ -987,7 +839,6 @@ export const DashboardView: React.FC = () => {
                                 </div>
                             ))}
 
-                        {/* --- MANUEL EK İŞLER / ÖZEL İLAVELER BÖLÜMÜ --- */}
                         <div className="md:col-span-2 mt-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg overflow-hidden transition-all duration-300 shadow-sm">
                             <div className="bg-slate-100 dark:bg-slate-800/50 px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center">
                                 <div className="flex items-center gap-3">
@@ -1069,9 +920,7 @@ export const DashboardView: React.FC = () => {
                     <FinancialAnalysisPanel />
                 </div>
 
-                {/* 1.5 SECTION: COST VISUALIZATION & MATERIAL SUMMARY */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* CHART */}
                     <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg">
                         <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                             <i className="fas fa-chart-pie text-pink-500"></i> Proje Maliyet Dağılımı
@@ -1108,121 +957,56 @@ export const DashboardView: React.FC = () => {
                     <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i className="fas fa-truck-loading text-emerald-500"></i> Tedarik Planlama (Sarf)
+                                <i className="fas fa-truck-loading text-emerald-500"></i> Malzeme & Tedarik Planı
                             </h2>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
-                                    İşe Bağlı Termin
-                                </span>
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800">
-                                    {totalRawMaterialCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                    {totalProcurementCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                 </span>
                             </div>
                         </div>
                         <div className="flex justify-between items-center mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
                             <p className="text-xs text-slate-500">
-                                Şantiyeye indirilmesi gereken sarf malzemeleri. Detaylı zamanlama için butona tıklayın.
+                                Şantiyeye sevk edilecek malzeme listesi.
                             </p>
                             <button
                                 onClick={() => setShowProcurementModal(true)}
                                 className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition shadow-sm font-bold flex items-center gap-1 shrink-0 ml-2"
                             >
-                                <i className="fas fa-search"></i> Detayları İncele
+                                <i className="fas fa-search"></i> Tüm Listeyi İncele
                             </button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2 max-h-64">
-                            {rawMaterials.length === 0 && (
+                            {topProcurementItems.length === 0 && (
                                 <div className="text-center text-slate-500 text-xs py-8">İş programı ve metrajlar hesaplanıyor...</div>
                             )}
-                            {rawMaterials.map((item, idx) => (
-                                <button
+                            {topProcurementItems.map((item, idx) => (
+                                <div
                                     key={idx}
-                                    onClick={() => setSelectedMaterial(item)}
-                                    className="w-full flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-700/50 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition group text-left"
+                                    className="w-full flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-2 rounded border border-slate-100 dark:border-slate-700/50 transition group text-left"
                                 >
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">{item.name}</span>
+                                        <span className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors truncate max-w-[200px] sm:max-w-[250px]">{item.name}</span>
                                         <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                            {item.details.length} farklı iş kaleminde kullanılacak
+                                            {item.taskName} 
                                         </span>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
+                                    <div className="text-right flex flex-col items-end shrink-0">
                                         <div className="font-bold text-slate-900 dark:text-white text-base">
-                                            {item.totalQuantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                            {item.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
                                             <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-1">{item.unit}</span>
                                         </div>
-                                        <div className="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 transition-colors">
-                                            Tahmini: {item.estimatedCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                        <div className="text-[10px] font-bold text-slate-400">
+                                            {item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                         </div>
                                     </div>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </section>
                 </div>
 
-                {/* TEDARİK ZAMANLAMA MODALI */}
-                {selectedMaterial && (
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 border-b border-emerald-100 dark:border-emerald-900/30 flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-emerald-100 dark:bg-emerald-800 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
-                                        <i className="fas fa-box-open text-emerald-600 dark:text-emerald-200 text-lg"></i>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 dark:text-white">{selectedMaterial.name}</h3>
-                                        <p className="text-xs text-emerald-600 dark:text-emerald-300 font-bold">
-                                            Toplam: {selectedMaterial.totalQuantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {selectedMaterial.unit}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setSelectedMaterial(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition">
-                                    <i className="fas fa-times text-xl"></i>
-                                </button>
-                            </div>
-
-                            <div className="p-0 flex-1 overflow-y-auto max-h-[60vh] bg-slate-50 dark:bg-slate-900">
-                                <div className="p-4 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-                                    Bu malzeme İş Zaman Programı'na göre aşağıdaki tarihlerde şantiyede hazır bulunmalıdır:
-                                </div>
-                                <div className="relative p-4 border-l-2 border-emerald-300 dark:border-emerald-700 ml-6 my-4 space-y-6">
-                                    {selectedMaterial.details.map((detail, i) => (
-                                        <div key={i} className="relative pl-6">
-                                            <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[25px] top-1 border-4 border-white dark:border-slate-900 shadow"></div>
-
-                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-slate-800 dark:text-white text-sm">{detail.taskName}</h4>
-                                                    <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded text-[10px] font-bold">
-                                                        {detail.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {selectedMaterial.unit}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
-                                                    <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                                        <i className="far fa-calendar-alt"></i>
-                                                        <span>Başlangıç: {detail.startDate.toLocaleDateString('tr-TR')}</span>
-                                                    </div>
-                                                    <span className="text-slate-300">|</span>
-                                                    <div className="flex items-center gap-1 text-red-500 dark:text-red-400">
-                                                        <i className="far fa-flag"></i>
-                                                        <span>Bitiş: {detail.endDate.toLocaleDateString('tr-TR')}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="p-4 bg-slate-100 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 text-right">
-                                <button onClick={() => setSelectedMaterial(null)} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition">
-                                    Kapat
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </main>
 
             {/* ALAN HATASI DETAY MODALI */}
@@ -1297,8 +1081,7 @@ export const DashboardView: React.FC = () => {
             <ProcurementModal
                 isOpen={showProcurementModal}
                 onClose={() => setShowProcurementModal(false)}
-                procurementGroups={procurementData.timelineGroups}
-                recurringGroup={procurementData.recurringGroup}
+                procurementGroups={groupedProcurement}
             />
             <TutorialOverlay />
             {showDuplexModal && <DuplexManagerModal onClose={() => setShowDuplexModal(false)} />}
