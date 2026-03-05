@@ -30,8 +30,8 @@ const calculateSCurve = (x: number) => {
 }
 
 export const FinancialAnalysisPanel: React.FC = () => {
-    const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails, globalStats } = useProjectStore(); const [isExpanded, setIsExpanded] = useState(false);
-
+    const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails, globalStats, duplexPairs } = useProjectStore();
+    const [isExpanded, setIsExpanded] = useState(false);
     // --- YENİ UI STATE'LERİ (SEKMELER VE GÖRÜNÜM İÇİN) ---
     const [leftTab, setLeftTab] = useState<'sermaye' | 'gelir' | 'risk'>('sermaye');
     const [rightView, setRightView] = useState<'chart' | 'table'>('chart');
@@ -402,25 +402,100 @@ export const FinancialAnalysisPanel: React.FC = () => {
         const isKatKarsiligi = buildingStats.constructionModel === 'kat_karsiligi';
         const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1;
 
-        // DEĞİŞEN KISIM: Fiziksel birimleri toplamak yerine, store'da dubleksleri 
-        // düşerek hesapladığımız net "calc_unit_count" değişkenini baz alıyoruz.
-        const totalUnitsCount = globalStats?.['calc_unit_count'] || units.reduce((acc, u) => acc + u.count, 0);
-        const totalSalableUnits = Math.round(totalUnitsCount * shareRatio);
-
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
-
-        const avgSalePrice = totalSalableUnits > 0
-            ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalSalableUnits / 1000) * 1000
-            : 0;
-
+        const totalTargetRevenue = currentTotalCost * (1 + targetProfitMargin / 100);
         const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
-        // DEĞİŞEN KISIM: Her birim için loop dönmek yerine, direkt salable net adet kadar loop dönüyoruz
-        for (let i = 0; i < totalSalableUnits; i++) {
+        // Kat şerefiye katsayıları
+        const FLOOR_MULTIPLIERS: Record<string, number> = {
+            basement: 0.85,
+            ground: 0.95,
+            normal: 1.05,
+            roof: 1.15
+        };
+
+        let totalEffectiveArea = 0;
+        const salableUnitsData: { name: string, effectiveArea: number }[] = [];
+
+        // Müsait birim adetlerini bulalım (Dubleksler ayrılacak):
+        const availableUnitCounts: Record<string, number> = {};
+        units.forEach(u => availableUnitCounts[u.id] = u.count);
+
+        // 1. Dubleksleri İşle
+        duplexPairs.forEach(pair => {
+            const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
+            const upperUnit = units.find(u => u.id === pair.upperUnitId);
+            
+            if (lowerUnit && upperUnit) {
+                const c = Math.min(pair.count, availableUnitCounts[pair.lowerUnitId] || 0, availableUnitCounts[pair.upperUnitId] || 0);
+                if (c > 0) {
+                    availableUnitCounts[pair.lowerUnitId] -= c;
+                    availableUnitCounts[pair.upperUnitId] -= c;
+                    
+                    // Alanları hesapla (Tanımlı değilse varsayılan 50m2 kabul et)
+                    const lowerArea = lowerUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (lowerUnit.scale > 0 ? r.area_px / (lowerUnit.scale ** 2) : 0)), 0) || 50; 
+                    const upperArea = upperUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (upperUnit.scale > 0 ? r.area_px / (upperUnit.scale ** 2) : 0)), 0) || 50;
+                    
+                    const lowerEffective = lowerArea * (FLOOR_MULTIPLIERS[lowerUnit.floorType] || 1.0);
+                    const upperEffective = upperArea * (FLOOR_MULTIPLIERS[upperUnit.floorType] || 1.0);
+                    const totalDuplexEffective = lowerEffective + upperEffective;
+
+                    const salableDuplexCount = Math.round(c * shareRatio);
+                    for (let i = 0; i < salableDuplexCount; i++) {
+                        salableUnitsData.push({
+                            name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
+                            effectiveArea: totalDuplexEffective
+                        });
+                        totalEffectiveArea += totalDuplexEffective;
+                    }
+                }
+            }
+        });
+
+        // 2. Kalan standart birimleri işle
+        units.forEach(u => {
+            const availableCount = availableUnitCounts[u.id] || 0;
+            if (availableCount > 0) {
+                const area = u.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (u.scale > 0 ? r.area_px / (u.scale ** 2) : 0)), 0);
+                const safeArea = area > 0 ? area : 100; // Çizim/değer yoksa varsayılan 100m2
+                const multiplier = FLOOR_MULTIPLIERS[u.floorType] || 1.0;
+                const effectiveArea = safeArea * multiplier;
+
+                const salableCount = Math.round(availableCount * shareRatio);
+                const floorLabel = u.floorType === 'basement' ? 'Bodrum' : u.floorType === 'ground' ? 'Zemin' : u.floorType === 'roof' ? 'Çatı' : 'Normal Kat';
+
+                for (let i = 0; i < salableCount; i++) {
+                    salableUnitsData.push({
+                        name: `${u.name} [${floorLabel}]`,
+                        effectiveArea: effectiveArea
+                    });
+                    totalEffectiveArea += effectiveArea;
+                }
+            }
+        });
+
+        if (totalEffectiveArea === 0) totalEffectiveArea = 1;
+        const basePricePerEffectiveM2 = totalTargetRevenue / totalEffectiveArea;
+
+        // 3. Satışları fiyatlandırıp tabloya ekle
+        salableUnitsData.forEach((item, index) => {
+            // Fiyatı 1.000 TL'lik küsuratlara yuvarlayarak estetik göster
+            const calculatedPrice = Math.round((item.effectiveArea * basePricePerEffectiveM2) / 1000) * 1000;
             defaultSales.push({
-                id: Date.now().toString() + Math.random().toString(),
-                name: `Bağımsız Bölüm (Satış ${i + 1})`,
-                amount: avgSalePrice,
+                id: Date.now().toString() + index + Math.random().toString().slice(2, 5),
+                name: item.name,
+                amount: calculatedPrice,
+                month: 0,
+                saleDate: targetDate
+            });
+        });
+
+        // Eğer hala boşsa (örn: oran çok düşükse)
+        if (defaultSales.length === 0) {
+            defaultSales.push({
+                id: Date.now().toString(),
+                name: `Toplu Satış`,
+                amount: Math.round(totalTargetRevenue / 1000) * 1000,
                 month: 0,
                 saleDate: targetDate
             });
