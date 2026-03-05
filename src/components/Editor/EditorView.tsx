@@ -46,6 +46,7 @@ export const EditorView: React.FC = () => {
     // Persistent Settings (Remember last values)
     const [lastWallHeight, setLastWallHeight] = useState<number | undefined>(undefined);
     const [lastSlabThickness, setLastSlabThickness] = useState<number>(15);
+    const [lastWallThickness, setLastWallThickness] = useState<number>(13.5);
 
     // Selection & Modals State (Local to Editor)
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -451,9 +452,9 @@ export const EditorView: React.FC = () => {
             startPoint: start,
             endPoint: end,
             length_px: lengthPx,
-            properties: {
+           properties: {
                 material: globalWallMaterial, // USE GLOBAL MATERIAL
-                thickness: 13.5,
+                thickness: lastWallThickness, // GÜNCELLENDİ: 13.5 yerine son hatırlanan kalınlık kullanılıyor
                 height: lastWallHeight, // Use stored height
                 isUnderBeam: false,
                 beamHeight: 50
@@ -800,7 +801,9 @@ case 'wc': ctx.fillStyle = 'rgba(20, 184, 166, 0.4)'; break; // teal
             {modalType === 'wallParams' && selectedWallId && <WallModal wall={editorWalls.find(w => w.id === selectedWallId)!} scale={editorScale}
                 onUpdate={(props) => {
                     if (props.height !== undefined) setLastWallHeight(props.height); // Remember height
+                   if (props.thickness !== undefined) setLastWallThickness(props.thickness); // YENİ EKLENDİ: Kalınlığı hatırla
                     setEditorWalls(prev => prev.map(w => w.id === selectedWallId ? { ...w, properties: { ...w.properties, ...props } } : w));
+                   
                 }}
                 onDelete={() => { setEditorWalls(prev => prev.filter(w => w.id !== selectedWallId)); setModalType(null); }} onClose={() => setModalType(null)} onSave={() => setModalType(null)} />}
 
