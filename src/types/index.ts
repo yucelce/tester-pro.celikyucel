@@ -212,6 +212,7 @@ export interface BuildingStats {
     projectStartDate?: string;
 
     constructionModel?: 'standard' | 'kat_karsiligi'; // İnşaat Modeli
+    contractorShare?: number;
     isUrbanTransformation?: boolean; // Kentsel Dönüşüm (Riskli Yapı) var mı?
 
     existingUnitCount?: number;     // Yıkılacak mevcut bağımsız bölüm (daire/dükkan) sayısı

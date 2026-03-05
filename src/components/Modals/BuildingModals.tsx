@@ -662,6 +662,27 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         <option value="kat_karsiligi">Kat Karşılığı (Müteahhitlik Modeli)</option>
                                     </select>
                                 </div>
+
+
+                                {buildingStats.constructionModel === 'kat_karsiligi' && (
+                                    <div className="mt-4 pt-4 border-t border-slate-700 animate-fadeIn">
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Müteahhit Payı (%)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="10"
+                                                max="100"
+                                                value={buildingStats.contractorShare || 50}
+                                                onChange={(e) => setBuildingStats({ ...buildingStats, contractorShare: parseFloat(e.target.value) || 50 })}
+                                                className="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white text-sm outline-none focus:border-blue-500"
+                                            />
+                                            <span className="absolute right-3 top-2.5 text-slate-400 font-bold">%</span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mt-1">
+                                            Gelir (Satış) tablosu otomatik oluşturulurken, projedeki dairelerin sadece bu yüzdelik kısmı hesaba katılacaktır.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Mevcut Yapı ve Kentsel Dönüşüm (Yıkılacak Bina Kontrolü) */}

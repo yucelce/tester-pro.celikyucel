@@ -426,17 +426,34 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const handleAutoPopulate = () => {
         if (units.length === 0) return;
         const defaultSales: SalePlan[] = [];
+
+        // 1. Müteahhide ait satılabilir birimleri hesapla
+        let totalSalableUnits = 0;
+        const isKatKarsiligi = buildingStats.constructionModel === 'kat_karsiligi';
+        const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1; // Standart ise %100
+
+        // 2. Satış fiyatı için tüm maliyeti, SADECE satılabilir daire sayısına bölüyoruz
         const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
-        // totals nesnesi cashflow hook'undan gelir, eğer mevcut değilse tahmini enflasyonlu maliyet hesaplanabilir.
+        totalSalableUnits = totalUnitsCount * shareRatio;
+
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
-        const avgSalePrice = totalUnitsCount > 0 ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalUnitsCount / 1000) * 1000 : 0;
+
+        // DİKKAT: Toplam yatırım tutarını sadece satacağımız dairelere bölüyoruz!
+        const avgSalePrice = totalSalableUnits > 0
+            ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalSalableUnits / 1000) * 1000
+            : 0;
+
         const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
+        // 3. Listeyi doldururken sadece müteahhidin payına düşen adet kadar satır oluştur
         units.forEach(u => {
-            for (let i = 0; i < u.count; i++) {
+            // Bu tipten müteahhide düşen adet (Tam sayıya yuvarlayarak, örn 5 dairenin %50'si = 2.5 -> 3 veya 2 alınabilir, projede genelde yuvarlanır)
+            const contractorUnitCount = Math.round(u.count * shareRatio);
+
+            for (let i = 0; i < contractorUnitCount; i++) {
                 defaultSales.push({
                     id: Date.now().toString() + Math.random().toString(),
-                    name: `${u.name} (Bölüm ${i + 1})`,
+                    name: `${u.name} (Satış ${i + 1})`,
                     amount: avgSalePrice,
                     month: 0,
                     saleDate: targetDate

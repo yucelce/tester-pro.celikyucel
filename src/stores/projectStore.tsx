@@ -301,6 +301,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         heatingSystem: 'radiator',
         constructionModel: 'standard', // Varsayılan: Kendin Yap / Taahhüt
+        contractorShare: 50,
         isUrbanTransformation: false,   // Varsayılan: Hayır
         existingUnitCount: 0,
         monthlyRentPerUnit: 0,
