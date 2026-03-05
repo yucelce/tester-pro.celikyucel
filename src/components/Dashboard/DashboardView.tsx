@@ -615,13 +615,14 @@ export const DashboardView: React.FC = () => {
                 </section>
 
                 {/* 4. SECTION: PROJECT COST DETAILS */}
-                <section id="tour-cost-details" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg dark:shadow-xl transition-colors duration-300">
+                <section id="tour-cost-details" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg dark:shadow-xl transition-colors duration-300 relative">
                     {(() => {
-                        const costCategoryIds = projectCostDetails.filter(cat => cat.id !== 'ozel_kalemler').map(c => c.id);
+                        const costCategoryIds = projectCostDetails.filter(cat => cat.id !== 'ozel_kalemler' && cat.items.length > 0).map(c => c.id);
                         const isAllExpanded = costCategoryIds.length > 0 && costCategoryIds.every(id => expandedCategories[id]);
 
                         return (
-                            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="sticky top-0 z-20 -mx-4 -mt-4 p-4 md:-mx-6 md:-mt-6 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 shadow-sm rounded-t-xl transition-all">
+                                {/* YAPISKAN PANEL BAŞLIĞI */}
                                 <div className="flex-1">
                                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                                         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -695,15 +696,16 @@ export const DashboardView: React.FC = () => {
                             .map((category) => (
                                 <div
                                     key={category.id}
-                                    className={`bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg overflow-hidden transition-all duration-300 ${expandedCategories[category.id] ? 'md:col-span-2 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700' : ''}`}
+                                    className={`bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg transition-all duration-300 ${expandedCategories[category.id] ? 'md:col-span-2 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700' : ''} relative`}
                                 >
-                                    <button onClick={() => toggleCategory(category.id)} className="w-full bg-slate-100 dark:bg-slate-700/50 px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                    <button onClick={() => toggleCategory(category.id)} className="sticky top-[165px] md:top-[110px] z-10 w-full bg-slate-100/95 dark:bg-slate-700/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm">
                                         <div className="flex items-center gap-3">
                                             <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">{getCategoryIcon(category.id)}</div>
                                             <div className="text-left"><h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">{category.title}</h3></div>
                                         </div>
                                         <span className="text-green-600 dark:text-green-400 font-bold text-sm">{category.totalCategoryCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</span>
                                     </button>
+
                                     {expandedCategories[category.id] && (
                                         <div className="p-4 bg-white dark:bg-slate-900/30 animate-fadeIn">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -839,8 +841,8 @@ export const DashboardView: React.FC = () => {
                                 </div>
                             ))}
 
-                        <div className="md:col-span-2 mt-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg overflow-hidden transition-all duration-300 shadow-sm">
-                            <div className="bg-slate-100 dark:bg-slate-800/50 px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center">
+                        <div className="md:col-span-2 mt-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg transition-all duration-300 shadow-sm relative">
+                            <div className="sticky top-[165px] md:top-[110px] z-10 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center shadow-sm">
                                 <div className="flex items-center gap-3">
                                     <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">
                                         <i className="fas fa-plus-circle text-teal-500"></i>
