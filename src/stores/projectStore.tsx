@@ -866,6 +866,29 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addToAggregated(stats, u.count);
         });
 
+        if (buildingStats.buildingType !== 'villa') {
+            const nHallArea = Math.max(0, buildingStats.normalFloorHallArea || 0);
+            const gHallArea = Math.max(0, buildingStats.groundFloorHallArea || 0);
+            const bHallArea = Math.max(0, buildingStats.basementFloorHallArea || 0);
+
+            // 1. Tavan Alanları İlavesi (Direkt m2 olarak)
+            const totalHallCeilingArea = (nHallArea * buildingStats.normalFloorCount) + gHallArea + (bHallArea * buildingStats.basementFloorCount);
+
+            // 2. Duvar Alanları İlavesi (Kare kabulü ile Çevre x Kat Yüksekliği)
+            const nHallWall = buildingStats.normalFloorCount * (Math.sqrt(nHallArea) * 4 * buildingStats.normalFloorHeight);
+            const gHallWall = Math.sqrt(gHallArea) * 4 * buildingStats.groundFloorHeight;
+            const bHallWall = buildingStats.basementFloorCount * (Math.sqrt(bHallArea) * 4 * buildingStats.basementFloorHeight);
+            const totalHallWallArea = nHallWall + gHallWall + bHallWall;
+
+            // Hesaplanan ortak alan sıva/boya değerlerini ana metraj havuzuna (aggregatedUnitStats) ekle
+            aggregatedUnitStats['calc_ceiling_paint_area'] = (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) + totalHallCeilingArea;
+            aggregatedUnitStats['calc_rough_plaster_area'] = (aggregatedUnitStats['calc_rough_plaster_area'] || 0) + totalHallWallArea;
+            aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
+            
+            // Eğer "Alçı Sıva (Kaba+Saten)" kullanılıyorsa ona da ilave et
+            aggregatedUnitStats['calc_plaster_area'] = (aggregatedUnitStats['calc_plaster_area'] || 0) + totalHallCeilingArea + totalHallWallArea;
+        }
+
         // Üst katlarda çelik kapı, pano, diafon vb. olmaz. Bunları toplam sayıdan düşüyoruz.
         const availableUnitCounts: Record<string, number> = {};
         units.forEach(u => availableUnitCounts[u.id] = u.count);
