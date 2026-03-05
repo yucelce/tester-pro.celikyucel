@@ -1078,7 +1078,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         // 2. İlgili Yapı Sınıfının m² Birim Maliyetini Çek
         // (Eğer sistemde o an fiyat yoksa fallback olarak ortalama bir rakam veriyoruz)
-        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) || 20000;
+        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) 
 
         // 3. SGK Hesaplama Formülü
         // Toplam Yaklaşık Maliyet = Toplam Alan x m² Birim Fiyatı
