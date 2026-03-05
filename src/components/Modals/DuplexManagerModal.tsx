@@ -15,7 +15,7 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
     // --- YENİ: Dinamik Eşleşme Mantığı ---
     const availableUpperUnits = useMemo(() => {
         if (!lowerId) return []; // Önce giriş katı seçilmeli
-        
+
         const selectedLowerUnit = units.find(u => u.id === lowerId);
         if (!selectedLowerUnit) return [];
 
@@ -28,10 +28,10 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
 
             // Kural 1: Giriş Bodrum ise, diğeri sadece Zemin olabilir
             if (lowerType === 'basement') return upperType === 'ground';
-            
+
             // Kural 2: Giriş Zemin ise, diğeri Bodrum (Ters Dubleks) veya Normal Kat olabilir
             if (lowerType === 'ground') return upperType === 'basement' || upperType === 'normal';
-            
+
             // Kural 3: Giriş Normal Kat ise, diğeri Zemin veya başka bir Normal Kat olabilir (Bodrum Olamaz)
             if (lowerType === 'normal') return upperType === 'ground' || upperType === 'normal' || upperType === 'roof';
 
@@ -42,20 +42,26 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
     // Giriş katı değiştiğinde 2. kat seçimini sıfırla
     const handleLowerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setLowerId(e.target.value);
-        setUpperId(''); 
+        setUpperId('');
     };
 
     const handleAdd = () => {
         if (!lowerId || !upperId) return alert('Lütfen eşleştirilecek iki kat tipini de seçin.');
-        
+
         const lowerUnit = units.find(u => u.id === lowerId);
         const upperUnit = units.find(u => u.id === upperId);
-        
+
         if (!lowerUnit || !upperUnit) return;
-        
-        const maxPossible = Math.min(lowerUnit.count, upperUnit.count);
+
+        // YENİ: Sadece BOŞTA KALAN (kullanılabilir) adetleri hesapla
+        const usedLower = getUsedCount(lowerUnit.id);
+        const usedUpper = getUsedCount(upperUnit.id);
+        const availableLower = lowerUnit.count - usedLower;
+        const availableUpper = upperUnit.count - usedUpper;
+
+        const maxPossible = Math.min(availableLower, availableUpper);
         if (count > maxPossible) {
-            return alert(`Eşleştirilecek adet (${count}), seçili tiplerin mevcut adetlerinden (${maxPossible}) fazla olamaz.`);
+            return alert(`Eşleştirilecek adet (${count}), seçili tiplerin BOŞTA KALAN adetlerinden (${maxPossible}) fazla olamaz.\n\nNot: Bu tipler zaten başka bir dubleks eşleşmesinde kullanılıyor olabilir.`);
         }
 
         addDuplexPair({ lowerUnitId: lowerId, upperUnitId: upperId, count });
@@ -68,6 +74,14 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
 
     // Kat tipini Türkçeleştiren yardımcı fonksiyon
     const getFloorLabel = (type: string) => type === 'basement' ? 'Bodrum' : type === 'ground' ? 'Zemin' : type === 'roof' ? 'Çatı' : 'Normal';
+
+    const getUsedCount = (unitId: string, excludePairId?: string) => {
+        return duplexPairs.reduce((sum, p) => {
+            if (excludePairId && p.id === excludePairId) return sum;
+            if (p.lowerUnitId === unitId || p.upperUnitId === unitId) return sum + p.count;
+            return sum;
+        }, 0);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex justify-center items-center backdrop-blur-sm p-4 animate-fadeIn">
@@ -136,22 +150,26 @@ export const DuplexManagerModal: React.FC<DuplexManagerModalProps> = ({ onClose 
                                         </div>
                                         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                                             <div className="flex items-center gap-2">
-                                                <input 
-                                                    type="number" 
-                                                    value={pair.count} 
+                                                <input
+                                                    type="number"
+                                                    value={pair.count}
                                                     onChange={e => {
                                                         const newCount = Math.max(1, parseInt(e.target.value) || 1);
                                                         if (lUnit && uUnit) {
-                                                            const maxPossible = Math.min(lUnit.count, uUnit.count);
+                                                            // YENİ: Güncelleme yaparken mevcut pair haricindeki kullanımları bul
+                                                            const usedL = getUsedCount(lUnit.id, pair.id);
+                                                            const usedU = getUsedCount(uUnit.id, pair.id);
+                                                            const maxPossible = Math.min(lUnit.count - usedL, uUnit.count - usedU);
+
                                                             if (newCount > maxPossible) {
-                                                                alert(`Adet, seçili tiplerin mevcut adetlerinden (${maxPossible}) fazla olamaz.`);
+                                                                alert(`Adet, seçili tiplerin boşta kalan adetlerinden (${maxPossible}) fazla olamaz.`);
                                                                 updateDuplexPair(pair.id, maxPossible);
                                                             } else {
                                                                 updateDuplexPair(pair.id, newCount);
                                                             }
                                                         }
-                                                    }} 
-                                                    className="w-16 bg-slate-950 border border-slate-600 rounded p-1.5 text-center text-white font-bold text-sm outline-none focus:border-indigo-500" 
+                                                    }}
+                                                    className="w-16 bg-slate-950 border border-slate-600 rounded p-1.5 text-center text-white font-bold text-sm outline-none focus:border-indigo-500"
                                                 />
                                                 <span className="text-xs text-slate-400">Adet</span>
                                             </div>

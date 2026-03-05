@@ -30,8 +30,7 @@ const calculateSCurve = (x: number) => {
 }
 
 export const FinancialAnalysisPanel: React.FC = () => {
-    const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails } = useProjectStore();
-    const [isExpanded, setIsExpanded] = useState(false);
+    const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails, globalStats } = useProjectStore(); const [isExpanded, setIsExpanded] = useState(false);
 
     // --- YENİ UI STATE'LERİ (SEKMELER VE GÖRÜNÜM İÇİN) ---
     const [leftTab, setLeftTab] = useState<'sermaye' | 'gelir' | 'risk'>('sermaye');
@@ -400,12 +399,13 @@ export const FinancialAnalysisPanel: React.FC = () => {
         if (units.length === 0) return;
         const defaultSales: SalePlan[] = [];
 
-        let totalSalableUnits = 0;
         const isKatKarsiligi = buildingStats.constructionModel === 'kat_karsiligi';
         const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1;
 
-        const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
-        totalSalableUnits = totalUnitsCount * shareRatio;
+        // DEĞİŞEN KISIM: Fiziksel birimleri toplamak yerine, store'da dubleksleri 
+        // düşerek hesapladığımız net "calc_unit_count" değişkenini baz alıyoruz.
+        const totalUnitsCount = globalStats?.['calc_unit_count'] || units.reduce((acc, u) => acc + u.count, 0);
+        const totalSalableUnits = Math.round(totalUnitsCount * shareRatio);
 
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
 
@@ -415,18 +415,17 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
-        units.forEach(u => {
-            const contractorUnitCount = Math.round(u.count * shareRatio);
-            for (let i = 0; i < contractorUnitCount; i++) {
-                defaultSales.push({
-                    id: Date.now().toString() + Math.random().toString(),
-                    name: `${u.name} (Satış ${i + 1})`,
-                    amount: avgSalePrice,
-                    month: 0,
-                    saleDate: targetDate
-                });
-            }
-        });
+        // DEĞİŞEN KISIM: Her birim için loop dönmek yerine, direkt salable net adet kadar loop dönüyoruz
+        for (let i = 0; i < totalSalableUnits; i++) {
+            defaultSales.push({
+                id: Date.now().toString() + Math.random().toString(),
+                name: `Bağımsız Bölüm (Satış ${i + 1})`,
+                amount: avgSalePrice,
+                month: 0,
+                saleDate: targetDate
+            });
+        }
+
         updateFinancialSettings({ sales: defaultSales });
     };
 

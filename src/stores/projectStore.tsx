@@ -108,7 +108,7 @@ interface ProjectContextType {
     globalWallThickness: number;
 
     reportSettings: ReportSettings;
-updateReportSettings: (settings: Partial<ReportSettings>) => void;
+    updateReportSettings: (settings: Partial<ReportSettings>) => void;
 
     // Derived Data
     projectCostDetails: ProjectCostDetail[];
@@ -163,8 +163,8 @@ updateReportSettings: (settings: Partial<ReportSettings>) => void;
     isPriceFetchError: boolean;
     // ProjectContextType içine eklenecekler (diğer tanımların arasına):
     financialSettings: FinancialSettings;
-updateFinancialSettings: (settings: Partial<FinancialSettings>) => void;
-addSale: (sale: SalePlan) => void;
+    updateFinancialSettings: (settings: Partial<FinancialSettings>) => void;
+    addSale: (sale: SalePlan) => void;
     removeSale: (id: string) => void;
     startNewProject: (type: 'apartment' | 'villa') => void;
 
@@ -585,7 +585,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     useEffect(() => {
         let validationResult: AreaValidationResult | null = null;
-        const floorTypes: UnitFloorType[] =['normal', 'ground', 'basement', 'roof'];
+        const floorTypes: UnitFloorType[] = ['normal', 'ground', 'basement', 'roof'];
 
         for (const floorType of floorTypes) {
             let declaredArea = 0;
@@ -768,7 +768,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         let area = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
             buildingStats.groundFloorArea +
             (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
-            
+
         // Çatı katı varsa toplama dahil et
         if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea) {
             area += buildingStats.roofFloorArea;
@@ -867,23 +867,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
         // Üst katlarda çelik kapı, pano, diafon vb. olmaz. Bunları toplam sayıdan düşüyoruz.
+        const availableUnitCounts: Record<string, number> = {};
+        units.forEach(u => availableUnitCounts[u.id] = u.count);
+
         duplexPairs.forEach(pair => {
-            // GÜVENLİK: Tiplerin güncel hallerini bul
             const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
             const upperUnit = units.find(u => u.id === pair.upperUnitId);
-            
+
             if (lowerUnit && upperUnit) {
-                // Asla sahip olunan daire sayısından fazla dubleks düşümü yapma
-                const c = Math.min(pair.count, lowerUnit.count, upperUnit.count);
-                
-                if (aggregatedUnitStats['calc_steel_door']) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
-                if (aggregatedUnitStats['calc_combi_count']) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
-                if (aggregatedUnitStats['calc_heat_pump']) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
-                if (aggregatedUnitStats['calc_sub_panel_count']) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
-                if (aggregatedUnitStats['calc_unit_count']) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
-                
-                // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
-                aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
+                // Asla müsait olan (boştaki) daire sayısından fazla düşüm yapma
+                const availableLower = availableUnitCounts[pair.lowerUnitId] || 0;
+                const availableUpper = availableUnitCounts[pair.upperUnitId] || 0;
+
+                const c = Math.min(pair.count, availableLower, availableUpper);
+
+                if (c > 0) {
+                    // undefined kontrolü ile güvenli düşüm
+                    if (aggregatedUnitStats['calc_steel_door'] !== undefined) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
+                    if (aggregatedUnitStats['calc_combi_count'] !== undefined) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
+                    if (aggregatedUnitStats['calc_heat_pump'] !== undefined) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
+                    if (aggregatedUnitStats['calc_sub_panel_count'] !== undefined) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
+                    if (aggregatedUnitStats['calc_unit_count'] !== undefined) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+
+                    // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
+                    aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
+
+                    // Kullanılanları müsait listeden düş
+                    availableUnitCounts[pair.lowerUnitId] -= c;
+                    availableUnitCounts[pair.upperUnitId] -= c;
+                }
             }
         });
 
@@ -1494,7 +1506,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             totalConstructionArea, constructionDuration, isFetchingHeat,
             isDataDirty, dismissDataDirty, recalculateCosts,
             addUnit, addStructuralUnit, updateUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType,
-            setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction, 
+            setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction,
             setGlobalWallThickness: setGlobalWallThicknessAction,
             updateCostItem: updateCostItemAction,
             saveProject, loadProject, fetchProjects, deleteProject,
