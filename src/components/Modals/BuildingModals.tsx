@@ -1,7 +1,7 @@
 // src/components/Modals/BuildingModals.tsx dosyasındaki BuildingModal componentini aşağıdaki gibi güncelleyin:
 
 import React, { useState } from 'react';
-import { BuildingStats, UnitType, Point } from '../../types';
+import { BuildingStats, UnitType, Point, WallMaterial } from '../../types';
 import { CostCategory } from '../../cost_data';
 
 import { useProjectStore } from '../../stores/projectStore';
@@ -21,7 +21,7 @@ interface BuildingModalProps {
 }
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
-    const { updateHallArea, structuralUnits } = useProjectStore();
+    const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
     const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general'); const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
 
     const handleBuildingTypeChange = (newType: 'apartment' | 'villa') => {
@@ -192,11 +192,12 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     <button onClick={() => setActiveTab('floors')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'floors' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
                         <i className="fas fa-layer-group"></i> Kat Bilgileri
                     </button>
-                    <button onClick={() => setActiveTab('contract')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'contract' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-file-contract"></i> Sözleşme & Mevcut Yapı
-                    </button>
+                   
                     <button onClick={() => setActiveTab('special')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'special' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-tools"></i> Tesisat & Altyapı
+                        <i className="fas fa-tools"></i> Malzeme & Tesisat
+                    </button>
+                     <button onClick={() => setActiveTab('contract')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'contract' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
+                        <i className="fas fa-file-contract"></i> Sözleşme & Mevcut Yapı
                     </button>
                     {buildingStats.buildingType === 'villa' && (
                         <button onClick={() => setActiveTab('villa_outdoor')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'villa_outdoor' ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
@@ -817,6 +818,26 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {/* TAB 4: TESİSAT VE ALTYAPI (Kuyu Temel ve Isıtma) */}
                     {activeTab === 'special' && (
                         <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+
+                            <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">
+                                <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded bg-yellow-500/20 text-yellow-400 flex items-center justify-center"><i className="fas fa-th-large"></i></div>
+                                    Malzeme Tercihleri
+                                </h4>
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Dış ve İç Duvar Ana Malzemesi</label>
+                                    <select
+                                        value={globalWallMaterial}
+                                        onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
+                                        className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
+                                    >
+                                        <option value="gazbeton">Gazbeton</option>
+                                        <option value="tugla">Tuğla</option>
+                                        <option value="bims">Bims</option>
+                                    </select>
+                                    <p className="text-[10px] text-slate-500 mt-2">Bu seçim tüm projedeki duvar maliyetlerini, işçiliği ve yapıştırıcı/harç türünü (Otomatik/Detaylı Mod fark etmeksizin) güncelleyecektir.</p>
+                                </div>
+                            </div>
 
                             {/* Tesisat Tercihleri */}
                             <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">

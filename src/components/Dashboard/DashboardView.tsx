@@ -541,19 +541,7 @@ export const DashboardView: React.FC = () => {
                             {/* Global Kontroller Barı */}
                             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-4 rounded-xl shadow-inner">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-                                    {/* Duvar Malzemesi */}
-                                    <div className="flex flex-col gap-1 items-start w-full sm:w-auto">
-                                        <span className="text-[10px] text-slate-400 uppercase font-bold px-1">Duvar Malzemesi</span>
-                                        <select
-                                            value={globalWallMaterial}
-                                            onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
-                                            className="w-full sm:w-auto h-10 bg-white dark:bg-slate-950 text-sm font-semibold text-slate-800 dark:text-slate-200 outline-none px-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:border-orange-400 dark:focus:border-orange-600 shadow-sm cursor-pointer"
-                                        >
-                                            <option value="gazbeton">Gazbeton</option>
-                                            <option value="tugla">Tuğla</option>
-                                            <option value="bims">Bims</option>
-                                        </select>
-                                    </div>
+                                
 
                                     {/* Hesaplama Modları (Oto/Detaylı) */}
                                     <div className="flex items-center gap-3 pt-4 sm:pt-0">
