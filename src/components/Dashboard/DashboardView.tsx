@@ -14,6 +14,7 @@ import { ProcurementModal } from '../Modals/ProcurementModal';
 import { TutorialOverlay } from '../Shared/TutorialOverlay';
 import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
 import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
+import { ITEM_DESCRIPTIONS } from '../../cost_data'; // <-- BUNU EKLEYİN
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -271,9 +272,15 @@ export const DashboardView: React.FC = () => {
                             <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
                                 {buildingStats.province}, {buildingStats.district}
                             </div>
-                            {buildingStats.buildingType === 'villa' && (
+
+                            {/* BİNA TİPİ ROZETİ (VİLLA / APARTMAN) */}
+                            {buildingStats.buildingType === 'villa' ? (
                                 <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[10px] font-bold px-2 py-1 rounded-full">
                                     <i className="fas fa-home text-[9px]"></i> VİLLA MODU
+                                </div>
+                            ) : (
+                                <div className="mt-2 inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full">
+                                    <i className="fas fa-building text-[9px]"></i> APARTMAN MODU
                                 </div>
                             )}
                         </div>
@@ -368,7 +375,7 @@ export const DashboardView: React.FC = () => {
                     </div>
                 </section>
 
-                
+
 
                 {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ */}
                 <section id="tour-units">
@@ -501,18 +508,19 @@ export const DashboardView: React.FC = () => {
                 </section>
 
                 {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (GİZLENEBİLİR AKORDİYON) */}
-                <section id="tour-structural" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg dark:shadow-xl transition-colors duration-300 overflow-hidden">
+                <section id="tour-structural" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg dark:shadow-xl transition-colors duration-300 overflow-hidden">
+                    {/* Akordiyon Başlığı */}
                     <button
                         onClick={() => setIsStructuralPanelExpanded(!isStructuralPanelExpanded)}
-                        className="w-full p-4 md:p-6 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group"
+                        className={`w-full p-5 md:p-6 flex justify-between items-center transition group ${isStructuralPanelExpanded ? 'bg-slate-50/50 dark:bg-slate-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border border-orange-200 dark:border-orange-800/30 shadow-sm text-orange-500 group-hover:scale-110 transition-transform">
-                                <i className="fas fa-hard-hat text-xl"></i>
+                        <div className="flex items-center gap-4">
+                            <div className="bg-orange-100 dark:bg-orange-950 p-2.5 rounded-xl border border-orange-200 dark:border-orange-800/50 shadow-inner text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                                <i className="fas fa-hard-hat text-2xl"></i>
                             </div>
                             <div className="text-left">
-                                <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    Detaylı Kaba Yapı & Statik Metrajı <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded font-bold uppercase tracking-wider hidden md:inline-block">İleri Düzey (Opsiyonel)</span>
+                                <h2 className="text-lg md:text-xl font-bold text-slate-950 dark:text-white flex items-center gap-2">
+                                    Detaylı Kaba Yapı & Statik Metrajı <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider hidden md:inline-block">İleri Düzey (Opsiyonel)</span>
                                 </h2>
                                 <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
                                     {isStructuralPanelExpanded
@@ -521,119 +529,135 @@ export const DashboardView: React.FC = () => {
                                 </p>
                             </div>
                         </div>
-                        <div className={`transform transition-transform duration-300 ${isStructuralPanelExpanded ? 'rotate-180' : ''}`}>
-                            <i className="fas fa-chevron-down text-slate-400 text-xl"></i>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border ${isStructuralPanelExpanded ? 'border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+                            <i className={`fas fa-chevron-down text-slate-400 text-lg transform transition-transform duration-300 ${isStructuralPanelExpanded ? 'rotate-180 text-orange-500' : ''}`}></i>
                         </div>
                     </button>
 
+                    {/* Akordiyon İçeriği */}
                     {isStructuralPanelExpanded && (
-                        <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-700 animate-fadeIn bg-slate-50/50 dark:bg-slate-800/30">
-                            <div className="mb-6 flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
-                                <div className="flex flex-col md:flex-row items-end md:items-center gap-4 w-full md:w-auto">
-                                    <div className="flex flex-col gap-1 items-start w-full md:w-auto">
-                                        <span className="text-[10px] text-slate-400 uppercase font-bold">Duvar Malzemesi ve Metraj</span>
-                                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700 w-full md:w-auto shadow-sm">
-                                            <select
-                                                value={globalWallMaterial}
-                                                onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
-                                                className="bg-transparent dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none p-1.5 border-r border-slate-300 dark:border-slate-600 mr-1 flex-1 md:flex-none"
-                                            >
-                                                <option value="gazbeton" className="dark:bg-slate-900">Gazbeton</option>
-                                                <option value="tugla" className="dark:bg-slate-900">Tuğla</option>
-                                                <option value="bims" className="dark:bg-slate-900">Bims</option>
-                                            </select>
+                        <div className="p-5 md:p-6 border-t border-slate-200 dark:border-slate-700 animate-fadeIn bg-white dark:bg-slate-800">
 
-                                            <button onClick={() => handleWallModeClick('auto')} className={`px-3 py-1.5 text-xs font-bold rounded transition ${globalWallMode === 'auto' ? 'bg-blue-500 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Oto</button>
-                                            <button onClick={() => handleWallModeClick('detailed')} className={`px-3 py-1.5 text-xs font-bold rounded transition ${globalWallMode === 'detailed' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Detaylı</button>
-                                        </div>
+                            {/* Global Kontroller Barı */}
+                            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-4 rounded-xl shadow-inner">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+                                    {/* Duvar Malzemesi */}
+                                    <div className="flex flex-col gap-1 items-start w-full sm:w-auto">
+                                        <span className="text-[10px] text-slate-400 uppercase font-bold px-1">Duvar Malzemesi</span>
+                                        <select
+                                            value={globalWallMaterial}
+                                            onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
+                                            className="w-full sm:w-auto h-10 bg-white dark:bg-slate-950 text-sm font-semibold text-slate-800 dark:text-slate-200 outline-none px-3 rounded-lg border border-slate-200 dark:border-slate-700 focus:border-orange-400 dark:focus:border-orange-600 shadow-sm cursor-pointer"
+                                        >
+                                            <option value="gazbeton">Gazbeton</option>
+                                            <option value="tugla">Tuğla</option>
+                                            <option value="bims">Bims</option>
+                                        </select>
                                     </div>
 
-                                    <div className="flex flex-col gap-1 items-start w-full md:w-auto">
-                                        <span className="text-[10px] text-slate-400 uppercase font-bold">Betonarme</span>
-                                        <div className="flex items-center bg-white dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700 w-full md:w-auto shadow-sm">
-                                            <button onClick={() => handleConcreteModeClick('auto')} className={`flex-1 md:flex-none px-3 py-1.5 text-xs font-bold rounded transition ${globalConcreteMode === 'auto' ? 'bg-orange-500 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Oto</button>
-                                            <button onClick={() => handleConcreteModeClick('detailed')} className={`flex-1 md:flex-none px-3 py-1.5 text-xs font-bold rounded transition ${globalConcreteMode === 'detailed' ? 'bg-orange-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Detaylı</button>
+                                    {/* Hesaplama Modları (Oto/Detaylı) */}
+                                    <div className="flex items-center gap-3 pt-4 sm:pt-0">
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <span className="text-[10px] text-slate-400 uppercase font-bold px-1">Metraj</span>
+                                            <div className="flex items-center gap-1 bg-white dark:bg-slate-950 rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-sm h-10">
+                                                <button onClick={() => handleWallModeClick('auto')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition ${globalWallMode === 'auto' ? 'bg-blue-500 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Oto</button>
+                                                <button onClick={() => handleWallModeClick('detailed')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition ${globalWallMode === 'detailed' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Detaylı</button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <span className="text-[10px] text-slate-400 uppercase font-bold px-1">Betonarme</span>
+                                            <div className="flex items-center gap-1 bg-white dark:bg-slate-950 rounded-lg p-1 border border-slate-200 dark:border-slate-700 shadow-sm h-10">
+                                                <button onClick={() => handleConcreteModeClick('auto')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition ${globalConcreteMode === 'auto' ? 'bg-orange-500 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Oto</button>
+                                                <button onClick={() => handleConcreteModeClick('detailed')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition ${globalConcreteMode === 'detailed' ? 'bg-orange-600 text-white shadow' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Detaylı</button>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <button onClick={addStructuralUnit} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 text-sm h-10 mt-2 md:mt-0 w-full md:w-auto justify-center shadow-md">
-                                        <i className="fas fa-plus"></i> Yeni Kat Planı
-                                    </button>
                                 </div>
+
+                                {/* Yeni Kat Planı Ekle Butonu */}
+                                <button onClick={addStructuralUnit} className="h-11 bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 text-sm w-full md:w-auto justify-center shadow-md active:scale-95">
+                                    <i className="fas fa-plus"></i> Yeni Kat Planı Ekle
+                                </button>
                             </div>
 
-                            <div className="space-y-3">
-                                {structuralUnits.length === 0 && <div className="text-slate-500 text-sm text-center py-4">Henüz bir kat planı eklenmemiş.</div>}
+                            {/* Kat Planları Listesi */}
+                            <div className="space-y-4">
+                                {structuralUnits.length === 0 && (
+                                    <div className="text-slate-500 dark:text-slate-400 text-sm text-center py-10 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                                        <i className="fas fa-drafting-compass text-3xl mb-3 text-slate-300 dark:text-slate-600"></i>
+                                        <p>Henüz bir statik kat planı eklenmemiş.</p>
+                                        <p className="text-xs text-slate-400 mt-1">Gelişmiş kaba yapı metrajı için "Yeni Kat Planı Ekle" butonunu kullanın.</p>
+                                    </div>
+                                )}
                                 {structuralUnits.map(unit => (
-                                    <div key={unit.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition group shadow-sm">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-4 flex-1">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold border border-slate-300 dark:border-slate-600 group-hover:border-orange-500 group-hover:text-orange-500 transition">{unit.name.substring(0, 2)}</div>
-                                                <div className="flex-1">
-                                                    <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3">
-                                                        <input
-                                                            type="text"
-                                                            value={unit.name}
-                                                            onChange={(e) => updateUnitName(unit.id, e.target.value, true)}
-                                                            className="w-full bg-transparent border-b border-transparent hover:border-slate-400 dark:hover:border-slate-600 focus:border-orange-500 text-slate-900 dark:text-white font-bold text-sm outline-none transition px-0 max-w-md"
-                                                        />
-                                                        <select
-                                                            value={unit.floorType}
-                                                            onChange={(e) => updateUnitFloorType(unit.id, e.target.value as UnitFloorType, true)}
-                                                            className="text-[10px] text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded outline-none border border-transparent hover:border-slate-400 dark:hover:border-slate-600 cursor-pointer"
-                                                        >
-                                                            <option value="normal">Normal ({buildingStats.normalFloorHeight}m)</option>
-                                                            <option value="ground">Zemin ({buildingStats.groundFloorHeight}m)</option>
-                                                            <option value="basement">Bodrum ({buildingStats.basementFloorHeight}m)</option>
-                                                            {buildingStats.hasRoofFloor && (
-                                                                <option value="roof">Çatı ({buildingStats.roofFloorHeight || 1.8}m)</option>
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-                                                        {unit.structuralWallSource === 'global_calculated' ?
-                                                            <span className="text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1 rounded border border-blue-100 dark:border-blue-800/50">Duvar: Oto ({globalWallMaterial})</span> :
-                                                            <span className="text-blue-600 font-bold bg-blue-100 dark:bg-blue-900/40 px-1 rounded border border-blue-200 dark:border-blue-700">Duvar: Detaylı ({globalWallMaterial})</span>
-                                                        }
-                                                        <span className="text-slate-300">|</span>
-                                                        {unit.structuralConcreteSource === 'global_calculated' ?
-                                                            <span className="text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1 rounded border border-orange-100 dark:border-orange-800/50">Beton: Oto</span> :
-                                                            <span className="text-orange-600 font-bold bg-orange-100 dark:bg-orange-900/40 px-1 rounded border border-orange-200 dark:border-orange-700">Beton: Detaylı</span>
-                                                        }
-                                                    </div>
+                                    <div key={unit.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-5 flex flex-col gap-4 hover:border-orange-300 dark:hover:border-orange-800 transition shadow-sm group">
+
+                                        {/* Üst Satır: İsim, Tip, Adet, Sil */}
+                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-1">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                {/* İkon */}
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold border border-slate-200 dark:border-slate-700 group-hover:border-orange-400 dark:group-hover:border-orange-700 group-hover:text-orange-500 transition flex-shrink-0">
+                                                    {unit.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                {/* İsim ve Tip */}
+                                                <div className="flex-1 min-w-0">
+                                                    <input
+                                                        type="text"
+                                                        value={unit.name}
+                                                        onChange={(e) => updateUnitName(unit.id, e.target.value, true)}
+                                                        className="w-full bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-orange-500 dark:focus:border-orange-500 text-slate-950 dark:text-white font-semibold text-sm outline-none transition px-0"
+                                                        placeholder="Kat Planı Adı (Örn: Bodrum Kat)"
+                                                    />
+                                                    <select
+                                                        value={unit.floorType}
+                                                        onChange={(e) => updateUnitFloorType(unit.id, e.target.value as UnitFloorType, true)}
+                                                        className="text-[10px] text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded outline-none border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer mt-1"
+                                                    >
+                                                        <option value="normal">Normal Kat ({buildingStats.normalFloorHeight}m)</option>
+                                                        <option value="ground">Zemin Kat ({buildingStats.groundFloorHeight}m)</option>
+                                                        <option value="basement">Bodrum Kat ({buildingStats.basementFloorHeight}m)</option>
+                                                        {buildingStats.hasRoofFloor && (
+                                                            <option value="roof">Çatı Katı ({buildingStats.roofFloorHeight || 1.8}m)</option>
+                                                        )}
+                                                    </select>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2 md:gap-4">
-                                                <div className="flex items-center justify-end gap-2">
+                                            {/* Sağ Taraf: Adet ve Sil */}
+                                            <div className="flex items-center justify-between sm:justify-end gap-3 pl-1 sm:pl-0 pt-2 sm:pt-0">
+                                                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner">
                                                     <input
                                                         type="number"
                                                         min="1"
                                                         value={unit.count}
                                                         onChange={(e) => updateUnitCount(unit.id, parseInt(e.target.value), true)}
-                                                        className="w-10 md:w-14 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-600 rounded p-1 text-center text-slate-900 dark:text-white font-bold text-sm focus:border-orange-500 outline-none"
+                                                        className="w-10 bg-transparent text-center text-slate-950 dark:text-white font-bold text-sm focus:text-orange-600 dark:focus:text-orange-400 outline-none"
                                                     />
-                                                    <span className="text-xs font-normal text-slate-500">Adet</span>
+                                                    <span className="text-[11px] font-normal text-slate-400">adet</span>
                                                 </div>
-
-                                                <button onClick={() => deleteUnit(unit.id, true)} className="text-red-500 hover:text-red-400 px-2"><i className="fas fa-trash"></i></button>
+                                                <button onClick={() => deleteUnit(unit.id, true)} className="text-slate-400 hover:text-red-500 transition p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/50">
+                                                    <i className="fas fa-trash-alt text-sm"></i>
+                                                </button>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row items-center gap-4 border-t border-slate-200 dark:border-slate-700/50 pt-3">
-                                            <div className="text-xs text-slate-500 dark:text-slate-500 flex gap-3 flex-1 w-full justify-around md:justify-start">
-                                                <span><i className="fas fa-th-large mr-1 text-yellow-600"></i>{unit.walls.length} Duvar</span>
-                                                <span><i className="fas fa-square mr-1 text-red-600"></i>{unit.columns.length} Kolon</span>
-                                                <span><i className="fas fa-grip-lines mr-1 text-blue-600"></i>{unit.beams.length} Kiriş</span>
-                                                <span><i className="fas fa-layer-group mr-1 text-purple-600"></i>{unit.slabs?.length || 0} Döşeme</span>
+                                        {/* Alt Satır: Metraj Detayları ve Butonlar */}
+                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                            {/* Eleman Sayıları */}
+                                            <div className="flex items-center gap-4 flex-wrap text-[11px] text-slate-600 dark:text-slate-400 px-1">
+                                                <div className="flex items-center gap-1.5"><i className="fas fa-th-large text-yellow-600"></i> {unit.walls.length} Duvar</div>
+                                                <div className="flex items-center gap-1.5"><i className="fas fa-square text-red-600"></i> {unit.columns.length} Kolon</div>
+                                                <div className="flex items-center gap-1.5"><i className="fas fa-grip-lines text-blue-600"></i> {unit.beams.length} Kiriş</div>
+                                                <div className="flex items-center gap-1.5"><i className="fas fa-layer-group text-purple-600"></i> {unit.slabs?.length || 0} Döşeme</div>
                                             </div>
 
-                                            <div className="flex gap-2 transition-opacity duration-300 w-full md:w-auto">
-                                                <button onClick={() => navigateToEditor(unit.id, 'structural')} className="hidden md:inline-flex bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold border border-orange-600 transition shadow-sm flex-1 md:flex-initial items-center justify-center">
-                                                    <i className="fas fa-drafting-compass mr-2"></i>Plan Üzerinde Çalış
+                                            {/* İşlem Butonları */}
+                                            <div className="flex gap-2 w-full lg:w-auto">
+                                                <button onClick={() => navigateToEditor(unit.id, 'structural')} className="flex-1 lg:flex-initial hidden sm:inline-flex bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm items-center justify-center gap-2 transition active:scale-95">
+                                                    <i className="fas fa-drafting-compass"></i>Plan Üzerinde Çiz
                                                 </button>
-                                                <button onClick={() => openModal('structuralManager', unit.id)} className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white px-4 py-2 rounded-lg text-sm font-bold border border-slate-300 dark:border-slate-600 transition shadow-sm flex-1 md:flex-initial flex items-center justify-center">
-                                                    <i className="fas fa-list-ul mr-2"></i>Manuel Liste
+                                                <button onClick={() => openModal('structuralManager', unit.id)} className="flex-1 lg:flex-initial bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white px-4 py-2 rounded-lg text-sm font-bold border border-slate-200 dark:border-slate-600 shadow-sm items-center justify-center gap-2 transition active:scale-95">
+                                                    <i className="fas fa-list-ul"></i>Manuel Liste Ekle
                                                 </button>
                                             </div>
                                         </div>
@@ -750,9 +774,22 @@ export const DashboardView: React.FC = () => {
                                                     return (
                                                         <div key={item.name} className="flex flex-col gap-2.5 p-3.5 rounded-xl border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
                                                             <div className="flex justify-between items-start gap-3">
-                                                                <span className="text-slate-800 dark:text-slate-200 text-sm font-bold leading-tight">
+                                                                <span className="text-slate-800 dark:text-slate-200 text-sm font-bold leading-tight flex items-center flex-wrap gap-1.5">
                                                                     {item.name}
-                                                                    {isLocked && <i className="fas fa-lock text-[10px] text-slate-400 ml-1.5 align-middle" title="Metraj sistem tarafından yönetilir"></i>}
+                                                                    {isLocked && <i className="fas fa-lock text-[10px] text-slate-400 align-middle" title="Metraj sistem tarafından yönetilir"></i>}
+
+                                                                    {/* BİLGİ İKONU VE TOOLTIP BAŞLANGICI */}
+                                                                    {ITEM_DESCRIPTIONS[item.name] && (
+                                                                        <div className="relative group inline-flex items-center justify-center">
+                                                                            <i className="fas fa-info-circle text-[11px] text-blue-400 hover:text-blue-600 cursor-help transition-colors"></i>
+
+                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[100]">
+                                                                                {ITEM_DESCRIPTIONS[item.name]}
+                                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {/* BİLGİ İKONU VE TOOLTIP BİTİŞİ */}
                                                                 </span>
                                                                 <div className="font-extrabold text-green-600 dark:text-green-400 text-sm whitespace-nowrap bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-md">
                                                                     {item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺

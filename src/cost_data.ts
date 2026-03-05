@@ -302,3 +302,18 @@ export const COST_DATA: CostCategory[] = [
     ]
   }
 ];
+
+export const ITEM_DESCRIPTIONS: Record<string, string> = {
+    "Haritacı Ücreti (Lihkab)": "Arsa sınırlarının belirlenmesi, aplikasyon ve röperli kroki işlemleri için lisanslı harita bürosuna ödenen zorunlu ücrettir.",
+    "Yapı Denetim Hizmet Bedeli": "İnşaatın yasal mevzuatlara uygun yapıldığını denetleyen resmi kuruma ödenen yasal hizmet bedelidir.",
+    "Şantiye Şefi (Aylık)": "İnşaat süresince yasal olarak şantiyenin başında durması zorunlu olan mühendis veya mimarın aylık maliyetidir.",
+    "OSGB Hizmet Bedeli (Aylık)": "İş Sağlığı ve Güvenliği uzmanı ile iş yeri hekimi bulundurma zorunluluğu kapsamında ödenen aylık tutardır.",
+    "Kuyu Temel Kazı İşçiliği": "Bitişik nizam yapılarda veya derin kazılarda komşu binaların çökmesini engellemek için parça parça yapılan özel ve masraflı destek kazısıdır.",
+    "Enerji Kimlik Belgesi": "Binanın enerji verimlilik sınıfını gösteren ve iskan (yapı kullanma izni) alınabilmesi için zorunlu olan belgedir.",
+    "İskan Harcı": "İnşaat bittikten sonra binada resmi olarak oturuma başlanabilmesi (Yapı Kullanma İzin Belgesi) için belediyeye ödenen harçtır.",
+    "Grobeton": "Temel betonunun altına dökülen, demirsiz, zemini düzeltmek ve yalıtımı korumak amacıyla kullanılan düşük dozlu betondur.",
+    "Subasman Dolgusu (Stabilize/Mıcır)": "Zemin katı toprak seviyesinden yukarıda tutmak (rutubetten korumak) için yapılan temel içi dolgu işlemidir.",
+    "Zemin Sondaj Birim Fiyatı": "Arsanın jeolojik yapısını belirlemek için yapılan sondaj çalışmasının metre maliyetidir.",
+    "Püskürtme Beton (İksa)": "Derin kazılarda zemin kaymasını önlemek için hasır çelik üzerine uygulanan özel beton tekniğidir."
+    // İleride buraya istediğiniz kadar yeni açıklama ekleyebilirsiniz.
+};
