@@ -1,4 +1,4 @@
-import { UnitType, BuildingStats, WallMaterial, RoomType } from '../types';
+import { UnitType, BuildingStats, WallMaterial } from '../types';
 import { CostCategory, CostItem } from '../cost_data';
 import { calculateWasteFactor } from './geometry';
 import { DEFAULT_PRICES } from '../constants';
@@ -129,8 +129,8 @@ export class QuantityTakeoffService {
             wet_area: 0, net_wet_area: 0, dry_area: 0, dry_perimeter: 0, net_wall_area: 0, cornice_length: 0,
             mortar_volume: 0, adhesive_weight: 0, calc_plumbing_unit: 0, calc_combi_count: 0,
             calc_radiator_infrastructure: 0, calc_radiator_len: 0, calc_radiator_count: 0,
-            calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0, mortar_amount: 0,
-            calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0, calc_plaster_area: 0,
+            calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0, 
+            calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0,
             calc_window_area: 0, calc_sill_length: 0, calc_window_perimeter: 0, calc_balcony_railing: 0,
             wall_10_area: 0, wall_13_5_area: 0, wall_15_area: 0, wall_20_area: 0, wall_25_area: 0,
             column_concrete_volume: 0, column_formwork_area: 0, beam_concrete_volume: 0, beam_formwork_area: 0,
@@ -539,7 +539,7 @@ export class PricingService {
     static calculateCosts(stats: Record<string, number>, currentCosts: CostCategory[], context: any) {
         let quantities: Record<string, number> = {};
         let totalCost = 0;
-        const { defaultFloorArea, projectTotalArea, buildingStats, globalWallMaterial, useDetailedConcrete } = context;
+        const { defaultFloorArea, projectTotalArea, buildingStats, globalWallMaterial } = context;
 
         currentCosts.forEach(cat => {
             cat.items.forEach(item => {
