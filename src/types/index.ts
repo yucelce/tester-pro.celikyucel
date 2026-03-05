@@ -271,4 +271,9 @@ export interface ReportSettings {
     showUnitDetails: boolean; // Daire detaylarını raporda gösterelim mi?
     profitMargin: number;
     selectedBrands: Record<string, string[]>;
+
+    includeCashflow: boolean;
+    includeProcurement: boolean;
+    includeSchedule: boolean;
+    includeRiskAnalysis: boolean;
 }

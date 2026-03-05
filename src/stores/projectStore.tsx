@@ -186,9 +186,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         projectDescription: 'Bu proje modern mimari standartlarına uygun olarak tasarlanmış olup, 1. sınıf malzemelerle inşa edilecektir.',
         firmLogo: null,
         projectRender: null,
-        showUnitDetails: true,
+        showUnitDetails: false, // Firma içi detaylar varsayılan olarak kapalı
         profitMargin: 0,
-        selectedBrands: {} // YENİ EKLENDİ
+        selectedBrands: {},
+        includeCashflow: false,
+        includeProcurement: false,
+        includeSchedule: false,
+        includeRiskAnalysis: false
     });
 
     const [financialSettings, setFinancialSettings] = useState<FinancialSettings>({
