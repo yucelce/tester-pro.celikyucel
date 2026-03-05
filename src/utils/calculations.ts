@@ -1409,15 +1409,25 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_roof': ({ buildingStats }) => {
         if (buildingStats.buildingType === 'villa') {
             const nArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : 0;
-            // Binanın en geniş oturduğu alanı bul
-            const maxArea = Math.max(nArea, buildingStats.groundFloorArea);
+            const gArea = buildingStats.groundFloorArea || 0;
 
-            // Mimari saçak payı eklemesi:
-            // Binanın kareye yakın olduğunu varsayarsak bir kenar uzunluğu:
-            const sideLength = Math.sqrt(maxArea);
+            let maxArea = 0;
+            let basePerim = 0;
+
+            // Hangi kat daha geniş oturuyorsa onun alanını ve çevresini baz al
+            if (nArea > gArea) {
+                maxArea = nArea;
+                basePerim = buildingStats.normalFloorPerimeter || (Math.sqrt(nArea) * 4);
+            } else {
+                maxArea = gArea;
+                basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(gArea) * 4);
+            }
+
             const eaveOverhang = 0.80; // 80 cm saçak payı
-            // Saçaklı yeni kenar uzunluğu ve izdüşüm alanı
-            const footprintWithEaves = Math.pow(sideLength + (eaveOverhang * 2), 2);
+
+            // Gerçek Matematiksel Formül:
+            // Saçaklı İzdüşüm Alanı = Bina Alanı + (Bina Çevresi * Saçak) + (Köşe Boşlukları: 4 * Saçak²)
+            const footprintWithEaves = maxArea + (basePerim * eaveOverhang) + (4 * Math.pow(eaveOverhang, 2));
 
             // Çatı eğim katsayısı: 30 derece eğim için 1 / cos(30) ≈ 1.154
             // Zayiat payı: Mahya, dere, eğik kesimler için %10 (1.10)
@@ -1736,12 +1746,39 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_duration_months': ({ constructionDuration }) => constructionDuration,
 
-    'calc_foundation_area': ({ buildingStats }) => {
-        const foundationArea = buildingStats.basementFloorCount > 0
-            ? buildingStats.basementFloorArea
-            : buildingStats.groundFloorArea;
-        return foundationArea;
-    },
+    'calc_foundation_area': ({ buildingStats, totalFloors }) => {
+    let foundationArea = buildingStats.basementFloorCount > 0
+        ? buildingStats.basementFloorArea
+        : buildingStats.groundFloorArea;
+        
+    let totalInsulationArea = foundationArea;
+
+    // Radye temel kalınlığı ve ampatman (yanak) hesabı (Opsiyonel: Daha hassas metraj için)
+    const raftHeight = calculateEstimatedRaftHeight(totalFloors);
+    const ampatman = raftHeight * 1.5;
+    let basePerim = buildingStats.basementFloorCount > 0
+        ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
+        : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+        
+    const foundationPerimeter = basePerim + (8 * ampatman);
+    
+    // Radye temel yanak alanı
+    totalInsulationArea += (foundationPerimeter * raftHeight);
+
+    // Bodrum katlar varsa toprak altında kalan perde duvarların dış yüzey alanı
+    if (buildingStats.basementFloorCount > 0) {
+        const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
+        totalInsulationArea += (basePerim * totalBasementHeight);
+    } else {
+        // Bodrum yoksa subasman perdeleri toprakla temas eder
+        const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+        if (subasmanH > 0) {
+            totalInsulationArea += (basePerim * subasmanH);
+        }
+    }
+
+    return totalInsulationArea;
+},
 
     'calc_scaffolding_area': ({ buildingStats }) => {
         const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
