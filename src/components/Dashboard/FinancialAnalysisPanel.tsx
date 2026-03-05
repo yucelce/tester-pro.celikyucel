@@ -466,6 +466,17 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const netProfit = totals.finalBalance - currentEquityAmount;
     const recommendedPricePerM2 = totalConstructionArea > 0 ? (totals.actualTotalCostWithInflation * (1 + targetProfitMargin / 100)) / totalConstructionArea : 0;
 
+    const kdvRate = 0.20; // %20 KDV varsayımı
+    // Enflasyon hesaba katılmış toplam brüt maliyet üzerinden KDV ayrıştırılır
+    const currentTotalBrut = totals.actualTotalCostWithInflation;
+    const netTotalCost = currentTotalBrut / (1 + kdvRate);
+    const includedVatAmount = currentTotalBrut - netTotalCost;
+
+    // Satışlardan kesilecek tahmini %1 KDV (Kentsel dönüşüm için)
+    const estimatedSalesVat = totals.totalSales * 0.01;
+    // Potansiyel İade (Ödenen - Tahsil Edilen)
+    const potentialVatRefund = includedVatAmount - estimatedSalesVat;
+
     const drawChart = () => {
         if (tableData.length === 0) return null;
         const maxVal = Math.max(...tableData.map(d => Math.max(d.cumulativeExpense, d.cumulativeSales)), totals.actualTotalCostWithInflation) * 1.1;
@@ -699,6 +710,56 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                 {recommendedPricePerM2.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} <span className="text-xs">₺/m²</span>
                             </div>
                         </div>
+
+
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Net Maliyet */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
+                            <div>
+                                <div className="text-[10px] text-slate-500 uppercase font-bold">Net İnşaat Maliyeti</div>
+                                <div className="text-[9px] text-slate-400">Vergiler hariç saf (gerçek) maliyet</div>
+                            </div>
+                            <div className="text-lg font-bold text-slate-700 dark:text-slate-300 font-mono">
+                                {netTotalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                            </div>
+                        </div>
+
+                        {/* İçindeki KDV */}
+                        <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-200 dark:border-red-900/30 flex justify-between items-center shadow-sm">
+                            <div>
+                                <div className="text-[10px] text-red-600 uppercase font-bold">İçindeki KDV Yükü (%20)</div>
+                                <div className="text-[9px] text-red-500/80">İnşaat süresince devlete ödenen vergi</div>
+                            </div>
+                            <div className="text-lg font-bold text-red-600 dark:text-red-400 font-mono">
+                                {includedVatAmount.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                            </div>
+                        </div>
+
+                        {/* Kentsel Dönüşüm Varsa KDV İadesi */}
+                        {buildingStats.isUrbanTransformation ? (
+                            <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-900/30 flex justify-between items-center relative overflow-hidden shadow-sm">
+                                <div className="absolute -right-2 -top-2 text-emerald-500/10 text-6xl"><i className="fas fa-hand-holding-usd"></i></div>
+                                <div className="relative z-10">
+                                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold">Potansiyel KDV İadesi</div>
+                                    <div className="text-[9px] text-emerald-600/80">%1 Satış KDV'si mahsup edilmiştir</div>
+                                </div>
+                                <div className="relative z-10 text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                    {Math.max(0, potentialVatRefund).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50 flex justify-between items-center opacity-70 border-dashed">
+                                <div>
+                                    <div className="text-[10px] text-slate-500 uppercase font-bold">KDV İadesi Fırsatı</div>
+                                    <div className="text-[9px] text-slate-400">Sadece Kentsel Dönüşüm projelerinde</div>
+                                </div>
+                                <div className="text-xs font-bold text-slate-400 bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">
+                                    Aktif Değil
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-6">
