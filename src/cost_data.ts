@@ -32,7 +32,7 @@ export interface CostItem {
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
   'calc_smart_home' | "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
-  'calc_suspended_ceiling_area' | 'calc_sgk_premium'
+  'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk'
 
 
   ;
@@ -95,6 +95,7 @@ export const COST_DATA: CostCategory[] = [
       { name: "Ruhsat Harcı", unit: "m2", unit_price: 840, auto_source: "total_area", multiplier: 1, scope: 'global' },
       { name: "İskan Harcı", unit: "m2", unit_price: 360, auto_source: "total_area", multiplier: 1, scope: 'global' },
      { name: "SGK Asgari İşçilik Primi", unit: "Paket", unit_price: 1, auto_source: "calc_sgk_premium", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+     { name: "İnşaat All Risk Sigortası", unit: "Paket", unit_price: 1, auto_source: "calc_all_risk", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Şantiye Şefi (Aylık)", unit: "Ay", unit_price: 90000, auto_source: "calc_site_chief", multiplier: 1, scope: 'global' },
       { name: "Enerji Kimlik Belgesi", unit: "Paket", unit_price: 3000, auto_source: "calc_ekb", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yeşil Etiket (Asansör Ruhsat)", unit: "Toplam", unit_price: 5000, auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },

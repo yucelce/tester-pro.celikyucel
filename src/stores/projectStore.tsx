@@ -303,6 +303,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         constructionModel: 'standard', // Varsayılan: Kendin Yap / Taahhüt
         contractorShare: 50,
         isUrbanTransformation: false,   // Varsayılan: Hayır
+        hasAllRiskInsurance: false,
         existingUnitCount: 0,
         monthlyRentPerUnit: 0,
         evictionCostPerUnit: 0,

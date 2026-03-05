@@ -214,7 +214,7 @@ export interface BuildingStats {
     constructionModel?: 'standard' | 'kat_karsiligi'; // İnşaat Modeli
     contractorShare?: number;
     isUrbanTransformation?: boolean; // Kentsel Dönüşüm (Riskli Yapı) var mı?
-
+    hasAllRiskInsurance?: boolean;
     existingUnitCount?: number;     // Yıkılacak mevcut bağımsız bölüm (daire/dükkan) sayısı
     existingArea?: number;
     monthlyRentPerUnit?: number;    // Daire başı aylık NET ödenecek kira yardımı (TL)

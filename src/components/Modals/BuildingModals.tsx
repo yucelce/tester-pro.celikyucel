@@ -791,6 +791,26 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 )}
                             </div>
+                            <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={buildingStats.hasAllRiskInsurance || false}
+                                        onChange={(e) => setBuildingStats({ ...buildingStats, hasAllRiskInsurance: e.target.checked })}
+                                        className="w-5 h-5 accent-blue-500 rounded cursor-pointer"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                                            <i className="fas fa-shield-alt text-blue-400"></i>
+                                            İnşaat All Risk Sigortası (Bütün Riskler)
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 mt-1 block">
+                                            İsteğe bağlıdır. İnşaat süresince şantiyeyi kazalara ve doğal afetlere karşı güvence altına alır.
+                                            Seçildiğinde yasal maliyet üzerinden ortalama binde 2 oranında prim tutarı hesaplanır.
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     )}
 

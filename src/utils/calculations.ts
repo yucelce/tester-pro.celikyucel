@@ -1049,6 +1049,45 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
+    'calc_all_risk': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
+        if (!buildingStats.hasAllRiskInsurance) return 0; // Tikli değilse 0 TL atar
+
+        let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
+        if (totalApartments === 0) {
+            totalApartments = Math.ceil(totalConstructionArea / 100);
+        }
+        const isDetached = totalApartments === 1;
+
+        // 1. Binanın Yapı Sınıfını Belirleme
+        let buildingClass = "Yapı Sınıfı 3A";
+        if (isDetached) {
+            if (totalConstructionArea < 200) buildingClass = "Yapı Sınıfı 3B";
+            else if (totalConstructionArea >= 200 && totalConstructionArea < 500) buildingClass = "Yapı Sınıfı 3C";
+            else buildingClass = "Yapı Sınıfı 4B";
+        } else {
+            if (totalFloors <= 3) {
+                buildingClass = "Yapı Sınıfı 3A";
+            } else if (regulationHeight < 21.50) {
+                buildingClass = "Yapı Sınıfı 3B";
+            } else if (regulationHeight >= 21.50 && regulationHeight < 30.50) {
+                buildingClass = "Yapı Sınıfı 3C";
+            } else if (regulationHeight >= 30.50 && regulationHeight < 51.50) {
+                buildingClass = "Yapı Sınıfı 4A";
+            } else if (regulationHeight >= 51.50) {
+                buildingClass = "Yapı Sınıfı 4B";
+            }
+        }
+
+        // 2. İlgili Yapı Sınıfının m² Birim Maliyetini Çek
+        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) || 20000;
+
+        // 3. Toplam Yaklaşık Maliyet üzerinden binde 2 (0.002) sigorta primi tahmini
+        const totalEstimatedCost = totalConstructionArea * classUnitPrice;
+        const allRiskPremium = totalEstimatedCost * 0.002;
+
+        return Math.round(allRiskPremium);
+    },
+
     'calc_sgk_premium': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
         let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
         if (totalApartments === 0) {
