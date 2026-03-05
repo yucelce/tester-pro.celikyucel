@@ -152,7 +152,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
         });
 
         const expensesByMonth: Record<string, number> = {};
-        const tasksByMonth: Record<string, string[]> = {}; 
+        const tasksByMonth: Record<string, string[]> = {};
 
         let totalTaskWeeks = projectSchedule.reduce((acc, t) => acc + t.durationWeeks, 0);
         let projectStartMonthDate = new Date(formatMonth(startDate) + '-01');
@@ -201,7 +201,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
             let finalTaskCost = fixedTasks.includes(task.id) ? baseTaskCost : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
             let currentD = new Date(startDate);
-            let accumulatedDays = 0; 
+            let accumulatedDays = 0;
 
             while (currentD <= endDate) {
                 let eom = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 0);
@@ -227,7 +227,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
         });
 
         const salesByMonth: Record<string, number> = {};
-        const contractValue = projectTotalCost * (1 + targetProfitMargin / 100); 
+        const contractValue = projectTotalCost * (1 + targetProfitMargin / 100);
 
         if (financialSettings.revenueModel === 'taahhut') {
             const progressPayments = financialSettings.progressPayments || [];
@@ -402,7 +402,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         let totalSalableUnits = 0;
         const isKatKarsiligi = buildingStats.constructionModel === 'kat_karsiligi';
-        const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1; 
+        const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1;
 
         const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
         totalSalableUnits = totalUnitsCount * shareRatio;
@@ -433,7 +433,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const netProfit = totals.finalBalance - currentEquityAmount;
     const recommendedPricePerM2 = totalConstructionArea > 0 ? (totals.actualTotalCostWithInflation * (1 + targetProfitMargin / 100)) / totalConstructionArea : 0;
 
-    const kdvRate = 0.20; 
+    const kdvRate = 0.20;
     const currentTotalBrut = totals.actualTotalCostWithInflation;
     const netTotalCost = currentTotalBrut / (1 + kdvRate);
     const includedVatAmount = currentTotalBrut - netTotalCost;
@@ -447,9 +447,9 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         const width = 800;
         const height = 340;
-        const paddingX = 60; 
+        const paddingX = 60;
         const paddingTop = 40;
-        const paddingBottom = 80; 
+        const paddingBottom = 80;
 
         const step = (width - paddingX * 2) / Math.max(1, tableData.length - 1);
         const getX = (index: number) => paddingX + (index * step);
@@ -693,28 +693,28 @@ export const FinancialAnalysisPanel: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-6">
-                        
+
                         {/* ========================================= */}
                         {/* SOL PANEL: SEKMELİ (TAB) YAPI               */}
                         {/* ========================================= */}
                         <div className="w-full lg:w-1/3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
-                            
+
                             {/* Sekme Başlıkları */}
                             <div className="flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                                <button 
-                                    onClick={() => setLeftTab('sermaye')} 
+                                <button
+                                    onClick={() => setLeftTab('sermaye')}
                                     className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'sermaye' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
                                 >
                                     <i className="fas fa-coins"></i> Finansman
                                 </button>
-                                <button 
-                                    onClick={() => setLeftTab('gelir')} 
+                                <button
+                                    onClick={() => setLeftTab('gelir')}
                                     className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'gelir' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
                                 >
                                     <i className="fas fa-hand-holding-usd"></i> Gelir
                                 </button>
-                                <button 
-                                    onClick={() => setLeftTab('risk')} 
+                                <button
+                                    onClick={() => setLeftTab('risk')}
                                     className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'risk' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400 bg-orange-50/50 dark:bg-orange-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
                                 >
                                     <i className="fas fa-shield-alt"></i> Risk / Hedge
@@ -723,7 +723,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
                             {/* Sekme İçerikleri */}
                             <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
-                                
+
                                 {/* SEKME 1: FİNANSMAN */}
                                 {leftTab === 'sermaye' && (
                                     <div className="space-y-6 animate-fadeIn">
@@ -943,22 +943,32 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                 {/* SEKME 3: RİSK / HEDGE */}
                                 {leftTab === 'risk' && (
                                     <div className="space-y-6 animate-fadeIn">
-                                        
+
                                         {/* Stres Testi */}
-                                        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-orange-200 dark:border-orange-900/50 shadow-sm">
-                                            <label className="text-xs font-bold text-orange-600 dark:text-orange-400 block mb-2">
-                                                <i className="fas fa-exclamation-triangle mr-1"></i> Beklenmeyen Maliyet Artışı
-                                            </label>
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 leading-tight">
-                                                Malzeme fiyatlarına ek olarak gelebilecek öngörülemeyen şok dalgaları için nakit akışınızı test edin.
+                                        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-orange-200 dark:border-orange-800/50 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 rounded-bl-full -mr-4 -mt-4 pointer-events-none"></div>
+
+                                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-1.5">
+                                                <i className="fas fa-exclamation-triangle text-orange-500"></i>
+                                                Beklenmeyen Maliyet Artışı
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 pr-4 leading-relaxed">
+                                                Malzeme fiyatlarına gelebilecek öngörülemeyen şok dalgaları için nakit akışınızı test edin.
                                             </p>
-                                            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-orange-300 dark:border-orange-700 rounded px-3 py-2 focus-within:border-orange-500 transition-colors">
-                                                <NumericInput
-                                                    value={stressCostIncrease}
-                                                    onChange={setStressCostIncrease}
-                                                    className="w-full bg-transparent text-sm outline-none font-bold text-orange-600 dark:text-orange-400"
-                                                />
-                                                <span className="text-orange-500 font-bold ml-1">% Toplam Maliyet Şoku</span>
+
+                                            <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-lg p-2">
+                                                <span className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider pl-1">
+                                                    Şok Oranı
+                                                </span>
+                                                <div className="flex items-center bg-white dark:bg-slate-950 border border-orange-300 dark:border-orange-700 rounded-md px-2 py-1 focus-within:ring-2 focus-within:ring-orange-500/30 w-24 shadow-sm transition-all">
+                                                    <span className="text-orange-400 font-bold mr-1">%</span>
+                                                    <NumericInput
+                                                        value={stressCostIncrease}
+                                                        onChange={setStressCostIncrease}
+                                                        className="w-full bg-transparent text-sm outline-none font-bold text-orange-600 dark:text-orange-400 text-center"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1030,21 +1040,21 @@ export const FinancialAnalysisPanel: React.FC = () => {
                         {/* SAĞ PANEL: GRAFİK VE TABLO GÖRÜNÜMÜ         */}
                         {/* ========================================= */}
                         <div className="w-full lg:w-2/3 flex flex-col">
-                            
+
                             {/* Toggle Header */}
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-bold text-slate-800 dark:text-white text-sm">
                                     {rightView === 'chart' ? 'Nakit Akışı Görselleştirme' : 'Dönemsel Nakit Akışı Tablosu'}
                                 </h3>
                                 <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg p-1 border border-slate-300 dark:border-slate-700">
-                                    <button 
-                                        onClick={() => setRightView('chart')} 
+                                    <button
+                                        onClick={() => setRightView('chart')}
                                         className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${rightView === 'chart' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                                     >
                                         <i className="fas fa-chart-line mr-1"></i> Grafik
                                     </button>
-                                    <button 
-                                        onClick={() => setRightView('table')} 
+                                    <button
+                                        onClick={() => setRightView('table')}
                                         className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${rightView === 'table' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                                     >
                                         <i className="fas fa-table mr-1"></i> Tablo
