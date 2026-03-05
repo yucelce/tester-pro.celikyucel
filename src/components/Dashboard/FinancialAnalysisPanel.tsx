@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
-
 import { NumericInput } from '../Shared/NumericInput';
 import { SalePlan } from '../../types';
 
@@ -33,6 +32,10 @@ const calculateSCurve = (x: number) => {
 export const FinancialAnalysisPanel: React.FC = () => {
     const { projectTotalCost, totalConstructionArea, projectSchedule, financialSettings, updateFinancialSettings, addSale, removeSale, units, buildingStats, projectCostDetails } = useProjectStore();
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // --- YENİ UI STATE'LERİ (SEKMELER VE GÖRÜNÜM İÇİN) ---
+    const [leftTab, setLeftTab] = useState<'sermaye' | 'gelir' | 'risk'>('sermaye');
+    const [rightView, setRightView] = useState<'chart' | 'table'>('chart');
 
     const [equityAmount, setEquityAmount] = useState<number | null>(null);
     const [useLoan, setUseLoan] = useState(false);
@@ -70,7 +73,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         financialSettings.sales.forEach(s => {
             if (s.saleDate) {
-                // Orijinal tarihi al ve üzerine öteleme ayını ekle
                 const originalDate = new Date(s.saleDate + '-01');
                 const sd = addMonths(originalDate, stressDelayMonths);
                 if (sd > maxD) maxD = sd;
@@ -86,8 +88,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const financialEndDateStr = formatMonth(financialEndDate);
     const defaultSaleDate = formatMonth(addMonths(constructionEndDate, 3));
     const [newSale, setNewSale] = useState({ name: '', amount: 0, saleDate: defaultSaleDate });
-
-
 
     const handleAddSale = () => {
         if (!newSale.name || newSale.amount <= 0 || !newSale.saleDate) return;
@@ -110,14 +110,12 @@ export const FinancialAnalysisPanel: React.FC = () => {
     };
 
     const autoPopulateHakedis = () => {
-        // Ana iş kalemlerini bul ve %100'ü onlara eşit dağıt
         const mainTasks = projectSchedule.filter(t => ['structure', 'walls', 'mep_rough', 'flooring', 'handover'].includes(t.id));
         if (mainTasks.length > 0) {
             const share = Math.floor(100 / mainTasks.length);
             const newPps = mainTasks.map((t, i) => ({
                 id: Math.random().toString(),
                 taskId: t.id,
-                // Küsurat kalmaması için son kaleme kalanı ekle
                 percentage: i === mainTasks.length - 1 ? 100 - (share * (mainTasks.length - 1)) : share
             }));
             updateFinancialSettings({ progressPayments: newPps });
@@ -133,7 +131,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
         }
     };
 
-    // --- ENFLASYONLU VE SABİTLEMELİ NAKİT AKIŞI ---
+    // --- NAKİT AKIŞI HESAPLAMA MANTIĞI (AYNEN KORUNDU) ---
     const cashflow = useMemo(() => {
         if (!projectTotalCost || projectSchedule.length === 0) return null;
 
@@ -154,11 +152,10 @@ export const FinancialAnalysisPanel: React.FC = () => {
         });
 
         const expensesByMonth: Record<string, number> = {};
-        const tasksByMonth: Record<string, string[]> = {}; // Hangi ay hangi işler var
+        const tasksByMonth: Record<string, string[]> = {}; 
 
         let totalTaskWeeks = projectSchedule.reduce((acc, t) => acc + t.durationWeeks, 0);
         let projectStartMonthDate = new Date(formatMonth(startDate) + '-01');
-        // --- YENİ EKLENEN: GÖREV BAZLI GERÇEK MALİYET HESAPLAMASI ---
         const taskActualCosts: Record<string, number> = {};
 
         const getTaskForCategory = (catId: string, itemName: string): string => {
@@ -182,7 +179,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
             }
         };
 
-        // Maliyetleri ilgili görevlerin havuzuna topla
         projectCostDetails.forEach(cat => {
             cat.items.forEach(item => {
                 if (item.totalPrice > 0) {
@@ -193,26 +189,19 @@ export const FinancialAnalysisPanel: React.FC = () => {
         });
 
         const stressMultiplier = 1 + (stressCostIncrease / 100);
-        // -------------------------------------------------------------
 
-
-        // Görevlerin enflasyonlu maliyet hesabı ve aylara göre görev isimleri
         projectSchedule.forEach(task => {
             const baseTaskCost = (taskActualCosts[task.id] || 0) * stressMultiplier;
-            // İşin başlangıç ve bitiş tarihlerini al
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
 
-            // Enflasyon hesabı (başlangıç ayına göre)
             let monthsDiff = (endDate.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (endDate.getMonth() - projectStartMonthDate.getMonth());
             monthsDiff = Math.max(0, monthsDiff);
             let finalTaskCost = fixedTasks.includes(task.id) ? baseTaskCost : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
-
-            // MALİYETİ AYLARA S-CURVE (ÇAN EĞRİSİ) İLE DAĞITMA MANTIĞI
             let currentD = new Date(startDate);
-            let accumulatedDays = 0; // İşin başından o ayın başına kadar geçen toplam gün
+            let accumulatedDays = 0; 
 
             while (currentD <= endDate) {
                 let eom = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 0);
@@ -221,38 +210,26 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 let daysInThisMonth = (eom.getTime() - currentD.getTime()) / (1000 * 3600 * 24);
                 if (daysInThisMonth === 0) daysInThisMonth = 1;
 
-                // 1. Ayın BAŞINDAKİ tamamlanma yüzdesi
                 const startProgressRatio = accumulatedDays / totalDays;
-
                 accumulatedDays += daysInThisMonth;
-
-                // 2. Ayın SONUNDAKİ tamamlanma yüzdesi
                 const endProgressRatio = accumulatedDays / totalDays;
 
-                // 3. S-Curve farkı: Bu aya düşen net maliyet yüzdesi
-                // Örneğin: İşin başı yavaştır (ilk %20'lik sürede maliyetin sadece %10'u çıkar)
-                // Ortasında hızlanır (orta %20'lik sürede maliyetin %30'u çıkar)
                 let costRatio = calculateSCurve(endProgressRatio) - calculateSCurve(startProgressRatio);
-
                 let monthStr = formatMonth(currentD);
 
-                // Gideri o aya ekle
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (finalTaskCost * costRatio);
 
                 if (!tasksByMonth[monthStr]) tasksByMonth[monthStr] = [];
                 if (!tasksByMonth[monthStr].includes(task.name)) tasksByMonth[monthStr].push(task.name);
 
-                // Bir sonraki ayın ilk gününe atla
                 currentD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
             }
-
         });
 
         const salesByMonth: Record<string, number> = {};
-        const contractValue = projectTotalCost * (1 + targetProfitMargin / 100); // Sözleşme Bedeli
+        const contractValue = projectTotalCost * (1 + targetProfitMargin / 100); 
 
         if (financialSettings.revenueModel === 'taahhut') {
-            // TAAHHÜT MODU: İş bitişlerinde yüzdelik hakediş al
             const progressPayments = financialSettings.progressPayments || [];
             progressPayments.forEach(pp => {
                 const task = projectSchedule.find(t => t.id === pp.taskId);
@@ -264,7 +241,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 }
             });
         } else {
-            // YAP-SAT MODU: Normal satışlar
             sales.forEach(sale => {
                 if (sale.saleDate) {
                     let saleDateObj = new Date(sale.saleDate + '-01');
@@ -346,7 +322,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
             const totalIncomeThisMonth = equityInject + loanDraw + sal + interestEarned;
             const totalExpenseThisMonth = exp + loanInstallment;
 
-            // Satır Açıklaması ve Görev Detayları
             let descItems = [];
             if (equityInject > 0) descItems.push('Sermaye');
             if (loanDraw > 0) descItems.push('Kredi');
@@ -356,7 +331,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
             if (exp > 0) {
                 const monthTasks = tasksByMonth[mStr] || [];
                 if (monthTasks.length > 0) {
-                    // İlk 2 görevi göster, kalanı varsa "..." ekle
                     const taskStr = monthTasks.length > 2 ? `${monthTasks.slice(0, 2).join(', ')}...` : monthTasks.join(', ');
                     descItems.push(`İnşaat (${taskStr})`);
                 } else {
@@ -392,7 +366,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         const actualTotalCostWithInflation = Object.values(expensesByMonth).reduce((a, b) => a + b, 0);
 
-        // Alternatif Senaryo Hesabı (İnşaata girilmeyip sadece faize yatırılsaydı)
         const monthsCount = Math.max(0, continuousMonths.length - 1);
         const alternativeBalance = currentEquityAmount * Math.pow(1 + depositInterestRate, monthsCount);
         const alternativeProfit = alternativeBalance - currentEquityAmount;
@@ -427,29 +400,23 @@ export const FinancialAnalysisPanel: React.FC = () => {
         if (units.length === 0) return;
         const defaultSales: SalePlan[] = [];
 
-        // 1. Müteahhide ait satılabilir birimleri hesapla
         let totalSalableUnits = 0;
         const isKatKarsiligi = buildingStats.constructionModel === 'kat_karsiligi';
-        const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1; // Standart ise %100
+        const shareRatio = isKatKarsiligi ? ((buildingStats.contractorShare || 50) / 100) : 1; 
 
-        // 2. Satış fiyatı için tüm maliyeti, SADECE satılabilir daire sayısına bölüyoruz
         const totalUnitsCount = units.reduce((acc, u) => acc + u.count, 0);
         totalSalableUnits = totalUnitsCount * shareRatio;
 
         const currentTotalCost = totals?.actualTotalCostWithInflation || projectTotalCost;
 
-        // DİKKAT: Toplam yatırım tutarını sadece satacağımız dairelere bölüyoruz!
         const avgSalePrice = totalSalableUnits > 0
             ? Math.round((currentTotalCost * (1 + targetProfitMargin / 100)) / totalSalableUnits / 1000) * 1000
             : 0;
 
         const targetDate = formatMonth(addMonths(constructionEndDate, 3));
 
-        // 3. Listeyi doldururken sadece müteahhidin payına düşen adet kadar satır oluştur
         units.forEach(u => {
-            // Bu tipten müteahhide düşen adet (Tam sayıya yuvarlayarak, örn 5 dairenin %50'si = 2.5 -> 3 veya 2 alınabilir, projede genelde yuvarlanır)
             const contractorUnitCount = Math.round(u.count * shareRatio);
-
             for (let i = 0; i < contractorUnitCount; i++) {
                 defaultSales.push({
                     id: Date.now().toString() + Math.random().toString(),
@@ -466,27 +433,23 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const netProfit = totals.finalBalance - currentEquityAmount;
     const recommendedPricePerM2 = totalConstructionArea > 0 ? (totals.actualTotalCostWithInflation * (1 + targetProfitMargin / 100)) / totalConstructionArea : 0;
 
-    const kdvRate = 0.20; // %20 KDV varsayımı
-    // Enflasyon hesaba katılmış toplam brüt maliyet üzerinden KDV ayrıştırılır
+    const kdvRate = 0.20; 
     const currentTotalBrut = totals.actualTotalCostWithInflation;
     const netTotalCost = currentTotalBrut / (1 + kdvRate);
     const includedVatAmount = currentTotalBrut - netTotalCost;
 
-    // Satışlardan kesilecek tahmini %1 KDV (Kentsel dönüşüm için)
     const estimatedSalesVat = totals.totalSales * 0.01;
-    // Potansiyel İade (Ödenen - Tahsil Edilen)
     const potentialVatRefund = includedVatAmount - estimatedSalesVat;
 
     const drawChart = () => {
         if (tableData.length === 0) return null;
         const maxVal = Math.max(...tableData.map(d => Math.max(d.cumulativeExpense, d.cumulativeSales)), totals.actualTotalCostWithInflation) * 1.1;
 
-        // Grafiğin alt kısmına tarihler sığsın diye height ve padding değerlerini artırdık
         const width = 800;
         const height = 340;
-        const paddingX = 60; // Sağ-Sol boşluğu
+        const paddingX = 60; 
         const paddingTop = 40;
-        const paddingBottom = 80; // Alt boşluk (Tarihler için)
+        const paddingBottom = 80; 
 
         const step = (width - paddingX * 2) / Math.max(1, tableData.length - 1);
         const getX = (index: number) => paddingX + (index * step);
@@ -503,12 +466,10 @@ export const FinancialAnalysisPanel: React.FC = () => {
         const expensePoints = tableData.map((d, i) => `${getX(i)},${getY(d.cumulativeExpense)}`).join(' ');
         const salesPoints = tableData.map((d, i) => `${getX(i)},${getY(d.cumulativeSales)}`).join(' ');
 
-        // X ekseni etiketlerini (aylar) çok uzun projelerde üst üste binmemesi için atlayarak gösteririz
         const labelStep = Math.max(1, Math.ceil(tableData.length / 8));
 
         return (
-            <div className="w-full overflow-x-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mt-4 shadow-sm relative" onMouseLeave={() => setHoveredChartIndex(null)}>
-                {/* GRAFİK BAŞLIĞI VE LEJANT */}
+            <div className="w-full overflow-x-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-b-lg p-4 shadow-sm relative" onMouseLeave={() => setHoveredChartIndex(null)}>
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sticky left-0">
                     <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-2 sm:mb-0">Nakit Akışı Eğrisi (S-Curve)</h4>
                     <div className="flex flex-wrap justify-center gap-3 md:gap-4 text-[10px] font-bold">
@@ -520,8 +481,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
                 <div className="min-w-[700px] relative">
                     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="overflow-visible">
-
-                        {/* 1. KIRMIZI BÖLGE: Nakit Açığı */}
                         {tableData.map((d, i) => {
                             if (d.endBalance < 0) {
                                 const rectX = i === 0 ? getX(i) : getX(i) - step / 2;
@@ -533,7 +492,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             return null;
                         })}
 
-                        {/* 2. YATAY KILAVUZ ÇİZGİLERİ VE Y EKSENİ DEĞERLERİ */}
                         {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
                             const y = paddingTop + (height - paddingTop - paddingBottom) * ratio;
                             return (
@@ -544,7 +502,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             )
                         })}
 
-                        {/* 3. YENİ EKLENEN: X EKSENİ ETİKETLERİ (DÖNEMLER) */}
                         {tableData.map((d, i) => {
                             if (i % labelStep === 0 || i === tableData.length - 1) {
                                 return (
@@ -559,11 +516,9 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             return null;
                         })}
 
-                        {/* 4. EĞRİLER (S-CURVES) */}
                         <polyline fill="none" stroke="#ef4444" strokeWidth="3" points={expensePoints} className="drop-shadow-sm" />
                         <polyline fill="none" stroke="#10b981" strokeWidth="3" points={salesPoints} className="drop-shadow-sm" />
 
-                        {/* 5. BAŞA BAŞ NOKTASI */}
                         {breakEvenPoint && (
                             <g>
                                 <circle cx={breakEvenPoint.x} cy={breakEvenPoint.y} r="6" fill="#f59e0b" className="animate-pulse" />
@@ -572,7 +527,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             </g>
                         )}
 
-                        {/* 6. HOVER (İMLEÇ) KILAVUZ ÇİZGİSİ VE NOKTALARI */}
                         {hoveredChartIndex !== null && (
                             <g>
                                 <line x1={getX(hoveredChartIndex)} y1={paddingTop} x2={getX(hoveredChartIndex)} y2={height - paddingBottom} stroke="#94a3b8" strokeWidth="1" strokeDasharray="4 4" />
@@ -581,7 +535,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             </g>
                         )}
 
-                        {/* 7. GÖRÜNMEZ ETKİLEŞİM ALANLARI (Hitboxes for Hover) */}
                         {tableData.map((d, i) => {
                             const rectX = i === 0 ? getX(i) : getX(i) - step / 2;
                             const rectWidth = i === 0 || i === tableData.length - 1 ? step / 2 : step;
@@ -600,17 +553,12 @@ export const FinancialAnalysisPanel: React.FC = () => {
                         })}
                     </svg>
 
-                    {/* 8. HTML TABANLI TOOLTİP (Dinamik Yönlendirme ile Sığmama Sorunu Çözüldü) */}
                     {hoveredChartIndex !== null && (
                         <div
                             className="absolute pointer-events-none bg-slate-900/95 backdrop-blur-sm text-white p-3 rounded-xl shadow-2xl border border-slate-700 text-xs z-[100] transition-all duration-75"
                             style={{
-                                // Kutu başlangıcı her zaman imlecin tam üzeri
                                 left: `${getX(hoveredChartIndex)}px`,
-                                // GÜNCELLEME: Fare grafiğin %60'lık dilimini geçtiyse kutuyu Sola İt, yoksa Sağa it.
-                                transform: (hoveredChartIndex / tableData.length) > 0.6
-                                    ? 'translateX(calc(-100% - 15px))'
-                                    : 'translateX(15px)',
+                                transform: (hoveredChartIndex / tableData.length) > 0.6 ? 'translateX(calc(-100% - 15px))' : 'translateX(15px)',
                                 top: '30px',
                                 minWidth: '180px',
                                 whiteSpace: 'nowrap'
@@ -664,21 +612,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
             {isExpanded && (
                 <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-700 animate-fadeIn bg-white dark:bg-slate-900 flex flex-col gap-6">
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-800/80 p-4 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i className="far fa-play-circle mr-1"></i>Proje Başlangıç</span>
-                            <span className="text-sm font-bold text-slate-800 dark:text-white">{formatMonthDisplay(formatMonth(startDate))}</span>
-                        </div>
-                        <div className="flex flex-col items-center md:items-start text-center md:text-left md:border-l border-slate-200 dark:border-slate-700 md:pl-6">
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1"><i className="fas fa-hard-hat mr-1"></i>İnşaat Bitiş</span>
-                            <span className="text-sm font-bold text-slate-800 dark:text-white">{formatMonthDisplay(formatMonth(constructionEndDate))}</span>
-                        </div>
-                        <div className="flex flex-col items-center md:items-start text-center md:text-left md:border-l border-slate-200 dark:border-slate-700 md:pl-6">
-                            <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider mb-1"><i className="fas fa-flag-checkered mr-1"></i>Finansal Bitiş</span>
-                            <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{formatMonthDisplay(financialEndDateStr)}</span>
-                        </div>
-                    </div>
-
+                    {/* --- ÖZET KARTLARI (ÜST BÖLÜM) --- */}
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                         <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-center relative group">
                             <div className="text-[10px] text-slate-500 uppercase font-bold">Enflasyonlu Maliyet</div>
@@ -710,12 +644,10 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                 {recommendedPricePerM2.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} <span className="text-xs">₺/m²</span>
                             </div>
                         </div>
-
-
                     </div>
 
+                    {/* --- VERGİ VE KDV BİLGİLERİ (İkincil Bilgiler) --- */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Net Maliyet */}
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex justify-between items-center shadow-sm">
                             <div>
                                 <div className="text-[10px] text-slate-500 uppercase font-bold">Net İnşaat Maliyeti</div>
@@ -726,7 +658,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* İçindeki KDV */}
                         <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-200 dark:border-red-900/30 flex justify-between items-center shadow-sm">
                             <div>
                                 <div className="text-[10px] text-red-600 uppercase font-bold">İçindeki KDV Yükü (%20)</div>
@@ -737,7 +668,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Kentsel Dönüşüm Varsa KDV İadesi */}
                         {buildingStats.isUrbanTransformation ? (
                             <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-900/30 flex justify-between items-center relative overflow-hidden shadow-sm">
                                 <div className="absolute -right-2 -top-2 text-emerald-500/10 text-6xl"><i className="fas fa-hand-holding-usd"></i></div>
@@ -763,362 +693,427 @@ export const FinancialAnalysisPanel: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-6">
-                        {/* SOL PANEL */}
-                        <div className="w-full lg:w-1/3 space-y-4">
-
-                            {/* 1. ÖZ SERMAYE, FİNANSAL ORANLAR & STRES TESTİ */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
-                                    <i className="fas fa-chart-bar mr-2 text-blue-500"></i>Finansal Parametreler
-                                </h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Mevcut Öz Sermaye (₺)</label>
-                                        <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1">
-                                            <NumericInput
-                                                value={Number((equityAmount !== null ? equityAmount : projectTotalCost).toFixed(2))}
-                                                onChange={setEquityAmount}
-                                                className="w-full min-w-0 bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 truncate"
-                                            />
-                                            <span className="text-slate-400 font-bold ml-1">₺</span>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                                <label className="text-[10px] uppercase font-bold text-slate-500">Aylık Enf. (%)</label>
-                                                {financialSettings.systemMonthlyInflationRate !== undefined && financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate && (
-                                                    <button
-                                                        onClick={() => updateFinancialSettings({ monthlyInflationRate: financialSettings.systemMonthlyInflationRate })}
-                                                        className="text-[9px] text-red-500 hover:text-red-700 font-bold transition flex items-center gap-1"
-                                                    >
-                                                        <i className="fas fa-undo"></i>
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className={`flex items-center bg-white dark:bg-slate-900 border rounded px-2 py-1 border-l-2 border-l-red-500 transition-colors ${financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate ? 'border-red-300 dark:border-red-800' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                <NumericInput value={financialSettings.monthlyInflationRate} onChange={(val) => updateFinancialSettings({ monthlyInflationRate: val })} className={`w-full bg-transparent text-sm outline-none font-bold ${financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300'}`} />
-                                                <span className="text-slate-400 font-bold ml-1">%</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                                <label className="text-[10px] uppercase font-bold text-slate-500">Aylık Faiz (%)</label>
-                                                {financialSettings.systemMonthlyInterestRate !== undefined && financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate && (
-                                                    <button
-                                                        onClick={() => updateFinancialSettings({ monthlyInterestRate: financialSettings.systemMonthlyInterestRate })}
-                                                        className="text-[9px] text-green-600 hover:text-green-800 font-bold transition flex items-center gap-1"
-                                                    >
-                                                        <i className="fas fa-undo"></i>
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className={`flex items-center bg-white dark:bg-slate-900 border rounded px-2 py-1 border-l-2 border-l-green-500 transition-colors ${financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate ? 'border-green-300 dark:border-green-800' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                <NumericInput value={financialSettings.monthlyInterestRate} onChange={(val) => updateFinancialSettings({ monthlyInterestRate: val })} className={`w-full bg-transparent text-sm outline-none font-bold ${financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`} />
-                                                <span className="text-slate-400 font-bold ml-1">%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* STRES TESTİ EKLENTİSİ */}
-                                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
-                                            <i className="fas fa-exclamation-triangle text-orange-500 mr-1"></i>
-                                            Beklenmeyen Maliyet Artışı (Stres Testi)
-                                        </label>
-                                        <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-orange-500 transition-colors">
-                                            <NumericInput
-                                                value={stressCostIncrease}
-                                                onChange={setStressCostIncrease}
-                                                className="w-full bg-transparent text-sm outline-none font-bold text-orange-600 dark:text-orange-400"
-                                            />
-                                            <span className="text-slate-400 font-bold ml-1">%</span>
-                                        </div>
-                                        <p className="text-[9px] text-slate-400 mt-1">İnşaat maliyetlerinin öngörülenden fazla çıkması durumunda nakit akışını test edin.</p>
-                                    </div>
-                                </div>
+                        
+                        {/* ========================================= */}
+                        {/* SOL PANEL: SEKMELİ (TAB) YAPI               */}
+                        {/* ========================================= */}
+                        <div className="w-full lg:w-1/3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+                            
+                            {/* Sekme Başlıkları */}
+                            <div className="flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                <button 
+                                    onClick={() => setLeftTab('sermaye')} 
+                                    className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'sermaye' ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
+                                >
+                                    <i className="fas fa-coins"></i> Finansman
+                                </button>
+                                <button 
+                                    onClick={() => setLeftTab('gelir')} 
+                                    className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'gelir' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
+                                >
+                                    <i className="fas fa-hand-holding-usd"></i> Gelir
+                                </button>
+                                <button 
+                                    onClick={() => setLeftTab('risk')} 
+                                    className={`flex-1 py-3 text-[11px] uppercase font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${leftTab === 'risk' ? 'text-orange-600 dark:text-orange-400 border-orange-600 dark:border-orange-400 bg-orange-50/50 dark:bg-orange-900/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border-transparent'}`}
+                                >
+                                    <i className="fas fa-shield-alt"></i> Risk / Hedge
+                                </button>
                             </div>
 
-                            {/* 1.5 BANKA KREDİSİ (KALDIRAÇ) EKLENTİSİ */}
-                            <div className={`p-4 rounded-lg border transition-colors ${useLoan ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" checked={useLoan} onChange={(e) => setUseLoan(e.target.checked)} className="w-5 h-5 accent-blue-500 rounded cursor-pointer" />
-                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">
-                                        <i className="fas fa-university mr-2 text-blue-500"></i>Banka Kredisi / Kaldıraç
-                                    </h3>
-                                </label>
-
-                                {useLoan && (
-                                    <div className="grid grid-cols-2 gap-3 animate-fadeIn pt-3 mt-3 border-t border-blue-100 dark:border-blue-800/50">
-                                        <div className="col-span-2">
-                                            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Kredi Tutarı (₺)</label>
-                                            <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
-                                                <NumericInput value={loanAmount || 0} onChange={setLoanAmount} className="w-full bg-transparent text-sm outline-none font-bold text-blue-600 dark:text-blue-400 text-right pr-2" />
-                                                <span className="text-slate-400 font-bold text-xs">₺</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Aylık Faiz (%)</label>
-                                            <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
-                                                <NumericInput value={loanInterestRate} onChange={setLoanInterestRate} className="w-full bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 text-right pr-2" />
-                                                <span className="text-slate-400 font-bold text-xs">%</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Vade (Ay)</label>
-                                            <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
-                                                <NumericInput value={loanDuration} onChange={setLoanDuration} className="w-full bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 text-right pr-2" />
-                                                <span className="text-slate-400 font-bold text-xs">Ay</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Kullanım Ayı</label>
-                                            <input type="month" value={currentLoanDate} onChange={(e) => setLoanDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs outline-none font-bold text-slate-700 dark:text-slate-300" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Taksit Başlangıcı</label>
-                                            <input type="month" value={currentLoanRepayDate} onChange={(e) => setLoanRepayStartDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs outline-none font-bold text-slate-700 dark:text-slate-300" />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            {/* 2. FİYAT SABİTLEME (HEDGE) PANELİ */}
-                            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800/30">
-                                <div className="flex justify-between items-center mb-3 border-b border-indigo-200 dark:border-indigo-800/50 pb-2">
-                                    <h3 className="font-bold text-indigo-700 dark:text-indigo-400 text-sm">
-                                        <i className="fas fa-lock mr-2"></i>Anlaşması Yapılan İşler
-                                    </h3>
-                                    <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded font-bold">
-                                        {(financialSettings.fixedPriceTaskIds || []).length} İş Sabit
-                                    </span>
-                                </div>
-                                <p className="text-[9px] text-indigo-600/80 dark:text-indigo-300/80 mb-3 leading-tight">
-                                    Taşeron veya tedarikçiyle önceden anlaşılan kalemleri seçin. Seçili kalemler aylık enflasyon/maliyet artışından etkilenmez.
-                                </p>
-                                <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-1 bg-white dark:bg-slate-900 p-2 rounded border border-indigo-100 dark:border-slate-700">
-                                    {projectSchedule.map(task => {
-                                        const isFixed = (financialSettings.fixedPriceTaskIds || []).includes(task.id);
-                                        return (
-                                            <label key={task.id} className={`flex items-center justify-between p-2 rounded cursor-pointer transition text-xs ${isFixed ? 'bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'}`}>
-                                                <div className="flex items-center gap-2 truncate">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isFixed}
-                                                        onChange={() => toggleFixedTask(task.id)}
-                                                        className="accent-indigo-600"
+                            {/* Sekme İçerikleri */}
+                            <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+                                
+                                {/* SEKME 1: FİNANSMAN */}
+                                {leftTab === 'sermaye' && (
+                                    <div className="space-y-6 animate-fadeIn">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Mevcut Öz Sermaye (₺)</label>
+                                                <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500 transition-colors">
+                                                    <NumericInput
+                                                        value={Number((equityAmount !== null ? equityAmount : projectTotalCost).toFixed(2))}
+                                                        onChange={setEquityAmount}
+                                                        className="w-full min-w-0 bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 truncate"
                                                     />
-                                                    <span className={`truncate ${isFixed ? 'font-bold text-indigo-900 dark:text-indigo-100' : 'text-slate-600 dark:text-slate-300'}`}>{task.name}</span>
+                                                    <span className="text-slate-400 font-bold ml-1">₺</span>
                                                 </div>
-                                                {isFixed && <i className="fas fa-shield-alt text-indigo-500 text-[10px]"></i>}
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* 3. GELİR MODELİ VE GİRİŞİ */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-
-                                {/* Mod Seçici (Toggle) */}
-                                <div className="flex bg-slate-200 dark:bg-slate-900 rounded-lg p-1 mb-4 border border-slate-300 dark:border-slate-700">
-                                    <button
-                                        onClick={() => updateFinancialSettings({ revenueModel: 'yap_sat' })}
-                                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'yap_sat' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
-                                    >
-                                        Yap-Sat (Satış)
-                                    </button>
-                                    <button
-                                        onClick={() => updateFinancialSettings({ revenueModel: 'taahhut' })}
-                                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'taahhut' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
-                                    >
-                                        Taahhüt (Hakediş)
-                                    </button>
-                                </div>
-
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">
-                                        {revenueModel === 'yap_sat' ? 'Satış Planlaması' : 'Hakediş Planlaması'}
-                                    </h3>
-                                    <div className="flex gap-2">
-                                        <div className="flex items-center bg-yellow-100 text-yellow-800 px-2 rounded text-[10px] font-bold border border-yellow-300" title="Hedef Kar Marjı">
-                                            Kâr % <input type="number" value={targetProfitMargin} onChange={e => setTargetProfitMargin(parseFloat(e.target.value) || 0)} className="w-8 bg-transparent outline-none ml-1 text-center" />
-                                        </div>
-                                        <button onClick={revenueModel === 'yap_sat' ? handleAutoPopulate : autoPopulateHakedis} className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded shadow flex items-center gap-1">
-                                            <i className="fas fa-magic"></i> Doldur
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* YAP-SAT MODU ARAYÜZÜ */}
-                                {revenueModel === 'yap_sat' && (
-                                    <>
-                                        <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
-                                            <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
-                                            <div className="flex gap-2">
-                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none" />
-                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/2 bg-transparent border-b border-slate-200 p-1 text-xs outline-none text-right" placeholder="Tutar ₺" />
                                             </div>
-                                            <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Ekle</button>
-                                        </div>
-
-                                        <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                            {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
-                                                <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-100 dark:border-slate-700 text-[10px]">
-                                                    <span className="truncate max-w-[100px] font-bold dark:text-white">{s.name}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
-                                                            {formatMonthDisplay(s.saleDate || '')}
-                                                        </span>
-                                                        {stressDelayMonths !== 0 && (
-                                                            <span className="text-orange-500 font-bold">
-                                                                {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
-                                                            </span>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <div className="flex justify-between items-end mb-1">
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500">Aylık Enf. (%)</label>
+                                                        {financialSettings.systemMonthlyInflationRate !== undefined && financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate && (
+                                                            <button onClick={() => updateFinancialSettings({ monthlyInflationRate: financialSettings.systemMonthlyInflationRate })} className="text-[9px] text-red-500 hover:text-red-700 font-bold transition flex items-center gap-1"><i className="fas fa-undo"></i></button>
                                                         )}
-                                                        <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
-                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                                    </div>
+                                                    <div className={`flex items-center bg-white dark:bg-slate-900 border rounded px-2 py-1 border-l-2 border-l-red-500 transition-colors ${financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate ? 'border-red-300 dark:border-red-800' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                        <NumericInput value={financialSettings.monthlyInflationRate} onChange={(val) => updateFinancialSettings({ monthlyInflationRate: val })} className={`w-full bg-transparent text-sm outline-none font-bold ${financialSettings.monthlyInflationRate !== financialSettings.systemMonthlyInflationRate ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300'}`} />
+                                                        <span className="text-slate-400 font-bold ml-1">%</span>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* TAAHHÜT MODU ARAYÜZÜ */}
-                                {revenueModel === 'taahhut' && (
-                                    <>
-                                        <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-2 rounded mb-3 border border-blue-100 dark:border-blue-800">
-                                            <span className="text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase">Sözleşme Bedeli:</span>
-                                            <span className="text-sm font-bold font-mono text-blue-800 dark:text-blue-400">
-                                                {(projectTotalCost * (1 + targetProfitMargin / 100)).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-                                            </span>
-                                        </div>
-                                        <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                                            {projectSchedule.map(task => {
-                                                const pp = progressPayments.find(p => p.taskId === task.id);
-                                                const val = pp ? pp.percentage : 0;
-                                                const contractVal = projectTotalCost * (1 + targetProfitMargin / 100);
-
-                                                return (
-                                                    <div key={task.id} className={`flex flex-col gap-1 text-xs bg-white dark:bg-slate-900 p-2 rounded border transition ${val > 0 ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30' : 'border-slate-100 dark:border-slate-700'}`}>
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex flex-col">
-                                                                <span className="font-bold dark:text-white truncate w-32 md:w-40">{task.name}</span>
-                                                                <span className="text-[9px] text-slate-400">Bitiş: {formatMonthDisplay(formatMonth(task.endDate))}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="flex items-center border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-800 focus-within:border-emerald-500">
-                                                                    <NumericInput value={val} onChange={(newVal) => handleUpdateProgressPayment(task.id, newVal)} className="w-10 text-right bg-transparent outline-none p-1 font-mono text-emerald-700 dark:text-emerald-400 font-bold" />
-                                                                    <span className="px-1 text-slate-400">%</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {val > 0 && (
-                                                            <div className="text-right text-[10px] font-mono text-emerald-600 font-bold border-t border-emerald-100 dark:border-emerald-800 pt-1 mt-1">
-                                                                + {((contractVal * val) / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-                                                            </div>
+                                                <div>
+                                                    <div className="flex justify-between items-end mb-1">
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500">Aylık Faiz (%)</label>
+                                                        {financialSettings.systemMonthlyInterestRate !== undefined && financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate && (
+                                                            <button onClick={() => updateFinancialSettings({ monthlyInterestRate: financialSettings.systemMonthlyInterestRate })} className="text-[9px] text-green-600 hover:text-green-800 font-bold transition flex items-center gap-1"><i className="fas fa-undo"></i></button>
                                                         )}
                                                     </div>
-                                                )
-                                            })}
+                                                    <div className={`flex items-center bg-white dark:bg-slate-900 border rounded px-2 py-1 border-l-2 border-l-green-500 transition-colors ${financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate ? 'border-green-300 dark:border-green-800' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                        <NumericInput value={financialSettings.monthlyInterestRate} onChange={(val) => updateFinancialSettings({ monthlyInterestRate: val })} className={`w-full bg-transparent text-sm outline-none font-bold ${financialSettings.monthlyInterestRate !== financialSettings.systemMonthlyInterestRate ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`} />
+                                                        <span className="text-slate-400 font-bold ml-1">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {/* Toplam Yüzde Kontrolü */}
-                                        <div className="mt-3 flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
-                                            <span className="text-[10px] uppercase font-bold text-slate-500">Toplam Dağıtılan:</span>
-                                            <span className={`font-bold ${progressPayments.reduce((a, b) => a + b.percentage, 0) !== 100 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                %{progressPayments.reduce((a, b) => a + b.percentage, 0)}
-                                            </span>
+                                        <div className={`p-4 rounded-lg border transition-colors ${useLoan ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                <input type="checkbox" checked={useLoan} onChange={(e) => setUseLoan(e.target.checked)} className="w-5 h-5 accent-blue-500 rounded cursor-pointer" />
+                                                <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                                                    <i className="fas fa-university mr-2 text-blue-500"></i>Banka Kredisi / Kaldıraç
+                                                </h3>
+                                            </label>
+
+                                            {useLoan && (
+                                                <div className="grid grid-cols-2 gap-3 animate-fadeIn pt-3 mt-3 border-t border-blue-100 dark:border-blue-800/50">
+                                                    <div className="col-span-2">
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Kredi Tutarı (₺)</label>
+                                                        <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
+                                                            <NumericInput value={loanAmount || 0} onChange={setLoanAmount} className="w-full bg-transparent text-sm outline-none font-bold text-blue-600 dark:text-blue-400 text-right pr-2" />
+                                                            <span className="text-slate-400 font-bold text-xs">₺</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Aylık Faiz (%)</label>
+                                                        <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
+                                                            <NumericInput value={loanInterestRate} onChange={setLoanInterestRate} className="w-full bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 text-right pr-2" />
+                                                            <span className="text-slate-400 font-bold text-xs">%</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Vade (Ay)</label>
+                                                        <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus-within:border-blue-500">
+                                                            <NumericInput value={loanDuration} onChange={setLoanDuration} className="w-full bg-transparent text-sm outline-none font-bold text-slate-700 dark:text-slate-300 text-right pr-2" />
+                                                            <span className="text-slate-400 font-bold text-xs">Ay</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Kullanım Ayı</label>
+                                                        <input type="month" value={currentLoanDate} onChange={(e) => setLoanDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs outline-none font-bold text-slate-700 dark:text-slate-300" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Taksit Başlangıcı</label>
+                                                        <input type="month" value={currentLoanRepayDate} onChange={(e) => setLoanRepayStartDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs outline-none font-bold text-slate-700 dark:text-slate-300" />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </>
+                                    </div>
                                 )}
 
-                                {/* ÖTELEME KONTROL PANELİ (ORTAK) */}
-                                {(financialSettings.sales.length > 0 || (financialSettings.progressPayments && financialSettings.progressPayments.length > 0)) && (
-                                    <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
-                                        <label className="text-[10px] uppercase font-bold text-slate-500 block mb-2">Toplu Ötele / Geç Teslim</label>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => setStressDelayMonths(prev => prev - 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">-1</button>
-                                            <div className="flex-1 text-center bg-slate-100 dark:bg-slate-900/50 rounded py-1 border border-slate-200 dark:border-slate-700">
-                                                <span className={`font-bold text-xs ${stressDelayMonths > 0 ? 'text-orange-600 dark:text-orange-400' : stressDelayMonths < 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                    {stressDelayMonths > 0 ? `+${stressDelayMonths} Ay Ötelendi` : stressDelayMonths < 0 ? `${Math.abs(stressDelayMonths)} Ay Erken` : `Değişiklik Yok`}
+                                {/* SEKME 2: GELİR PLANI */}
+                                {leftTab === 'gelir' && (
+                                    <div className="animate-fadeIn">
+                                        <div className="flex bg-slate-200 dark:bg-slate-900 rounded-lg p-1 mb-4 border border-slate-300 dark:border-slate-700">
+                                            <button onClick={() => updateFinancialSettings({ revenueModel: 'yap_sat' })} className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'yap_sat' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                                                Yap-Sat (Satış)
+                                            </button>
+                                            <button onClick={() => updateFinancialSettings({ revenueModel: 'taahhut' })} className={`flex-1 py-1.5 text-[11px] font-bold rounded transition ${revenueModel === 'taahhut' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+                                                Taahhüt (Hakediş)
+                                            </button>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center bg-yellow-100 text-yellow-800 px-2 rounded text-[10px] font-bold border border-yellow-300" title="Hedef Kar Marjı">
+                                                    Kâr % <input type="number" value={targetProfitMargin} onChange={e => setTargetProfitMargin(parseFloat(e.target.value) || 0)} className="w-8 bg-transparent outline-none ml-1 text-center" />
+                                                </div>
+                                            </div>
+                                            <button onClick={revenueModel === 'yap_sat' ? handleAutoPopulate : autoPopulateHakedis} className="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded shadow flex items-center gap-1">
+                                                <i className="fas fa-magic"></i> Doldur
+                                            </button>
+                                        </div>
+
+                                        {revenueModel === 'yap_sat' && (
+                                            <>
+                                                {financialSettings.sales.length === 0 ? (
+                                                    <div className="text-center py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                                                        <i className="fas fa-shopping-cart text-3xl text-slate-300 dark:text-slate-600 mb-2"></i>
+                                                        <p className="text-xs text-slate-500 mb-3">Henüz bir satış planı oluşturmadınız.</p>
+                                                        <button onClick={handleAutoPopulate} className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-500 transition">
+                                                            Otomatik Satış Planı Oluştur
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                                                            <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
+                                                            <div className="flex gap-2">
+                                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/2 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
+                                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/2 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none text-right focus:border-emerald-500" placeholder="Tutar ₺" />
+                                                            </div>
+                                                            <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Manuel Ekle</button>
+                                                        </div>
+
+                                                        <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                                                            {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
+                                                                <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-200 dark:border-slate-700 text-[10px]">
+                                                                    <span className="truncate max-w-[90px] font-bold dark:text-white" title={s.name}>{s.name}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
+                                                                            {formatMonthDisplay(s.saleDate || '')}
+                                                                        </span>
+                                                                        {stressDelayMonths !== 0 && (
+                                                                            <span className="text-orange-500 font-bold">
+                                                                                {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
+                                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {revenueModel === 'taahhut' && (
+                                            <>
+                                                {progressPayments.length === 0 ? (
+                                                    <div className="text-center py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                                                        <i className="fas fa-file-signature text-3xl text-slate-300 dark:text-slate-600 mb-2"></i>
+                                                        <p className="text-xs text-slate-500 mb-3">Henüz bir hakediş planı oluşturmadınız.</p>
+                                                        <button onClick={autoPopulateHakedis} className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-500 transition">
+                                                            Otomatik Hakediş Planı Oluştur
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded mb-3 border border-emerald-100 dark:border-emerald-800">
+                                                            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold uppercase">Sözleşme Bedeli:</span>
+                                                            <span className="text-sm font-bold font-mono text-emerald-800 dark:text-emerald-400">
+                                                                {(projectTotalCost * (1 + targetProfitMargin / 100)).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                                            </span>
+                                                        </div>
+                                                        <div className="max-h-64 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                                                            {projectSchedule.map(task => {
+                                                                const pp = progressPayments.find(p => p.taskId === task.id);
+                                                                const val = pp ? pp.percentage : 0;
+                                                                const contractVal = projectTotalCost * (1 + targetProfitMargin / 100);
+
+                                                                return (
+                                                                    <div key={task.id} className={`flex flex-col gap-1 text-xs bg-white dark:bg-slate-900 p-2 rounded border transition ${val > 0 ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/30' : 'border-slate-200 dark:border-slate-700'}`}>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="font-bold dark:text-white truncate w-32 md:w-40">{task.name}</span>
+                                                                                <span className="text-[9px] text-slate-400">Bitiş: {formatMonthDisplay(formatMonth(task.endDate))}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="flex items-center border border-slate-300 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-800 focus-within:border-emerald-500">
+                                                                                    <NumericInput value={val} onChange={(newVal) => handleUpdateProgressPayment(task.id, newVal)} className="w-10 text-right bg-transparent outline-none p-1 font-mono text-emerald-700 dark:text-emerald-400 font-bold" />
+                                                                                    <span className="px-1 text-slate-400">%</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {val > 0 && (
+                                                                            <div className="text-right text-[10px] font-mono text-emerald-600 font-bold border-t border-emerald-100 dark:border-emerald-800 pt-1 mt-1">
+                                                                                + {((contractVal * val) / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                        <div className="mt-3 flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-500">Toplam Dağıtılan:</span>
+                                                            <span className={`font-bold ${progressPayments.reduce((a, b) => a + b.percentage, 0) !== 100 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                                %{progressPayments.reduce((a, b) => a + b.percentage, 0)}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* SEKME 3: RİSK / HEDGE */}
+                                {leftTab === 'risk' && (
+                                    <div className="space-y-6 animate-fadeIn">
+                                        
+                                        {/* Stres Testi */}
+                                        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-orange-200 dark:border-orange-900/50 shadow-sm">
+                                            <label className="text-xs font-bold text-orange-600 dark:text-orange-400 block mb-2">
+                                                <i className="fas fa-exclamation-triangle mr-1"></i> Beklenmeyen Maliyet Artışı
+                                            </label>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 leading-tight">
+                                                Malzeme fiyatlarına ek olarak gelebilecek öngörülemeyen şok dalgaları için nakit akışınızı test edin.
+                                            </p>
+                                            <div className="flex items-center bg-slate-50 dark:bg-slate-800 border border-orange-300 dark:border-orange-700 rounded px-3 py-2 focus-within:border-orange-500 transition-colors">
+                                                <NumericInput
+                                                    value={stressCostIncrease}
+                                                    onChange={setStressCostIncrease}
+                                                    className="w-full bg-transparent text-sm outline-none font-bold text-orange-600 dark:text-orange-400"
+                                                />
+                                                <span className="text-orange-500 font-bold ml-1">% Toplam Maliyet Şoku</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Öteleme */}
+                                        {(financialSettings.sales.length > 0 || (financialSettings.progressPayments && financialSettings.progressPayments.length > 0)) && (
+                                            <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                                                    <i className="far fa-calendar-times mr-1 text-slate-500"></i> Toplu Ötele / Geç Teslim
+                                                </label>
+                                                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 leading-tight">
+                                                    İnşaat süresi uzadığında veya satışlar geciktiğinde nakit akışının nasıl etkileneceğini görün.
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={() => setStressDelayMonths(prev => prev - 1)} className="w-10 h-10 rounded flex items-center justify-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">-1</button>
+                                                    <div className="flex-1 text-center bg-slate-50 dark:bg-slate-800/50 rounded py-2 border border-slate-200 dark:border-slate-700">
+                                                        <span className={`font-bold text-sm ${stressDelayMonths > 0 ? 'text-orange-600 dark:text-orange-400' : stressDelayMonths < 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                            {stressDelayMonths > 0 ? `+${stressDelayMonths} Ay Ötelendi` : stressDelayMonths < 0 ? `${Math.abs(stressDelayMonths)} Ay Erken` : `Değişiklik Yok`}
+                                                        </span>
+                                                    </div>
+                                                    <button onClick={() => setStressDelayMonths(prev => prev + 1)} className="w-10 h-10 rounded flex items-center justify-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">+1</button>
+                                                    {stressDelayMonths !== 0 && (
+                                                        <button onClick={() => setStressDelayMonths(0)} className="w-10 h-10 flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded font-bold transition shadow-sm" title="Orijinal tarihlere dön">
+                                                            <i className="fas fa-undo"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Fiyat Sabitleme */}
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800/30 shadow-sm flex flex-col h-64">
+                                            <div className="flex justify-between items-center mb-2 border-b border-indigo-200 dark:border-indigo-800/50 pb-2 shrink-0">
+                                                <h3 className="font-bold text-indigo-700 dark:text-indigo-400 text-sm">
+                                                    <i className="fas fa-lock mr-2"></i>Fiyatı Sabit İşler (Hedge)
+                                                </h3>
+                                                <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded font-bold">
+                                                    {(financialSettings.fixedPriceTaskIds || []).length} İş Sabit
                                                 </span>
                                             </div>
-                                            <button onClick={() => setStressDelayMonths(prev => prev + 1)} className="w-8 h-8 rounded flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition shadow-sm">+1</button>
-                                            {stressDelayMonths !== 0 && (
-                                                <button onClick={() => setStressDelayMonths(0)} className="w-8 h-8 flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded font-bold transition shadow-sm" title="Orijinal tarihlere dön">
-                                                    <i className="fas fa-undo"></i>
-                                                </button>
-                                            )}
+                                            <p className="text-[9px] text-indigo-600/80 dark:text-indigo-300/80 mb-2 leading-tight shrink-0">
+                                                Taşeron veya tedarikçiyle önceden anlaşılan kalemleri seçin. Seçili kalemler aylık enflasyondan etkilenmez.
+                                            </p>
+                                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 bg-white dark:bg-slate-900 p-2 rounded border border-indigo-100 dark:border-slate-700">
+                                                {projectSchedule.map(task => {
+                                                    const isFixed = (financialSettings.fixedPriceTaskIds || []).includes(task.id);
+                                                    return (
+                                                        <label key={task.id} className={`flex items-center justify-between p-2 rounded cursor-pointer transition text-xs ${isFixed ? 'bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'}`}>
+                                                            <div className="flex items-center gap-2 truncate">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isFixed}
+                                                                    onChange={() => toggleFixedTask(task.id)}
+                                                                    className="accent-indigo-600"
+                                                                />
+                                                                <span className={`truncate ${isFixed ? 'font-bold text-indigo-900 dark:text-indigo-100' : 'text-slate-600 dark:text-slate-300'}`}>{task.name}</span>
+                                                            </div>
+                                                            {isFixed && <i className="fas fa-shield-alt text-indigo-500 text-[10px]"></i>}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* SAĞ PANEL: GRAFİK VE TABLO */}
+                        {/* ========================================= */}
+                        {/* SAĞ PANEL: GRAFİK VE TABLO GÖRÜNÜMÜ         */}
+                        {/* ========================================= */}
                         <div className="w-full lg:w-2/3 flex flex-col">
-
-                            {/* GRAFİK */}
-                            {drawChart()}
-
-                            {/* TABLO */}
-                            <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-t-lg max-h-[400px] custom-scrollbar relative flex-1 mt-4 shadow-sm border-b-0">
-                                <table className="w-full text-xs text-left">
-                                    <thead className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase sticky top-0 z-10 shadow-sm">
-                                        <tr>
-                                            <th className="p-3 font-bold whitespace-nowrap border-b border-slate-200 dark:border-slate-700">Dönem</th>
-                                            <th className="p-3 font-bold text-left text-slate-500 border-b border-slate-200 dark:border-slate-700">Açıklama</th>
-                                            <th className="p-3 font-bold text-right text-emerald-600 border-b border-slate-200 dark:border-slate-700" title="Öz Sermaye + Satış Geliri + Faiz + Kredi Kullanımı">Gelir (+)</th>
-                                            <th className="p-3 font-bold text-right text-red-600 border-b border-slate-200 dark:border-slate-700" title="Maliyet + Kredi Taksiti">Gider (-)</th>
-                                            <th className="p-3 font-bold text-right text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-700">Kasa (Bakiye)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-mono bg-white dark:bg-slate-950">
-                                        {tableData.map((row, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-help">
-                                                <td className="p-3 font-sans font-medium text-slate-800 dark:text-slate-300 whitespace-nowrap">{row.displayMonth}</td>
-                                                <td className="p-3 font-sans text-slate-500 dark:text-slate-400 max-w-[200px] truncate" title={row.tooltip}>{row.description}</td>
-                                                <td className="p-3 text-right text-emerald-600">{row.totalIncome > 0 ? `+${row.totalIncome.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>                                                <td className="p-3 text-right text-red-600">{row.totalExpense > 0 ? `-${row.totalExpense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
-                                                <td className={`p-3 text-right font-bold text-sm ${row.endBalance < 0 ? 'text-red-600 bg-red-50 dark:bg-red-900/10' : 'text-slate-900 dark:text-white'}`}>{row.endBalance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* ========================================================= */}
-                            {/* --- YENİ EKLENEN: NİHAİ KASA BAKİYESİ SABİT BARI --- */}
-                            {/* ========================================================= */}
-                            <div className="bg-white dark:bg-slate-900 p-3 border-x border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 shadow-sm z-10">
-                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                    DÖNEM SONU KASA (NİHAİ BAKİYE):
-                                </span>
-                                <span className={`text-xl font-extrabold font-mono ${totals.finalBalance < 0 ? 'text-red-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                    {totals.finalBalance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-                                </span>
-                            </div>
-                            {/* ========================================================= */}
-
-                            {/* MEVDUAT ALTERNATİFİ BİLGİ BARI */}
-                            {/* DİKKAT: border-t-0 eklendi ki çizgiler üst üste binmesin */}
-                            <div className="bg-slate-100 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 border-t-0 flex flex-col sm:flex-row justify-between items-center rounded-b-lg">
-                                <div className="flex items-center gap-3 mb-2 sm:mb-0">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
-                                        <i className="fas fa-piggy-bank"></i>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-slate-800 dark:text-white text-sm">Alternatif Senaryo (Mevduat)</h4>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                                            Eğer inşaata başlanmasaydı, {currentEquityAmount.toLocaleString()} ₺ öz sermaye aylık %{financialSettings.monthlyInterestRate} faizle toplam <b>{totals.monthsCount} ay</b> sonunda ne kadar olurdu?
-                                        </p>
-                                    </div>
+                            
+                            {/* Toggle Header */}
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="font-bold text-slate-800 dark:text-white text-sm">
+                                    {rightView === 'chart' ? 'Nakit Akışı Görselleştirme' : 'Dönemsel Nakit Akışı Tablosu'}
+                                </h3>
+                                <div className="flex bg-slate-200 dark:bg-slate-800 rounded-lg p-1 border border-slate-300 dark:border-slate-700">
+                                    <button 
+                                        onClick={() => setRightView('chart')} 
+                                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${rightView === 'chart' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                    >
+                                        <i className="fas fa-chart-line mr-1"></i> Grafik
+                                    </button>
+                                    <button 
+                                        onClick={() => setRightView('table')} 
+                                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${rightView === 'table' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                    >
+                                        <i className="fas fa-table mr-1"></i> Tablo
+                                    </button>
                                 </div>
-                                <div className="text-right whitespace-nowrap">
-                                    <div className="text-lg font-bold text-slate-900 dark:text-white font-mono">
-                                        {totals.alternativeBalance?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                            </div>
+
+                            {/* İçerik */}
+                            {rightView === 'chart' ? (
+                                <div className="flex-1 min-h-[350px]">
+                                    {drawChart()}
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg max-h-[400px] custom-scrollbar relative shadow-sm bg-white dark:bg-slate-900 animate-fadeIn">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase sticky top-0 z-10 shadow-sm">
+                                            <tr>
+                                                <th className="p-3 font-bold whitespace-nowrap border-b border-slate-200 dark:border-slate-700">Dönem</th>
+                                                <th className="p-3 font-bold text-left text-slate-500 border-b border-slate-200 dark:border-slate-700">Açıklama</th>
+                                                <th className="p-3 font-bold text-right text-emerald-600 border-b border-slate-200 dark:border-slate-700" title="Öz Sermaye + Satış Geliri + Faiz + Kredi Kullanımı">Gelir (+)</th>
+                                                <th className="p-3 font-bold text-right text-red-600 border-b border-slate-200 dark:border-slate-700" title="Maliyet + Kredi Taksiti">Gider (-)</th>
+                                                <th className="p-3 font-bold text-right text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-700">Kasa (Bakiye)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50 font-mono bg-white dark:bg-slate-950">
+                                            {tableData.map((row, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-help">
+                                                    <td className="p-3 font-sans font-medium text-slate-800 dark:text-slate-300 whitespace-nowrap">{row.displayMonth}</td>
+                                                    <td className="p-3 font-sans text-slate-500 dark:text-slate-400 max-w-[200px] truncate" title={row.tooltip}>{row.description}</td>
+                                                    <td className="p-3 text-right text-emerald-600">{row.totalIncome > 0 ? `+${row.totalIncome.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                                    <td className="p-3 text-right text-red-600">{row.totalExpense > 0 ? `-${row.totalExpense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                                    <td className={`p-3 text-right font-bold text-sm ${row.endBalance < 0 ? 'text-red-600 bg-red-50 dark:bg-red-900/10' : 'text-slate-900 dark:text-white'}`}>{row.endBalance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* SABİT BARLAR (Kasa & Mevduat Alternatifi) */}
+                            <div className={`flex flex-col mt-4 ${rightView === 'chart' ? 'border-t border-slate-200 dark:border-slate-700 pt-4' : ''}`}>
+                                <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 shadow-sm z-10 rounded-t-lg">
+                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        DÖNEM SONU KASA (NİHAİ BAKİYE):
+                                    </span>
+                                    <span className={`text-xl font-extrabold font-mono ${totals.finalBalance < 0 ? 'text-red-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {totals.finalBalance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                    </span>
+                                </div>
+
+                                <div className="bg-slate-100 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 border-t-0 flex flex-col sm:flex-row justify-between items-center rounded-b-lg">
+                                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
+                                            <i className="fas fa-piggy-bank"></i>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-800 dark:text-white text-sm">Alternatif Senaryo (Mevduat)</h4>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                Eğer inşaata başlanmasaydı, {currentEquityAmount.toLocaleString()} ₺ öz sermaye aylık %{financialSettings.monthlyInterestRate} faizle toplam <b>{totals.monthsCount} ay</b> sonunda ne kadar olurdu?
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-bold">
-                                        +{totals.alternativeProfit?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺ Net Getiri
+                                    <div className="text-right whitespace-nowrap pl-4">
+                                        <div className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                                            {totals.alternativeBalance?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                        </div>
+                                        <div className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                                            +{totals.alternativeProfit?.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺ Net Getiri
+                                        </div>
                                     </div>
                                 </div>
                             </div>

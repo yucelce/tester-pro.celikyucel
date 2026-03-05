@@ -766,7 +766,7 @@ export const DashboardView: React.FC = () => {
                                     </div>
                                     <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
                                         Tüm bağımsız bölümler ve genel yapı maliyetlerinin toplam dökümü. Metraj ve birim fiyatları buradan düzenleyebilirsiniz.
-                                        <span className="inline-block mt-1 sm:mt-0 sm:ml-2 text-orange-600 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded border border-orange-200 dark:border-orange-800/30">
+                                        <span className="inline-block mt-1 sm:mt-0 sm:ml-2 text-orange-600 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded border border-orange-200 dark:border-orange-800/30 text-[10px] md:text-xs whitespace-nowrap">
                                             <i className="fas fa-info-circle mr-1"></i>
                                             Tüm birim fiyatlar KDV DAHİL olarak listelenmektedir.
                                         </span>
