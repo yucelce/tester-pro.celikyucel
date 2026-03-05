@@ -407,7 +407,7 @@ export const ReportView: React.FC = () => {
                     </div>
 
                     <div className="mt-8 p-4 bg-slate-50 border border-slate-200 text-[10px] text-slate-500 rounded break-inside-avoid">
-                        <strong>NOT:</strong> Bu teklif dosyası CY Pro Yapı Maliyet Sistemi (www.celikyucel.com) kullanılarak oluşturulmuştur. Hesaplanan değerler piyasa ortalamalarına ve girilen parametrelere dayalı tahmini verilerdir.
+                        <strong>NOT:</strong> Bu teklif dosyası CY Pro İnşaat Manager (www.celikyucel.com) kullanılarak oluşturulmuştur. Hesaplanan değerler piyasa ortalamalarına ve girilen parametrelere dayalı tahmini verilerdir.
                     </div>
                 </div>
 
