@@ -541,7 +541,7 @@ export const DashboardView: React.FC = () => {
                             {/* Global Kontroller Barı */}
                             <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-4 rounded-xl shadow-inner">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-                                
+
 
                                     {/* Hesaplama Modları (Oto/Detaylı) */}
                                     <div className="flex items-center gap-3 pt-4 sm:pt-0">
@@ -663,8 +663,7 @@ export const DashboardView: React.FC = () => {
                         const isAllExpanded = costCategoryIds.length > 0 && costCategoryIds.every(id => expandedCategories[id]);
 
                         return (
-                            <div className="sticky top-0 z-20 -mx-4 -mt-4 p-4 md:-mx-6 md:-mt-6 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 shadow-sm rounded-t-xl transition-all">
-                                {/* YAPISKAN PANEL BAŞLIĞI */}
+                            <div className="md:sticky md:top-0 z-20 -mx-4 -mt-4 p-4 md:-mx-6 md:-mt-6 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 shadow-sm rounded-t-xl transition-all">                                {/* YAPISKAN PANEL BAŞLIĞI */}
                                 <div className="flex-1">
                                     <div className="flex flex-col md:flex-row md:items-center gap-3">
                                         <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -740,11 +739,10 @@ export const DashboardView: React.FC = () => {
                                     key={category.id}
                                     className={`bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg transition-all duration-300 ${expandedCategories[category.id] ? 'md:col-span-2 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700' : ''} relative`}
                                 >
-                                    <button onClick={() => toggleCategory(category.id)} className="sticky top-[165px] md:top-[110px] z-10 w-full bg-slate-100/95 dark:bg-slate-700/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">{getCategoryIcon(category.id)}</div>
-                                            <div className="text-left"><h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">{category.title}</h3></div>
-                                        </div>
+                                    <button onClick={() => toggleCategory(category.id)} className="sticky top-0 md:top-[110px] z-10 w-full bg-slate-100/95 dark:bg-slate-700/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm">                                        <div className="flex items-center gap-3">
+                                        <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">{getCategoryIcon(category.id)}</div>
+                                        <div className="text-left"><h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">{category.title}</h3></div>
+                                    </div>
                                         <span className="text-green-600 dark:text-green-400 font-bold text-sm">{category.totalCategoryCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</span>
                                     </button>
 
@@ -771,9 +769,10 @@ export const DashboardView: React.FC = () => {
                                                                         <div className="relative group inline-flex items-center justify-center">
                                                                             <i className="fas fa-info-circle text-[11px] text-blue-400 hover:text-blue-600 cursor-help transition-colors"></i>
 
-                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[100]">
+                                                                            <div className="absolute bottom-full -left-2 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[260px] max-w-[85vw] p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[9999]">
                                                                                 {ITEM_DESCRIPTIONS[item.name]}
-                                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                {/* Tooltip oku - Mobilde sola yakın, masaüstünde ortada */}
+                                                                                <div className="absolute top-full left-3 sm:left-1/2 sm:-translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
                                                                             </div>
                                                                         </div>
                                                                     )}
@@ -897,16 +896,15 @@ export const DashboardView: React.FC = () => {
                             ))}
 
                         <div className="md:col-span-2 mt-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg transition-all duration-300 shadow-sm relative">
-                            <div className="sticky top-[165px] md:top-[110px] z-10 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">
-                                        <i className="fas fa-plus-circle text-teal-500"></i>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">Özel İlaveler / Ek İşler</h3>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Listede yer almayan özel maliyet ve kalemleri buraya ekleyebilirsiniz.</p>
-                                    </div>
+                            <div className="sticky top-0 md:top-[110px] z-10 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center shadow-sm">                                <div className="flex items-center gap-3">
+                                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">
+                                    <i className="fas fa-plus-circle text-teal-500"></i>
                                 </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">Özel İlaveler / Ek İşler</h3>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Listede yer almayan özel maliyet ve kalemleri buraya ekleyebilirsiniz.</p>
+                                </div>
+                            </div>
                                 <button onClick={addCustomCost} className="bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 rounded font-bold text-xs transition shadow-sm flex items-center gap-1">
                                     <i className="fas fa-plus"></i> <span className="hidden sm:inline">Kalem Ekle</span>
                                 </button>

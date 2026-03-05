@@ -303,17 +303,84 @@ export const COST_DATA: CostCategory[] = [
   }
 ];
 
+// src/cost_data.ts dosyasının en altındaki ITEM_DESCRIPTIONS kısmını aşağıdaki ile değiştirin:
+
 export const ITEM_DESCRIPTIONS: Record<string, string> = {
-    "Haritacı Ücreti (Lihkab)": "Arsa sınırlarının belirlenmesi, aplikasyon ve röperli kroki işlemleri için lisanslı harita bürosuna ödenen zorunlu ücrettir.",
-    "Yapı Denetim Hizmet Bedeli": "İnşaatın yasal mevzuatlara uygun yapıldığını denetleyen resmi kuruma ödenen yasal hizmet bedelidir.",
-    "Şantiye Şefi (Aylık)": "İnşaat süresince yasal olarak şantiyenin başında durması zorunlu olan mühendis veya mimarın aylık maliyetidir.",
-    "OSGB Hizmet Bedeli (Aylık)": "İş Sağlığı ve Güvenliği uzmanı ile iş yeri hekimi bulundurma zorunluluğu kapsamında ödenen aylık tutardır.",
-    "Kuyu Temel Kazı İşçiliği": "Bitişik nizam yapılarda veya derin kazılarda komşu binaların çökmesini engellemek için parça parça yapılan özel ve masraflı destek kazısıdır.",
-    "Enerji Kimlik Belgesi": "Binanın enerji verimlilik sınıfını gösteren ve iskan (yapı kullanma izni) alınabilmesi için zorunlu olan belgedir.",
-    "İskan Harcı": "İnşaat bittikten sonra binada resmi olarak oturuma başlanabilmesi (Yapı Kullanma İzin Belgesi) için belediyeye ödenen harçtır.",
-    "Grobeton": "Temel betonunun altına dökülen, demirsiz, zemini düzeltmek ve yalıtımı korumak amacıyla kullanılan düşük dozlu betondur.",
-    "Subasman Dolgusu (Stabilize/Mıcır)": "Zemin katı toprak seviyesinden yukarıda tutmak (rutubetten korumak) için yapılan temel içi dolgu işlemidir.",
-    "Zemin Sondaj Birim Fiyatı": "Arsanın jeolojik yapısını belirlemek için yapılan sondaj çalışmasının metre maliyetidir.",
-    "Püskürtme Beton (İksa)": "Derin kazılarda zemin kaymasını önlemek için hasır çelik üzerine uygulanan özel beton tekniğidir."
-    // İleride buraya istediğiniz kadar yeni açıklama ekleyebilirsiniz.
+    // --- 0. Arsa ve Finansman ---
+    "Hak Sahipleri Kira Yardımı (Toplam)": "Kentsel dönüşüm veya kat karşılığı projelerde mevcut hak sahiplerine evleri teslim edilene kadar (inşaat süresince) ödenen toplam kira bedelidir.",
+    "Hak Sahipleri Tahliye/Taşınma Bedeli": "Hak sahiplerinin evlerini boşaltıp geçici evlerine geçmeleri için bir defaya mahsus ödenen taşınma ve lojistik desteğidir.",
+    "Tapu Harçları ve Noter Masrafları": "Satış, kat irtifakı kurulumu, yönetim planı tescili ve inşaat sözleşmesi süreçlerinde devlete veya notere ödenen yasal harçların toplamıdır.",
+    "Emlak Vergisi Tutarı": "İnşaat süresince arsa ve inşaat halindeki bina için bağlı bulunulan belediyeye ödenmesi gereken yıllık vergi tutarıdır.",
+
+    // --- 1. Projelendirme ve Resmi Giderler ---
+    "Mimari Proje": "Binanın dış görünüşü, kat planları, vaziyet planı ve iç mekan yerleşimlerini içeren mimari çizimlerin toplam bedelidir.",
+    "Statik Proje": "Binanın taşıyıcı sistem (kolon, kiriş, temel, döşeme) hesaplamalarını, demir donatı ve beton detaylarını içeren mühendislik projesi bedelidir.",
+    "Mekanik Proje": "Binanın ısıtma, soğutma, havalandırma, sıhhi tesisat (temiz/pis su) ve yangın sistemlerinin hesaplanıp projelendirilmesi bedelidir.",
+    "Elektrik Projesi": "Binanın aydınlatma, priz, zayıf akım (internet/TV) ve ana/tali pano yerleşimlerini gösteren proje bedelidir.",
+    "Zemin Sondaj Birim Fiyatı": "Arsanın jeolojik yapısını, yeraltı suyu seviyesini ve depremselliğini (zemin sınıfını) belirlemek için yapılan sondaj çalışmasının metre maliyetidir.",
+    "Haritacı Ücreti (Lihkab)": "Arsa sınırlarının kesin olarak belirlenmesi, bina köşe noktalarının aplikasyonu ve röperli kroki işlemleri için lisanslı harita bürosuna ödenen yasal ücrettir.",
+    "Yapı Denetim Hizmet Bedeli": "İnşaatın projesine ve yasal mevzuatlara uygun yapıldığını denetleyen, devlete bağlı havuz sisteminden atanan yapı denetim firmasına ödenen hizmet bedelidir.",
+    "Ruhsat Harcı": "İnşaata yasal olarak başlayabilmek için mimari ve statik projelerin onaylanması sürecinde belediyeye ödenen yapı ruhsatı harcıdır.",
+    "İskan Harcı": "İnşaat bittikten sonra binada resmi olarak elektrik/su aboneliği alınıp oturuma başlanabilmesi (Yapı Kullanma İzin Belgesi) için belediyeye ödenen harçtır.",
+    "Enerji Kimlik Belgesi": "Binanın enerji verimlilik sınıfını (yalıtım, ısıtma soğutma performansı vb.) gösteren ve iskan alınabilmesi için zorunlu olan yasal belgedir.",
+    "Şantiye Şefi (Aylık)": "İnşaat süresince yasal olarak şantiyenin sevk, idare ve iş güvenliğinden sorumlu olan mühendis veya mimarın aylık maliyetidir.",
+    "OSGB Hizmet Bedeli (Aylık)": "İş Sağlığı ve Güvenliği Kanunu kapsamında şantiyede İSG uzmanı ve iş yeri hekimi bulundurma zorunluluğu için ödenen aylık tutardır.",
+    
+    // --- 2. Şantiye Kurulumu ---
+    "SGK Asgari İşçilik Primi": "İnşaatın m² maliyeti üzerinden devlete ödenmesi zorunlu olan ve 'İlişiksizlik Belgesi' (iskan için şarttır) alabilmek amacıyla ödenen asgari SGK prim tutarıdır.",
+    "İnşaat All Risk Sigortası": "İnşaat süresince oluşabilecek iş kazası, malzeme hırsızlığı, yangın veya doğal afet gibi risklere karşı projeyi güvence altına alan geniş kapsamlı sigortadır.",
+    "Hafriyat (Kazı ve Döküm)": "Bina temelinin açılması için toprağın kazılması, kamyonlara yüklenmesi ve çıkan hafriyatın belediyenin gösterdiği yasal döküm sahalarına taşınması işlemidir.",
+    "Kuyu Temel Kazı İşçiliği": "Bitişik nizam yapılarda veya derin kazılarda komşu binaların/yolların çökmesini engellemek için parça parça yapılan, yüksek insan gücü gerektiren özel destek kazısıdır.",
+    "Püskürtme Beton (İksa)": "Derin kazılarda zemin kaymasını önlemek için toprak yüzeyine hasır çelik serilerek yüksek basınçla uygulanan destek betonu (shotcrete) tekniğidir.",
+    "Şantiye Çiti (Çevirme)": "Şantiye alanına yetkisiz girişleri engellemek, toz çıkışını azaltmak ve çevre güvenliğini sağlamak amacıyla alanın etrafının OSB, sac veya tel örgü ile kapatılmasıdır.",
+    "Konteyner (Ofis/Depo)": "Şantiye personelinin ofis, yemekhane, yatakhane veya hassas malzemeler için depo olarak kullanacağı geçici prefabrik veya konteyner yapıların maliyetidir.",
+    "Kule Vinç Aylık Kira ve Operatör": "Yüksek katlı veya geniş oturumlu projelerde demir, beton, tuğla ve kalıp malzemelerini taşımak için kurulan vincin aylık kira bedeli ve operatör maaşıdır.",
+    "Dış Cephe Güvenlik Ağı ve Kenar Koruma": "Yüksekte çalışırken işçilerin düşmesini ve şantiye dışına malzeme sekmelerini önlemek için kurulan, yasal zorunluluğu olan ağ ve bariyer sistemidir.",
+
+    // --- 3. Kaba Yapı ---
+    "Betonarme Betonu": "Temel, kolon, perde, kiriş ve döşemelerde kullanılan, binanın ana iskeletini (taşıyıcı sistemi) oluşturan hazır betonun (örn: C30, C35) toplam döküm maliyetidir.",
+    "İnşaat Demiri": "Betonun çekme dayanımını artırmak, deprem kuvvetlerine karşı binaya esneklik ve direnç sağlamak için beton içine yerleştirilen nervürlü çelik donatının toplam maliyetidir.",
+    "Kalıp İşçiliği & Malzeme": "Taze beton dökülmeden önce projedeki şeklini almasını ve kuruyana (prizini alana) kadar desteklenmesini sağlayan ahşap/plywood kalıpların kurulumu, sökümü ve iskele malzemeleridir.",
+    "Grobeton": "Temel yalıtımını topraktan korumak, yeraltı suyunu kesmek ve demir döşemek için düz, temiz bir yüzey elde etmek amacıyla temel kazısının tabanına dökülen demirsiz, düşük dozlu betondur.",
+    "Temel Su Yalıtımı (Bohçalama)": "Binayı yeraltı sularından, korozyondan ve toprak neminden korumak için temel tabanına ve toprak altında kalan dış perdelere uygulanan membran veya likit yalıtım işlemidir.",
+    "Temel Yalıtım Koruma (XPS)": "Temel su yalıtımını (membranı) toprak dolgusu sırasında taş ve moloz zedelenmelerinden korumak ve aynı zamanda bodrum katlara ısı yalıtımı sağlamak için kullanılan sert köpük tabakadır.",
+    "Subasman Dolgusu (Stabilize/Mıcır)": "Bodrumu olmayan binalarda, zemin katı toprak seviyesinden yukarıda (kuru) tutmak için temel çevre perdelerinin içinin mekanik stabilize veya mıcır ile doldurulması işlemidir.",
+    "Çatı Konstrüksiyon ve Kaplama": "Çatının taşıyıcı iskeletinin (ahşap veya çelik) kurulması, ısı/su yalıtımının yapılması ve üzerine kiremit, şıngıl veya membran (sandviç panel vb.) kaplanması işlemidir.",
+
+    // --- 4. Duvar ve Tavan ---
+    "Duvar Örme Harcı (Kara Harç)": "Tuğla veya bims blokları örerken elemanları birbirine bağlamak ve boşlukları doldurmak için kullanılan çimento, kireç ve kum bazlı geleneksel inşaat harcıdır.",
+    "Gazbeton Yapıştırıcısı": "Gazbeton (Ytong vb.) blokları örerken kullanılan, 2-3 mm kalınlıkta ince uygulanan ve çimento harcına göre duvarlar arasında ısı köprüsü (soğuk hava sızıntısı) oluşturmayan özel hazır yapıştırıcıdır.",
+    "İç Sıva (Kara Sıva)": "Duvar örümü sonrası yüzeydeki eğrilikleri düzeltmek, tuğla aralarını doldurmak ve gömülü tesisat borularını kapatmak için yapılan kalın kum-çimento bazlı koruyucu sıvadır.",
+    "Alçı Sıva (Kaba+Saten)": "Boya öncesi duvarı tamamen pürüzsüz, beyaz ve düzgün hale getirmek için kara sıva veya gazbeton üzerine makine veya elle atılan kaba alçı ve son kat ince saten alçı tabakasıdır.",
+    "Asma Tavan (Alçıpan)": "Genellikle banyo, mutfak, wc gibi ıslak hacimlerde veya tesisat geçişlerini (havalandırma, elektrik tavaları) gizlemek, spot aydınlatma yerleştirmek için asıl tavanın altına kurulan alçıpan sistemidir.",
+
+    // --- 5. Dış Cephe ---
+    "Mantolama Malzemesi": "Binanın dış duvarlarından ısı kaybını önlemek (enerji tasarrufu) için kullanılan EPS, Karbonlu EPS, XPS veya Taşyünü yalıtım levhaları ile bunlara ait yapıştırıcı, sıva, donatı filesi ve dübel setidir.",
+    "PVC Pencere (Doğrama)": "Binanın dışa açılan pencereleri ve balkon kapıları için kullanılan, hava/ses yalıtımlı PVC profillerden ve ısıcamdan oluşan doğrama sisteminin malzeme ve montaj maliyetidir.",
+    "İskele Kirası (Aylık)": "Dış cephe sıva, boya, mantolama, söve ve pencere montaj işlemleri için binanın etrafına kurulan, güvenlikli çelik iş iskelesinin kurulum, söküm ve aylık kira bedelidir.",
+    "Cam Balkon Sistemleri": "Balkonları dış etkenlerden (rüzgar, yağmur, toz) korumak ve kışın da yaşam alanına katmak için uygulanan katlanabilir temperli veya sürme cam kaplama sistemidir.",
+
+    // --- 6. Zemin ve Merdiven ---
+    "Şap Malzemesi": "Döşeme üzerindeki tesisat borularını örtmek ve zemin kaplaması (parke/seramik) döşenmeden önce teraziye (su mastarına) alınmış dümdüz bir satıh elde etmek için dökülen kum-çimento harcıdır.",
+    "Seramik Kaplama": "Banyo, wc, mutfak tezgah arası, balkon, koridor gibi suya maruz kalan alanların (ıslak hacimler) zemin ve duvarlarına uygulanan fayans/granit seramik kaplama malzemesi ve yapıştırıcı/işçiliğidir.",
+    "Laminat Parke (Anahtar Teslim)": "Salon, yatak odası, oturma odası gibi kuru hacimlerin zeminlerine uygulanan kilitli parke paneller, altına serilen ses yalıtım şiltesi (kapron) ve köşe süpürgelikleri dahil tam maliyettir.",
+    
+    // --- 7. İnce İşler ve Mobilya ---
+    "Bina Giriş Kapısı (Ana)": "Apartman veya site bloklarının ana girişinde kullanılan, estetik, korozyona ve dış hava şartlarına dayanıklı, şifreli/kartlı veya görüntülü otomat sistemine sahip büyük bina kapısıdır.",
+    "Çelik Kapı (Daire Giriş)": "Bağımsız bölümlerin (dairelerin) girişlerinde kullanılan, ahşap görünümlü giydirmeye sahip, levye/kriko zorlamalarına ve hırsızlığa karşı dayanıklı çok kilitli ağır çelik kapıların maliyetidir.",
+    "İç Kapı (Panel/Lake)": "Oda, banyo ve mutfak geçişlerinde kullanılan; MDF üzeri lake boyalı, ahşap kaplamalı, melamin veya amerikan panel tipi kasa, pervaz, kanat ve kilit setinden oluşan iç mekan kapılarının maliyetidir.",
+    "Mutfak Dolabı (Standart)": "Mutfak tezgah altı ve tezgah üstü dolap modüllerinin MDF gövdeleri, kapakları (Membran/Akrilik/Lake), çekmece rayları, menteşe sistemleri ve kulplarının montaj dahil maliyetidir. (Tezgah/Evye hariçtir)",
+    "Mutfak Tezgahı (Granit/Çimstone)": "Mutfak alt dolaplarının üzerine yerleştirilen, su ve ısıya dayanıklı; doğal granit, mermer, kuvars (Çimstone, Belenco) veya porselen bazlı çalışma yüzeyinin kesim ve montaj maliyetidir.",
+    "Banyo Dolabı & Lavabo": "Banyolarda ayna (genellikle ledli), havlu/şampuan saklamak için alt/üst dolap modülleri ve Hilton tipi bütünleşik porselen/seramik lavabo taşından oluşan takım banyo mobilyasıdır.",
+
+    // --- 8, 9, 10. Tesisat, Elektrik ve Peyzaj ---
+    "Sıhhi Tesisat (Temiz+Pis Su)": "Binanın su saatinden mutfak ve banyolardaki bataryalara kadar giden şebeke (temiz su) boruları ile banyo/wc atık sularını dikey şaftlardan rögara ulaştıran gri/sessiz PVC (pis su) boru ağının toplam maliyetidir.",
+    "Kombi ve Baca Montajı": "Daire içi peteklerin (veya yerden ısıtmanın) ve muslukların sıcak suyunu sağlayan yoğuşmalı kombi cihazı, hermetik baca seti uzatması ve gaz dağıtım şirketinden alınan proje/bağlantı onayı maliyetidir.",
+    "Yerden Isıtma (Strafor+Boru+İşçilik)": "Şap dökülmeden önce zemine döşenen modüler yalıtım levhası (strafor) ve üzerine sarmal şekilde serilen oksijen bariyerli Pe-Xa esnek ısıtma borularından oluşan, radyatöre kıyasla daha homojen ısınma sağlayan sistemdir.",
+    "Kuvvetli Akım Sorti (Priz/Aydınlatma)": "Her bir aydınlatma armatürü, avize veya duvar prizi için; daire içi ana sigorta panosundan (şalterden) ilgili noktaya kadar sıva altından çekilen yanmaz antigron kablo, buat ve PVC boru altyapı işçiliğidir.",
+    "Zayıf Akım Sorti (TV/Data/Tel)": "İnternet (Cat6), uydu/TV anteni (Koaksiyel) ve diafon gibi düşük voltajlı cihazların çalışması için, bina şaftından daire içine ve odalara kadar çekilen zayıf akım altyapı kablolamasıdır.",
+    "Görüntülü Diafon Sistemi": "Daire içindeki ekrandan, bina dış kapısındaki veya şantiye girişindeki ziyaretçiyi sesli ve görüntülü olarak görmeye, iletişim kurmaya ve dış kapıyı otomatiğe basarak açmaya yarayan güvenlikli haberleşme sistemidir.",
+    "Yağmur Suyu Hasat Sistemi (Zorunlu)": "Çevre ve Şehircilik Bakanlığı kararınca, belirli bir büyüklüğün (örn: 2000 m²) üzerindeki parsellerde, çatılardan gelen yağmur suyunu toplayıp filtreleyerek bahçe sulamada veya rezervuarlarda kullanmak üzere yeraltı tankında depolayan ekolojik ve zorunlu bir sistemdir.",
+    "Bahçe / Çevre Duvarı": "Arsa sınırlarını netleştirmek, sokaktan izinsiz girişleri engellemek ve bahçe kotunun yol kotundan yüksek olması durumunda toprak kaymasını (istinat) durdurmak amacıyla yapılan betonarme veya yığma taş çevre duvarıdır.",
+    "Ağaç Dikimi": "Belediyelerin peyzaj onayı ve iskan (yapı kullanma izni) şartları gereğince, inşaat bitiminde arsanın yeşil alan büyüklüğüne göre hesaplanan asgari sayıda yetişkin ağaç ve fidanın temin edilip dikilmesi maliyetidir."
 };
