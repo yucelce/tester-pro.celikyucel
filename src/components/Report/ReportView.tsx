@@ -26,7 +26,7 @@ export const ReportView: React.FC = () => {
     const {
         projectTotalCost, totalConstructionArea, constructionDuration,
         projectCostDetails, reportSettings, updateReportSettings, buildingStats,
-        projectSchedule, financialSettings, units, structuralUnits
+        projectSchedule, financialSettings, units, structuralUnits,duplexPairs
     } = useProjectStore();
 
     const { navigateToDashboard } = useUIStore();
@@ -105,19 +105,19 @@ export const ReportView: React.FC = () => {
     // --- NAKİT AKIŞI HESAPLAMASI (Sadeleştirilmiş) ---
     const cashflowTable = useMemo(() => {
         if (!projectTotalCost || projectSchedule.length === 0) return [];
-        
+
         const inflationRate = (financialSettings.monthlyInflationRate || 0) / 100;
         const expensesByMonth: Record<string, number> = {};
         const projectStartMonthDate = new Date((buildingStats.projectStartDate || formatMonth(new Date())) + '-01');
 
         // Basit Maliyet Dağılımı
         const totalCostPerTask = projectTotalCost / projectSchedule.length; // Tahmini eşit dağılım
-        
+
         projectSchedule.forEach(task => {
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
-            
+
             let currentD = new Date(startDate);
             let accumulatedDays = 0;
 
@@ -132,7 +132,7 @@ export const ReportView: React.FC = () => {
                 const endRatio = accumulatedDays / totalDays;
                 let costRatio = calculateSCurve(endRatio) - calculateSCurve(startRatio);
                 let monthStr = formatMonth(currentD);
-                
+
                 // Enflasyon Çarpanı
                 let monthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 monthsDiff = Math.max(0, monthsDiff);
@@ -151,7 +151,7 @@ export const ReportView: React.FC = () => {
 
         const allMonthsSet = new Set([...Object.keys(expensesByMonth), ...Object.keys(salesByMonth)]);
         const sortedMonths = Array.from(allMonthsSet).sort();
-        
+
         let table = [];
         let cumulativeBalance = 0;
 
@@ -253,10 +253,10 @@ export const ReportView: React.FC = () => {
                 <div className="flex gap-3 w-full md:w-auto justify-end relative">
                     <button onClick={() => fileInputRefLogo.current?.click()} className="hidden sm:block bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-2 rounded text-xs font-bold transition"><i className="fas fa-image mr-2"></i>Logo</button>
                     <button onClick={() => fileInputRefRender.current?.click()} className="hidden sm:block bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-2 rounded text-xs font-bold transition"><i className="fas fa-camera mr-2"></i>Kapak</button>
-                    
+
                     {/* AYARLAR MENÜSÜ AÇMA BUTONU */}
-                    <button 
-                        onClick={() => setShowSettingsMenu(!showSettingsMenu)} 
+                    <button
+                        onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                         className={`px-4 py-2 rounded text-sm font-bold transition flex items-center gap-2 ${showSettingsMenu ? 'bg-blue-600 text-white' : 'bg-slate-800 hover:bg-slate-700 border border-slate-600'}`}
                     >
                         <i className="fas fa-cog"></i> Rapor İçeriği
@@ -281,7 +281,7 @@ export const ReportView: React.FC = () => {
                                     <input type="checkbox" checked={true} disabled className="accent-blue-600 w-4 h-4" />
                                     <span className="font-medium text-slate-500">Maliyet Detayları (Zorunlu)</span>
                                 </label>
-                                <hr className="my-1 border-slate-100"/>
+                                <hr className="my-1 border-slate-100" />
                                 <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
                                     <input type="checkbox" checked={reportSettings.showUnitDetails} onChange={(e) => updateReportSettings({ showUnitDetails: e.target.checked })} className="accent-blue-600 w-4 h-4" />
                                     <span className="font-bold text-slate-700">Daire (Mahal) İnce Metrajları</span>
@@ -306,7 +306,7 @@ export const ReportView: React.FC = () => {
                         </div>
                     )}
                 </div>
-                
+
                 <input type="file" ref={fileInputRefLogo} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} />
                 <input type="file" ref={fileInputRefRender} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'render')} />
             </div>
@@ -430,34 +430,85 @@ export const ReportView: React.FC = () => {
                 </div>
 
                 {/* --- OPSİYONEL SAYFA 1: BAĞIMSIZ BÖLÜM METRAJLARI --- */}
+                {/* --- OPSİYONEL SAYFA 1: BAĞIMSIZ BÖLÜM METRAJLARI --- */}
                 {reportSettings.showUnitDetails && (
                     <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Bağımsız Bölüm Metrajları</h2><p className="text-slate-500 text-sm mt-1">Daire ve yapı tiplerinin oda/mahal bazlı detayları</p></div>
                         </div>
-                        {units.length === 0 ? <p className="text-slate-500 italic">Tanımlı daire tipi bulunamadı.</p> : units.map(u => (
-                            <div key={u.id} className="mb-8 border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
-                                <div className="bg-slate-800 text-white p-3 flex justify-between items-center">
-                                    <h3 className="font-bold">{u.name} <span className="text-xs font-normal opacity-80">({u.count} Adet)</span></h3>
+
+                        {(() => {
+                            // 1. Dubleksleri birleştirip göstereceğimiz yeni dizi
+                            const displayUnits: any[] = [];
+                            const availableUnitCounts: Record<string, number> = {};
+                            units.forEach(u => availableUnitCounts[u.id] = u.count);
+
+                            // 2. Önce Dubleksleri Yakala ve Birleştir
+                            duplexPairs.forEach(pair => {
+                                const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
+                                const upperUnit = units.find(u => u.id === pair.upperUnitId);
+
+                                if (lowerUnit && upperUnit) {
+                                    const c = Math.min(pair.count, availableUnitCounts[lowerUnit.id] || 0, availableUnitCounts[upperUnit.id] || 0);
+                                    if (c > 0) {
+                                        // Kullanılanları boştaki havuzdan düş
+                                        availableUnitCounts[lowerUnit.id] -= c;
+                                        availableUnitCounts[upperUnit.id] -= c;
+
+                                        // Odaları isimlerine Alt/Üst kat ibaresi ekleyerek birleştir
+                                        const combinedRooms = [
+                                            ...lowerUnit.rooms.map(r => ({ ...r, name: `${r.name} (Giriş)` })),
+                                            ...upperUnit.rooms.map(r => ({ ...r, name: `${r.name} (Üst Kat)` }))
+                                        ];
+
+                                        displayUnits.push({
+                                            id: `duplex-${pair.id}`,
+                                            name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
+                                            count: c,
+                                            scale: lowerUnit.scale, // Referans olarak alt katın ölçeği
+                                            rooms: combinedRooms
+                                        });
+                                    }
+                                }
+                            });
+
+                            // 3. Kalan Standart (Tek Katlı) Daireleri Ekle
+                            units.forEach(u => {
+                                if (availableUnitCounts[u.id] > 0) {
+                                    displayUnits.push({
+                                        ...u,
+                                        count: availableUnitCounts[u.id]
+                                    });
+                                }
+                            });
+
+                            if (displayUnits.length === 0) return <p className="text-slate-500 italic">Tanımlı daire tipi bulunamadı.</p>;
+
+                            // 4. Ekrana Bas
+                            return displayUnits.map(u => (
+                                <div key={u.id} className="mb-8 border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
+                                    <div className="bg-slate-800 text-white p-3 flex justify-between items-center">
+                                        <h3 className="font-bold">{u.name} <span className="text-xs font-normal opacity-80">({u.count} Adet)</span></h3>
+                                    </div>
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                            <tr><th className="p-2">Mahal Adı</th><th className="p-2 text-right">Alan (m²)</th><th className="p-2">Zemin</th><th className="p-2">Duvar</th><th className="p-2 text-center">Kapı/Pencere</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {u.rooms.map((r: any, index: number) => (
+                                                <tr key={`${r.id}-${index}`}>
+                                                    <td className="p-2 font-medium">{r.name}</td>
+                                                    <td className="p-2 text-right font-mono">{r.manualAreaM2?.toFixed(2) || '0.00'}</td>
+                                                    <td className="p-2 uppercase text-[10px]">{r.properties.floorType}</td>
+                                                    <td className="p-2 uppercase text-[10px]">{r.properties.wallFinish}</td>
+                                                    <td className="p-2 text-center text-[10px]">{r.properties.doorCount} Kapı / {r.properties.windowArea}m² Pen.</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <table className="w-full text-xs text-left">
-                                    <thead className="bg-slate-100 text-slate-600 border-b border-slate-200">
-                                        <tr><th className="p-2">Mahal Adı</th><th className="p-2 text-right">Alan (m²)</th><th className="p-2">Zemin</th><th className="p-2">Duvar</th><th className="p-2 text-center">Kapı/Pencere</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {u.rooms.map(r => (
-                                            <tr key={r.id}>
-                                                <td className="p-2 font-medium">{r.name}</td>
-                                                <td className="p-2 text-right font-mono">{r.manualAreaM2?.toFixed(2) || '0.00'}</td>
-                                                <td className="p-2 uppercase text-[10px]">{r.properties.floorType}</td>
-                                                <td className="p-2 uppercase text-[10px]">{r.properties.wallFinish}</td>
-                                                <td className="p-2 text-center text-[10px]">{r.properties.doorCount} Kapı / {r.properties.windowArea}m² Pen.</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ))}
+                            ));
+                        })()}
                     </div>
                 )}
 
@@ -495,7 +546,7 @@ export const ReportView: React.FC = () => {
                             <div key={idx} className="mb-6 break-inside-avoid">
                                 <div className="bg-slate-100 p-2 border-l-4 border-blue-500 font-bold text-sm text-slate-800 mb-2 flex justify-between">
                                     <span>{group.date.toLocaleDateString('tr-TR')} - {group.taskName}</span>
-                                    <span className="text-blue-700">{group.totalCost.toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺</span>
+                                    <span className="text-blue-700">{group.totalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                                 </div>
                                 <table className="w-full text-[11px]">
                                     <tbody>
@@ -503,7 +554,7 @@ export const ReportView: React.FC = () => {
                                             <tr key={i} className="border-b border-slate-100">
                                                 <td className="p-1.5 text-slate-600">{item.name}</td>
                                                 <td className="p-1.5 text-right font-mono">{item.inputType === 'manual_total' ? '1 Paket' : `${item.qty.toLocaleString('tr-TR')} ${item.unit}`}</td>
-                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900">{item.totalPrice.toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺</td>
+                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -527,9 +578,9 @@ export const ReportView: React.FC = () => {
                                 {cashflowTable.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
                                         <td className="p-3 font-bold">{row.month}</td>
-                                        <td className="p-3 text-right font-mono text-green-600">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', {maximumFractionDigits:0})}` : '-'}</td>
-                                        <td className="p-3 text-right font-mono text-red-600">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', {maximumFractionDigits:0})}` : '-'}</td>
-                                        <td className={`p-3 text-right font-mono font-bold ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺</td>
+                                        <td className="p-3 text-right font-mono text-green-600">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className="p-3 text-right font-mono text-red-600">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className={`p-3 text-right font-mono font-bold ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -546,20 +597,20 @@ export const ReportView: React.FC = () => {
                         <div className="grid grid-cols-2 gap-6">
                             <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl">
                                 <h4 className="text-xs uppercase font-bold text-slate-500 mb-2">Bugünkü Net Maliyet</h4>
-                                <p className="text-3xl font-bold text-slate-900">{projectTotalCost.toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺</p>
+                                <p className="text-3xl font-bold text-slate-900">{projectTotalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</p>
                                 <p className="text-[10px] text-slate-400 mt-2">Bugünkü piyasa fiyatlarıyla hiç zam gelmezse ödenecek tutar.</p>
                             </div>
                             <div className="bg-orange-50 border border-orange-200 p-6 rounded-xl">
                                 <h4 className="text-xs uppercase font-bold text-orange-600 mb-2">Enflasyonlu Tahmini Maliyet</h4>
                                 <p className="text-3xl font-bold text-orange-700">
-                                    {(projectTotalCost * Math.pow(1 + ((financialSettings.monthlyInflationRate || 0)/100), constructionDuration / 2)).toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺
+                                    {(projectTotalCost * Math.pow(1 + ((financialSettings.monthlyInflationRate || 0) / 100), constructionDuration / 2)).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                 </p>
                                 <p className="text-[10px] text-orange-500 mt-2">Aylık %{financialSettings.monthlyInflationRate} enflasyon beklentisiyle hesaplanmıştır.</p>
                             </div>
                             <div className="col-span-2 bg-blue-50 border border-blue-200 p-6 rounded-xl">
                                 <h4 className="text-xs uppercase font-bold text-blue-600 mb-2">Fırsat Maliyeti (Mevduat Getirisi)</h4>
                                 <p className="text-2xl font-bold text-blue-800 mb-1">
-                                    Tahmini Getiri: +{((projectTotalCost * Math.pow(1 + ((financialSettings.monthlyInterestRate || 0)/100), constructionDuration)) - projectTotalCost).toLocaleString('tr-TR', {maximumFractionDigits:0})} ₺
+                                    Tahmini Getiri: +{((projectTotalCost * Math.pow(1 + ((financialSettings.monthlyInterestRate || 0) / 100), constructionDuration)) - projectTotalCost).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                 </p>
                                 <p className="text-[11px] text-blue-600">İnşaata yatırılacak olan "Bugünkü Maliyet" tutarı {constructionDuration} ay boyunca aylık %{financialSettings.monthlyInterestRate} mevduat faizinde kalsaydı elde edilecek risksiz kazançtır.</p>
                             </div>

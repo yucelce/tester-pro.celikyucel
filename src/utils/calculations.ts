@@ -471,6 +471,67 @@ export class QuantityTakeoffService {
     }
 }
 
+export const getFoundationMetrics = (buildingStats: BuildingStats) => {
+    const area = buildingStats.basementFloorCount > 0
+        ? buildingStats.basementFloorArea
+        : buildingStats.groundFloorArea;
+
+    const perimeter = buildingStats.basementFloorCount > 0
+        ? (buildingStats.basementFloorPerimeter || Math.sqrt(area) * 4)
+        : (buildingStats.groundFloorPerimeter || Math.sqrt(area) * 4);
+
+    return { area, perimeter };
+};
+
+export const determineBuildingClass = (
+    totalArea: number,
+    totalFloors: number,
+    regulationHeight: number,
+    unitCount: number
+): string => {
+    const isDetached = unitCount === 1;
+
+    if (isDetached) {
+        if (totalArea < 200) return "Yapı Sınıfı 3B";
+        if (totalArea < 500) return "Yapı Sınıfı 3C";
+        return "Yapı Sınıfı 4B";
+    } else {
+        if (totalFloors <= 3) return "Yapı Sınıfı 3A";
+        if (regulationHeight < 21.50) return "Yapı Sınıfı 3B";
+        if (regulationHeight < 30.50) return "Yapı Sınıfı 3C";
+        if (regulationHeight < 51.50) return "Yapı Sınıfı 4A";
+        return "Yapı Sınıfı 4B";
+    }
+};
+
+export const getEstimatedUnitCount = (aggregatedUnitStats: Record<string, number>, totalConstructionArea: number) => {
+    const count = aggregatedUnitStats['calc_unit_count'] || 0;
+    return count > 0 ? count : Math.ceil(totalConstructionArea / 100);
+};
+
+export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMaterial: string) => {
+    const zone = buildingStats.heatZone || 2;
+    let materialHeatFactor = 1.0;
+    if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
+    else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
+
+    const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
+    const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
+    const volG = buildingStats.groundFloorArea * (hG - 0.12);
+    const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
+
+    const totalVolNet = (volG + volN) * 0.75;
+    return { totalVolNet, hLossFactor };
+};
+
+export const getTotalHallArea = (buildingStats: BuildingStats) => {
+    if (buildingStats.buildingType === 'villa') return 0;
+    const normalHall = buildingStats.normalFloorCount * Math.max(0, buildingStats.normalFloorHallArea || 0);
+    const groundHall = Math.max(0, buildingStats.groundFloorHallArea || 0);
+    const basementHall = buildingStats.basementFloorCount * Math.max(0, buildingStats.basementFloorHallArea || 0);
+    return normalHall + groundHall + basementHall;
+};
+
 // ============================================================================
 // 3. FİYATLANDIRMA SERVİSİ (Sadece cost_data ile stats'ı birleştirir)
 // ============================================================================
@@ -627,11 +688,8 @@ const wellFoundationLogic: CalculatorFn = ({ buildingStats, item }) => {
     if (faceArea <= 0) {
         const depth = buildingStats.basementFloorCount * (buildingStats.basementFloorHeight || 3);
         if (depth > 0) {
-            const baseArea = buildingStats.basementFloorArea || buildingStats.groundFloorArea || 0;
-            const basePerimeter = buildingStats.basementFloorCount > 0
-                ? (buildingStats.basementFloorPerimeter || Math.sqrt(baseArea) * 4)
-                : (buildingStats.groundFloorPerimeter || Math.sqrt(baseArea) * 4);
-            faceArea = (basePerimeter / 2) * depth;
+            const { perimeter } = getFoundationMetrics(buildingStats); // YENİ HELPER KULLANILDI
+            faceArea = (perimeter / 2) * depth;
         }
     }
 
@@ -659,41 +717,13 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_satellite_system': ({ aggregatedUnitStats, totalConstructionArea, item }) => {
-        let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
-        if (totalApartments === 0) {
-            totalApartments = Math.ceil(totalConstructionArea / 100);
-        }
-        const baseCapacity = 10;
-        const factor = Math.max(1, totalApartments / baseCapacity);
-        return item.unit_price * factor;
+        const totalApartments = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+        return item.unit_price * Math.max(1, totalApartments / 10);
     },
 
     'calc_inspection': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts, constructionDuration }) => {
-        let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
-        if (totalApartments === 0) {
-            totalApartments = Math.ceil(totalConstructionArea / 100);
-        }
-        const isDetached = totalApartments === 1;
-
-        let buildingClass = "Yapı Sınıfı 3A";
-        if (isDetached) {
-            if (totalConstructionArea < 200) buildingClass = "Yapı Sınıfı 3B";
-            else if (totalConstructionArea >= 200 && totalConstructionArea < 500) buildingClass = "Yapı Sınıfı 3C";
-            else buildingClass = "Yapı Sınıfı 4B";
-        } else {
-            if (totalFloors <= 3) {
-                buildingClass = "Yapı Sınıfı 3A";
-            } else if (regulationHeight < 21.50) {
-                buildingClass = "Yapı Sınıfı 3B";
-            } else if (regulationHeight >= 21.50 && regulationHeight < 30.50) {
-                buildingClass = "Yapı Sınıfı 3C";
-            } else if (regulationHeight >= 30.50 && regulationHeight < 51.50) {
-                buildingClass = "Yapı Sınıfı 4A";
-            } else if (regulationHeight >= 51.50) {
-                buildingClass = "Yapı Sınıfı 4B";
-            }
-        }
-
+        const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+        const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
 
         let serviceRate = 1.43;
@@ -707,15 +737,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts }) => {
-        const totalUnits = aggregatedUnitStats['calc_unit_count'] || (totalConstructionArea / 100);
-        return calculateTapuNoterFees(
-            totalUnits,
-            buildingStats.province,
-            buildingStats.constructionModel,
-            buildingStats.isUrbanTransformation,
-            0,
-            currentCosts
-        );
+        const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+        return calculateTapuNoterFees(totalUnits, buildingStats.province, buildingStats.constructionModel, buildingStats.isUrbanTransformation, 0, currentCosts);
     },
 
     'calc_acoustic': ({ totalConstructionArea, item }) => {
@@ -794,35 +817,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_concrete_global': ({ buildingStats, totalFloors, aggregatedUnitStats, totalConstructionArea, item }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
+        const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
         const ampatman = raftHeight * 1.5;
-        const vTemel = (foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2))) * raftHeight;
+        const vTemel = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * raftHeight;
 
         let vBodrumPerde = 0;
         if (buildingStats.basementFloorCount > 0) {
-            const netPerimeter = basePerim + 1;
-            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
-            vBodrumPerde = netPerimeter * totalBasementHeight * 0.3;
-        } else {
-            // YENİ: Bodrum yoksa Subasman Perdesi (Varsayılan 50cm yükseklik, 25cm kalınlık)
-            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
-            if (subasmanH > 0) {
-                vBodrumPerde = basePerim * subasmanH * 0.25;
-            }
+            vBodrumPerde = (perimeter + 1) * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) * 0.3;
+        } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
+            vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-
-        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined
-            ? aggregatedUnitStats['calc_concrete_unit']
-            : (totalConstructionArea * 0.26);
-
-        const totalConcrete = vTemel + vBodrumPerde + vKatlar;
-        return totalConcrete * (item.multiplier || 1);
+        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.26);
+        return (vTemel + vBodrumPerde + vKatlar) * (item.multiplier || 1);
     },
 
     'calc_pool_concrete': ({ buildingStats }) => buildingStats.poolArea || 0,
@@ -855,43 +862,21 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_grobeton': ({ buildingStats, totalFloors }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
-        // Eski hali yerine:
+        const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
         const ampatman = raftHeight * 1.5;
-        // Ampatmanlı izdüşüm alanını hesapla
-        const vTemelArea = foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2));
-
-        return vTemelArea * 0.10; // 10 cm grobeton kalınlığı varsayımı
+        return (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10; 
     },
 
 
 
     'calc_foundation_xps': ({ buildingStats, totalFloors }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
-        // Eski hali yerine:
+        const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
-        const ampatman = raftHeight * 1.5;
-        const foundationPerimeter = basePerim + (8 * ampatman);
-
-        let xpsArea = foundationPerimeter * raftHeight; // Radye Temel çevre yanları
-
-        // Varsa bodrum perdelerine de XPS hesapla
+        let xpsArea = (perimeter + (8 * (raftHeight * 1.5))) * raftHeight;
         if (buildingStats.basementFloorCount > 0) {
-            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
-            xpsArea += basePerim * totalBasementHeight;
+            xpsArea += perimeter * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight);
         }
-
         return xpsArea;
     },
 
@@ -1008,23 +993,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_foundation_grounding': ({ buildingStats }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
-        // 1. Temel Çevresi (Dış Ring)
-        const ringLength = basePerim;
-
-        // 2. İç Grid (Izgara) Sistemi
-        // Ortalama 10x10m gözler varsayılırsa, her iki eksende (Alan / 10) kadar hat atılır.
-        // Güvenli tarafta kalmak adına (Alan / 5) formülü ile iç metrajı yaklaşık olarak bulabiliriz.
-        const gridLength = foundationArea / 5;
-
-        const totalLength = ringLength + gridLength;
-
-        // 3. Filiz Bırakma ve Eşpotansiyel Baralara Çıkış Payı (%15 Zayiat ve Çıkış Payı)
-        return totalLength * 1.15;
+        const { area, perimeter } = getFoundationMetrics(buildingStats);
+        return (perimeter + (area / 5)) * 1.15;
     },
 
     'calc_tower_crane_setup': ({ buildingStats, totalConstructionArea, totalFloors }) => {
@@ -1050,91 +1020,22 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_all_risk': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
-        if (!buildingStats.hasAllRiskInsurance) return 0; // Tikli değilse 0 TL atar
-
-        let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
-        if (totalApartments === 0) {
-            totalApartments = Math.ceil(totalConstructionArea / 100);
-        }
-        const isDetached = totalApartments === 1;
-
-        // 1. Binanın Yapı Sınıfını Belirleme
-        let buildingClass = "Yapı Sınıfı 3A";
-        if (isDetached) {
-            if (totalConstructionArea < 200) buildingClass = "Yapı Sınıfı 3B";
-            else if (totalConstructionArea >= 200 && totalConstructionArea < 500) buildingClass = "Yapı Sınıfı 3C";
-            else buildingClass = "Yapı Sınıfı 4B";
-        } else {
-            if (totalFloors <= 3) {
-                buildingClass = "Yapı Sınıfı 3A";
-            } else if (regulationHeight < 21.50) {
-                buildingClass = "Yapı Sınıfı 3B";
-            } else if (regulationHeight >= 21.50 && regulationHeight < 30.50) {
-                buildingClass = "Yapı Sınıfı 3C";
-            } else if (regulationHeight >= 30.50 && regulationHeight < 51.50) {
-                buildingClass = "Yapı Sınıfı 4A";
-            } else if (regulationHeight >= 51.50) {
-                buildingClass = "Yapı Sınıfı 4B";
-            }
-        }
-
-        // 2. İlgili Yapı Sınıfının m² Birim Maliyetini Çek
+        if (!buildingStats.hasAllRiskInsurance) return 0;
+        const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+        const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) || 20000;
-
-        // 3. Toplam Yaklaşık Maliyet üzerinden binde 2 (0.002) sigorta primi tahmini
-        const totalEstimatedCost = totalConstructionArea * classUnitPrice;
-        const allRiskPremium = totalEstimatedCost * 0.002;
-
-        return Math.round(allRiskPremium);
+        return Math.round(totalConstructionArea * classUnitPrice * 0.002);
     },
 
     'calc_sgk_premium': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
-        let totalApartments = aggregatedUnitStats['calc_unit_count'] || 0;
-        if (totalApartments === 0) {
-            totalApartments = Math.ceil(totalConstructionArea / 100);
-        }
-        const isDetached = totalApartments === 1;
-
-        // 1. Binanın Yapı Sınıfını Belirleme (Çevre ve Şehircilik Bakanlığı Tebliğine Göre)
-        let buildingClass = "Yapı Sınıfı 3A";
-        if (isDetached) {
-            if (totalConstructionArea < 200) buildingClass = "Yapı Sınıfı 3B";
-            else if (totalConstructionArea >= 200 && totalConstructionArea < 500) buildingClass = "Yapı Sınıfı 3C";
-            else buildingClass = "Yapı Sınıfı 4B";
-        } else {
-            if (totalFloors <= 3) {
-                buildingClass = "Yapı Sınıfı 3A";
-            } else if (regulationHeight < 21.50) {
-                buildingClass = "Yapı Sınıfı 3B";
-            } else if (regulationHeight >= 21.50 && regulationHeight < 30.50) {
-                buildingClass = "Yapı Sınıfı 3C";
-            } else if (regulationHeight >= 30.50 && regulationHeight < 51.50) {
-                buildingClass = "Yapı Sınıfı 4A";
-            } else if (regulationHeight >= 51.50) {
-                buildingClass = "Yapı Sınıfı 4B";
-            }
-        }
-
-        // 2. İlgili Yapı Sınıfının m² Birim Maliyetini Çek
-        // (Eğer sistemde o an fiyat yoksa fallback olarak ortalama bir rakam veriyoruz)
-        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) 
-
-        // 3. SGK Hesaplama Formülü
-        // Toplam Yaklaşık Maliyet = Toplam Alan x m² Birim Fiyatı
+        const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+        const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
+        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
         const totalEstimatedCost = totalConstructionArea * classUnitPrice;
-        
-        // Asgari İşçilik Matrahı = Toplam Maliyetin %9'u (Betonarme Karkas Binalar İçin)
-        // (Not: Kurum ihaleli olmayan işlerde %25 oranında eksiltme yapar, yani net oran %6.75'e düşer ancak
-        // taşeron faturaları vs. değişkenlik gösterdiği için güvenli bütçeleme adına %9'dan gitmek veya %6.75 üzerinden prim hesaplamak mümkündür.
-        // Biz yasal asgari matrahı %6.75 üzerinden hesaplayalım).
-        const laborBase = totalEstimatedCost * 0.0675; 
-
-        // Kesilecek Prim Tutarı = Matrahın %37,5'i (İşveren + İşçi Payı Toplamı)
-        const sgkPremium = laborBase * 0.375;
-
-        return Math.round(sgkPremium);
+        const laborBase = totalEstimatedCost * 0.0675;
+        return Math.round(laborBase * 0.375);
     },
-
+    
     'calc_demolition_area': ({ buildingStats, totalConstructionArea, item }) => {
         if (buildingStats.hasExistingBuilding && !buildingStats.isUrbanTransformation) {
             const existingArea = buildingStats.existingArea || (totalConstructionArea * 0.5);
@@ -1164,36 +1065,20 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone);
-        const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined
-            ? aggregatedUnitStats['calc_iron_unit']
-            : ((totalConstructionArea * 0.26) * ironCoeff);
-
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
-        // Eski hali yerine:
+        const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined ? aggregatedUnitStats['calc_iron_unit'] : ((totalConstructionArea * 0.26) * ironCoeff);
+        
+        const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
         const ampatman = raftHeight * 1.5;
-        const vTemel = (foundationArea + (ampatman * basePerim) + (4 * Math.pow(ampatman, 2))) * raftHeight;
+        const vTemel = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * raftHeight;
 
         let vBodrumPerde = 0;
         if (buildingStats.basementFloorCount > 0) {
-            const netPerimeter = basePerim + 1;
-            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
-            vBodrumPerde = netPerimeter * totalBasementHeight * 0.3;
-        } else {
-            // YENİ: Bodrum yoksa Subasman Perdesi Demiri
-            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
-            if (subasmanH > 0) {
-                vBodrumPerde = basePerim * subasmanH * 0.25;
-            }
+            vBodrumPerde = (perimeter + 1) * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) * 0.3;
+        } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
+            vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-
-        const ironTemelPerde = (vTemel + vBodrumPerde) * ironCoeff;
-        return (ironKatlar + ironTemelPerde) * (item.multiplier || 1);
+        return (ironKatlar + ((vTemel + vBodrumPerde) * ironCoeff)) * (item.multiplier || 1);
     },
 
     'calc_rainwater_system': ({ buildingStats, item }) => {
@@ -1327,21 +1212,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_radiator_mt': ({ aggregatedUnitStats, buildingStats, globalWallMaterial, item }) => {
-        if (aggregatedUnitStats && aggregatedUnitStats['radiator_length'] > 0) {
-            return aggregatedUnitStats['radiator_length'] * item.multiplier;
-        }
-
-        const zone = buildingStats.heatZone || 2;
-        let materialHeatFactor = 1.0;
-        if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
-        else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
-
-        const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
-        const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
-        const volG = buildingStats.groundFloorArea * (hG - 0.12);
-        const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
-
-        const totalVolNet = (volG + volN) * 0.75;
+        if (aggregatedUnitStats && aggregatedUnitStats['radiator_length'] > 0) return aggregatedUnitStats['radiator_length'] * item.multiplier;
+        const { totalVolNet, hLossFactor } = getHeatingMetrics(buildingStats, globalWallMaterial);
         return (totalVolNet * hLossFactor / 1455) * item.multiplier;
     },
 
@@ -1356,53 +1228,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_radiator': ({ aggregatedUnitStats, buildingStats, globalWallMaterial, item }) => {
-        if (aggregatedUnitStats && aggregatedUnitStats['radiator_length'] > 0) {
-            return aggregatedUnitStats['radiator_length'] * item.multiplier;
-        }
-        const zone = buildingStats.heatZone || 2;
-        let materialHeatFactor = 1.0;
-        if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
-        else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
-
-        const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
-        const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
-        const volG = buildingStats.groundFloorArea * (hG - 0.12);
-        const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
-
-        const totalVolNet = (volG + volN) * 0.75;
-        const calculatedMeters = (totalVolNet * hLossFactor) / 1455;
-        return calculatedMeters * item.multiplier;
+        if (aggregatedUnitStats && aggregatedUnitStats['radiator_length'] > 0) return aggregatedUnitStats['radiator_length'] * item.multiplier;
+        const { totalVolNet, hLossFactor } = getHeatingMetrics(buildingStats, globalWallMaterial);
+        return ((totalVolNet * hLossFactor) / 1455) * item.multiplier;
     },
 
     'calc_formwork_global': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, totalFloors, item }) => {
-        const formKatlar = aggregatedUnitStats['calc_formwork_unit'] !== undefined
-            ? aggregatedUnitStats['calc_formwork_unit']
-            : (totalConstructionArea * 2.6);
-
-        let foundationArea = buildingStats.basementFloorCount > 0 ? buildingStats.basementFloorArea : buildingStats.groundFloorArea;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
+        const formKatlar = aggregatedUnitStats['calc_formwork_unit'] !== undefined ? aggregatedUnitStats['calc_formwork_unit'] : (totalConstructionArea * 2.6);
+        
+        const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
-        const ampatman = raftHeight * 1.5;
-        const extendedPerimeter = basePerim + (8 * ampatman);
-        const formTemel = extendedPerimeter * raftHeight;
+        const formTemel = (perimeter + (8 * (raftHeight * 1.5))) * raftHeight;
 
         let formBodrumPerde = 0;
         if (buildingStats.basementFloorCount > 0) {
-            const netPerimeter = basePerim + 1;
-            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
-            formBodrumPerde = netPerimeter * totalBasementHeight * 2;
-        } else {
-            // YENİ: Bodrum yoksa Subasman Kalıbı (İç ve dış yüzey)
-            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
-            if (subasmanH > 0) {
-                formBodrumPerde = basePerim * subasmanH * 2;
-            }
+            formBodrumPerde = (perimeter + 1) * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) * 2;
+        } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
+            formBodrumPerde = perimeter * buildingStats.subasmanHeight * 2;
         }
-
         return (formKatlar + formTemel + formBodrumPerde) * (item.multiplier || 1);
     },
 
@@ -1443,19 +1286,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_wall_global': ({ buildingStats }) => {
         // 1. Normal katların duvar metrajı
         const normalWall = (buildingStats.normalFloorCount * buildingStats.normalFloorArea * buildingStats.normalFloorHeight) / 3.0;
-        
+
         // 2. Zemin katın duvar metrajı
         const groundWall = (buildingStats.groundFloorArea * buildingStats.groundFloorHeight) / 3.0;
-        
+
         // 3. Bodrum katların İÇ duvar metrajı
         const basementWall = (buildingStats.basementFloorCount * buildingStats.basementFloorArea * buildingStats.basementFloorHeight) / 3.0;
-        
+
         // 4. Çatı katı duvar metrajı (Eğimli tavan)
         let roofWall = 0;
         if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
             roofWall = (buildingStats.roofFloorArea * (buildingStats.roofFloorHeight || 1.8)) / 3.0;
         }
-        
+
         // Hepsini topla
         return normalWall + groundWall + basementWall + roofWall;
     },
@@ -1684,34 +1527,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 totalRailingMt += (buildingStats.normalFloorCount - 1) * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
             }
         } else {
-             // APARTMAN DUBLEKS MANTIĞI
-             const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
-             if (duplexCount > 0) {
-                 totalRailingMt += duplexCount * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
-             }
+            // APARTMAN DUBLEKS MANTIĞI
+            const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
+            if (duplexCount > 0) {
+                totalRailingMt += duplexCount * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+            }
         }
         return Math.round(totalRailingMt * 100) / 100;
     },
+    
     'calc_marble_mortar': ({ buildingStats, totalBuildingHeight }) => {
         if (buildingStats.buildingType === 'villa') return 0;
-        const stepCount = totalBuildingHeight / 0.17;
-        const stairsArea = stepCount * 0.45;
-
-        const normalHall = buildingStats.normalFloorCount * Math.max(0, buildingStats.normalFloorHallArea || 0);
-        const groundHall = Math.max(0, buildingStats.groundFloorHallArea || 0);
-        const basementHall = buildingStats.basementFloorCount * Math.max(0, buildingStats.basementFloorHallArea || 0);
-        const totalHallArea = normalHall + groundHall + basementHall;
-
-        const totalMarbleArea = stairsArea + totalHallArea;
-        return totalMarbleArea * 0.04;
+        const stairsArea = (totalBuildingHeight / 0.17) * 0.45;
+        return (stairsArea + getTotalHallArea(buildingStats)) * 0.04;
     },
 
     'calc_hall_area': ({ buildingStats, item }) => {
         if (buildingStats.buildingType === 'villa') return 0;
-        const normalHall = buildingStats.normalFloorCount * Math.max(0, buildingStats.normalFloorHallArea || 0);
-        const groundHall = Math.max(0, buildingStats.groundFloorHallArea || 0);
-        const basementHall = buildingStats.basementFloorCount * Math.max(0, buildingStats.basementFloorHallArea || 0);
-        return (normalHall + groundHall + basementHall) * (item.multiplier || 1);
+        return getTotalHallArea(buildingStats) * (item.multiplier || 1);
     },
 
     'calc_jcb': ({ totalFloors, totalConstructionArea }) => {
@@ -1728,57 +1561,46 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_drainage': ({ buildingStats, totalFloors }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0
-            ? buildingStats.basementFloorArea
-            : buildingStats.groundFloorArea;
-
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-
+        const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-
-        const ampatman = raftHeight * 1.5;
-        const foundationPerimeter = basePerim + (8 * ampatman);
-
-        return foundationPerimeter + 5;
+        return perimeter + (8 * (raftHeight * 1.5)) + 5;
     },
 
     'calc_duration_months': ({ constructionDuration }) => constructionDuration,
 
     'calc_foundation_area': ({ buildingStats, totalFloors }) => {
-    let foundationArea = buildingStats.basementFloorCount > 0
-        ? buildingStats.basementFloorArea
-        : buildingStats.groundFloorArea;
-        
-    let totalInsulationArea = foundationArea;
+        let foundationArea = buildingStats.basementFloorCount > 0
+            ? buildingStats.basementFloorArea
+            : buildingStats.groundFloorArea;
 
-    // Radye temel kalınlığı ve ampatman (yanak) hesabı (Opsiyonel: Daha hassas metraj için)
-    const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-    const ampatman = raftHeight * 1.5;
-    let basePerim = buildingStats.basementFloorCount > 0
-        ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-        : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
-        
-    const foundationPerimeter = basePerim + (8 * ampatman);
-    
-    // Radye temel yanak alanı
-    totalInsulationArea += (foundationPerimeter * raftHeight);
+        let totalInsulationArea = foundationArea;
 
-    // Bodrum katlar varsa toprak altında kalan perde duvarların dış yüzey alanı
-    if (buildingStats.basementFloorCount > 0) {
-        const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
-        totalInsulationArea += (basePerim * totalBasementHeight);
-    } else {
-        // Bodrum yoksa subasman perdeleri toprakla temas eder
-        const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
-        if (subasmanH > 0) {
-            totalInsulationArea += (basePerim * subasmanH);
+        // Radye temel kalınlığı ve ampatman (yanak) hesabı (Opsiyonel: Daha hassas metraj için)
+        const raftHeight = calculateEstimatedRaftHeight(totalFloors);
+        const ampatman = raftHeight * 1.5;
+        let basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
+            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+
+        const foundationPerimeter = basePerim + (8 * ampatman);
+
+        // Radye temel yanak alanı
+        totalInsulationArea += (foundationPerimeter * raftHeight);
+
+        // Bodrum katlar varsa toprak altında kalan perde duvarların dış yüzey alanı
+        if (buildingStats.basementFloorCount > 0) {
+            const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
+            totalInsulationArea += (basePerim * totalBasementHeight);
+        } else {
+            // Bodrum yoksa subasman perdeleri toprakla temas eder
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            if (subasmanH > 0) {
+                totalInsulationArea += (basePerim * subasmanH);
+            }
         }
-    }
 
-    return totalInsulationArea;
-},
+        return totalInsulationArea;
+    },
 
     'calc_scaffolding_area': ({ buildingStats }) => {
         const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
