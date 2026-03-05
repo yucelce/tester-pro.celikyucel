@@ -368,6 +368,138 @@ export const DashboardView: React.FC = () => {
                     </div>
                 </section>
 
+                
+
+                {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ */}
+                <section id="tour-units">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+                        <div>
+                            <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
+                                {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
+                            </h2>
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
+                        </div>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            {buildingStats.buildingType === 'apartment' && units.length > 1 && (
+                                <button onClick={() => setShowDuplexModal(true)} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-indigo-700">
+                                    <i className="fas fa-link"></i><span className="hidden md:inline"> Dubleks Eşle</span>
+                                </button>
+                            )}
+
+                            <button onClick={addUnit} className="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-purple-700">
+                                <i className="fas fa-plus"></i><span className="hidden md:inline"> Yeni Tip Ekle</span><span className="md:hidden">Tip Ekle</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {units.length === 0 && (
+                            <div className="col-span-full text-center text-slate-500 py-8 bg-white dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700 border-dashed">
+                                Henüz daire tipi eklenmemiş.
+                            </div>
+                        )}
+
+                        {units.map(unit => {
+                            const totalUnitArea = unit.rooms.reduce((acc, r) => {
+                                const area = r.manualAreaM2 || (unit.scale > 0 ? r.area_px / (unit.scale * unit.scale) : 0);
+                                return acc + area;
+                            }, 0);
+
+                            const isDuplexPart = duplexPairs.some(p => p.lowerUnitId === unit.id || p.upperUnitId === unit.id);
+
+                            return (
+                                <div key={unit.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-slate-400 dark:hover:border-slate-600 transition group relative">
+                                    <div className="h-40 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center border-b border-slate-200 dark:border-slate-700">
+                                        {isDuplexPart && (
+                                            <span className="absolute top-2 left-2 bg-indigo-600/90 backdrop-blur text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md flex items-center gap-1 z-10">
+                                                <i className="fas fa-link"></i> Dubleks Parçası
+                                            </span>
+                                        )}
+                                        {unit.imageData ? (
+                                            <img src={unit.imageData} className="w-full h-full object-cover opacity-80 dark:opacity-60" alt={unit.name} />
+                                        ) : (
+                                            <i className="fas fa-drafting-compass text-4xl text-slate-300 dark:text-slate-600"></i>
+                                        )}
+                                        <div className="absolute inset-0 bg-white/60 dark:bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3 backdrop-blur-sm">
+                                            <button onClick={() => navigateToEditor(unit.id, 'architectural')} className="hidden md:inline-flex bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg hover:bg-blue-500">Planı Düzenle</button>
+                                            <button onClick={() => openModal('roomManager', unit.id)} className="bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg hover:bg-purple-500">Manuel Liste</button>
+                                            <button
+                                                onClick={() => duplicateUnit(unit.id)}
+                                                className="bg-teal-500 hover:bg-teal-400 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition transform hover:scale-110"
+                                                title="Tipi Çoğalt"
+                                            >
+                                                <i className="fas fa-copy"></i>
+                                            </button>
+                                            <button onClick={() => deleteUnit(unit.id, false)} className="bg-red-600 hover:bg-red-500 text-white w-10 h-10 rounded-full shadow-lg"><i className="fas fa-trash"></i></button>
+                                        </div>
+                                        <div className="md:hidden absolute top-2 right-2 flex gap-2">
+                                            <button
+                                                onClick={() => duplicateUnit(unit.id)}
+                                                className="bg-teal-500 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"
+                                            >
+                                                <i className="fas fa-copy"></i>
+                                            </button>
+                                            <button onClick={() => openModal('roomManager', unit.id)} className="bg-purple-600 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"><i className="fas fa-list"></i></button>
+                                            <button onClick={() => deleteUnit(unit.id, false)} className="bg-red-600 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"><i className="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1 mr-4">
+                                                <input
+                                                    type="text"
+                                                    value={unit.name}
+                                                    onChange={(e) => updateUnitName(unit.id, e.target.value, false)}
+                                                    className="w-full bg-transparent border-b border-transparent hover:border-slate-400 dark:hover:border-slate-600 focus:border-blue-500 text-slate-900 dark:text-white font-bold mb-1 outline-none transition px-0 text-sm md:text-base"
+                                                />
+                                                <select
+                                                    value={unit.floorType}
+                                                    onChange={(e) => updateUnitFloorType(unit.id, e.target.value as any, false)}
+                                                    className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded outline-none border border-transparent hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer w-full md:w-auto"
+                                                >
+                                                    <option value="normal">Normal Kat ({buildingStats.normalFloorHeight}m)</option>
+                                                    <option value="ground">Zemin Kat ({buildingStats.groundFloorHeight}m)</option>
+                                                    <option value="basement">Bodrum Kat ({buildingStats.basementFloorHeight}m)</option>
+                                                    {buildingStats.hasRoofFloor && (
+                                                        <option value="roof">Çatı Katı ({buildingStats.roofFloorHeight || 1.8}m)</option>
+                                                    )}
+                                                </select>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={unit.count}
+                                                        onChange={(e) => updateUnitCount(unit.id, parseInt(e.target.value), false)}
+                                                        className="w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center text-slate-900 dark:text-white font-bold text-lg focus:border-blue-500 outline-none"
+                                                    />
+                                                    <span className="text-xs md:text-sm font-normal text-slate-500">Adet</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                                            <div className="flex items-center gap-2">
+                                                <span><i className="fas fa-vector-square mr-1"></i>{unit.rooms.length} Oda</span>
+                                                {totalUnitArea > 0 && (
+                                                    <>
+                                                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                                                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                            {totalUnitArea.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} m²
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <span><i className="fas fa-expand mr-1"></i>{unit.scale > 0 ? "Ölçekli" : "Ölçeksiz"}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
+
                 {/* 3. SECTION: YAPISAL ELEMANLAR DETAY PANELİ (GİZLENEBİLİR AKORDİYON) */}
                 <section id="tour-structural" className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg dark:shadow-xl transition-colors duration-300 overflow-hidden">
                     <button
@@ -510,136 +642,6 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
                     )}
-                </section>
-
-                {/* 2. SECTION: BAĞIMSIZ BÖLÜM TİPLERİ */}
-                <section id="tour-units">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-                        <div>
-                            <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
-                                {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
-                            </h2>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
-                        </div>
-                        <div className="flex gap-2 w-full md:w-auto">
-                            {buildingStats.buildingType === 'apartment' && units.length > 1 && (
-                                <button onClick={() => setShowDuplexModal(true)} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-indigo-700">
-                                    <i className="fas fa-link"></i><span className="hidden md:inline"> Dubleks Eşle</span>
-                                </button>
-                            )}
-
-                            <button onClick={addUnit} className="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-purple-700">
-                                <i className="fas fa-plus"></i><span className="hidden md:inline"> Yeni Tip Ekle</span><span className="md:hidden">Tip Ekle</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {units.length === 0 && (
-                            <div className="col-span-full text-center text-slate-500 py-8 bg-white dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700 border-dashed">
-                                Henüz daire tipi eklenmemiş.
-                            </div>
-                        )}
-
-                        {units.map(unit => {
-                            const totalUnitArea = unit.rooms.reduce((acc, r) => {
-                                const area = r.manualAreaM2 || (unit.scale > 0 ? r.area_px / (unit.scale * unit.scale) : 0);
-                                return acc + area;
-                            }, 0);
-
-                            const isDuplexPart = duplexPairs.some(p => p.lowerUnitId === unit.id || p.upperUnitId === unit.id);
-
-                            return (
-                                <div key={unit.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-slate-400 dark:hover:border-slate-600 transition group relative">
-                                    <div className="h-40 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center border-b border-slate-200 dark:border-slate-700">
-                                        {isDuplexPart && (
-                                            <span className="absolute top-2 left-2 bg-indigo-600/90 backdrop-blur text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md flex items-center gap-1 z-10">
-                                                <i className="fas fa-link"></i> Dubleks Parçası
-                                            </span>
-                                        )}
-                                        {unit.imageData ? (
-                                            <img src={unit.imageData} className="w-full h-full object-cover opacity-80 dark:opacity-60" alt={unit.name} />
-                                        ) : (
-                                            <i className="fas fa-drafting-compass text-4xl text-slate-300 dark:text-slate-600"></i>
-                                        )}
-                                        <div className="absolute inset-0 bg-white/60 dark:bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3 backdrop-blur-sm">
-                                            <button onClick={() => navigateToEditor(unit.id, 'architectural')} className="hidden md:inline-flex bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg hover:bg-blue-500">Planı Düzenle</button>
-                                            <button onClick={() => openModal('roomManager', unit.id)} className="bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg hover:bg-purple-500">Manuel Liste</button>
-                                            <button
-                                                onClick={() => duplicateUnit(unit.id)}
-                                                className="bg-teal-500 hover:bg-teal-400 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition transform hover:scale-110"
-                                                title="Tipi Çoğalt"
-                                            >
-                                                <i className="fas fa-copy"></i>
-                                            </button>
-                                            <button onClick={() => deleteUnit(unit.id, false)} className="bg-red-600 hover:bg-red-500 text-white w-10 h-10 rounded-full shadow-lg"><i className="fas fa-trash"></i></button>
-                                        </div>
-                                        <div className="md:hidden absolute top-2 right-2 flex gap-2">
-                                            <button
-                                                onClick={() => duplicateUnit(unit.id)}
-                                                className="bg-teal-500 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"
-                                            >
-                                                <i className="fas fa-copy"></i>
-                                            </button>
-                                            <button onClick={() => openModal('roomManager', unit.id)} className="bg-purple-600 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"><i className="fas fa-list"></i></button>
-                                            <button onClick={() => deleteUnit(unit.id, false)} className="bg-red-600 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-xs"><i className="fas fa-trash"></i></button>
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1 mr-4">
-                                                <input
-                                                    type="text"
-                                                    value={unit.name}
-                                                    onChange={(e) => updateUnitName(unit.id, e.target.value, false)}
-                                                    className="w-full bg-transparent border-b border-transparent hover:border-slate-400 dark:hover:border-slate-600 focus:border-blue-500 text-slate-900 dark:text-white font-bold mb-1 outline-none transition px-0 text-sm md:text-base"
-                                                />
-                                                <select
-                                                    value={unit.floorType}
-                                                    onChange={(e) => updateUnitFloorType(unit.id, e.target.value as any, false)}
-                                                    className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded outline-none border border-transparent hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer w-full md:w-auto"
-                                                >
-                                                    <option value="normal">Normal Kat ({buildingStats.normalFloorHeight}m)</option>
-                                                    <option value="ground">Zemin Kat ({buildingStats.groundFloorHeight}m)</option>
-                                                    <option value="basement">Bodrum Kat ({buildingStats.basementFloorHeight}m)</option>
-                                                    {buildingStats.hasRoofFloor && (
-                                                        <option value="roof">Çatı Katı ({buildingStats.roofFloorHeight || 1.8}m)</option>
-                                                    )}
-                                                </select>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        value={unit.count}
-                                                        onChange={(e) => updateUnitCount(unit.id, parseInt(e.target.value), false)}
-                                                        className="w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center text-slate-900 dark:text-white font-bold text-lg focus:border-blue-500 outline-none"
-                                                    />
-                                                    <span className="text-xs md:text-sm font-normal text-slate-500">Adet</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                                            <div className="flex items-center gap-2">
-                                                <span><i className="fas fa-vector-square mr-1"></i>{unit.rooms.length} Oda</span>
-                                                {totalUnitArea > 0 && (
-                                                    <>
-                                                        <span className="text-slate-300 dark:text-slate-600">|</span>
-                                                        <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                            {totalUnitArea.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} m²
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            <span><i className="fas fa-expand mr-1"></i>{unit.scale > 0 ? "Ölçekli" : "Ölçeksiz"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
                 </section>
 
                 {/* 4. SECTION: PROJECT COST DETAILS */}
