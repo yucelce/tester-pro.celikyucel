@@ -80,7 +80,7 @@ export const DashboardView: React.FC = () => {
         procurementList.forEach(item => {
             const dateStr = item.deliveryDate.toISOString().split('T')[0];
             const key = `${dateStr}_${item.taskId}`;
-            
+
             if (!groups[key]) {
                 groups[key] = { date: item.deliveryDate, taskName: item.taskName, items: [], totalCost: 0 };
             }
@@ -96,7 +96,7 @@ export const DashboardView: React.FC = () => {
     const [showProcurementModal, setShowProcurementModal] = useState(false);
 
     const LOCKED_ITEMS = [
-        "Mimari Proje", "Statik Proje", "Mekanik Proje", "Elektrik Projesi", 
+        "Mimari Proje", "Statik Proje", "Mekanik Proje", "Elektrik Projesi",
         "Yapı Denetim Hizmet Bedeli", "Arsa Rayiç Bedeli (Maliyet)"
     ];
 
@@ -668,7 +668,7 @@ export const DashboardView: React.FC = () => {
                                                         } else {
                                                             alert('Excel dosyasında geçerli fiyat verisi bulunamadı. Lütfen dosya formatını değiştirmeyin.');
                                                         }
-                                                        e.target.value = ''; 
+                                                        e.target.value = '';
                                                     });
                                                 }
                                             }}
@@ -691,7 +691,7 @@ export const DashboardView: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         {projectCostDetails
-                            .filter(cat => cat.id !== 'ozel_kalemler')
+                            .filter(cat => cat.id !== 'ozel_kalemler' && cat.items.length > 0)
                             .map((category) => (
                                 <div
                                     key={category.id}
@@ -989,7 +989,7 @@ export const DashboardView: React.FC = () => {
                                     <div className="flex flex-col">
                                         <span className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors truncate max-w-[200px] sm:max-w-[250px]">{item.name}</span>
                                         <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                                            {item.taskName} 
+                                            {item.taskName}
                                         </span>
                                     </div>
                                     <div className="text-right flex flex-col items-end shrink-0">
