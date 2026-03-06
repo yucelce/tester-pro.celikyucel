@@ -107,9 +107,9 @@ export const DashboardView: React.FC = () => {
             className="flex h-screen flex-col bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-200 overflow-y-auto transition-colors duration-300 relative"
             onScroll={(e) => setIsHeaderPinned(e.currentTarget.scrollTop > 120)}
         >
-            <div className={`fixed bottom-0 md:bottom-auto md:top-4 left-0 md:left-auto md:right-4 w-full md:w-auto z-[40] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md md:shadow-lg border-t md:border border-slate-200 dark:border-slate-700 md:rounded-xl p-3 md:p-2 px-4 transition-all duration-300 transform md:pointer-events-none flex justify-between md:flex-col items-center md:items-end ${isHeaderPinned ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 md:-translate-y-12 opacity-0 md:scale-95'}`}>
-                <div className="text-[10px] md:text-[9px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
-                <div className="text-xl md:text-lg font-extrabold text-green-600 dark:text-green-500 tracking-tight leading-tight">
+            <div className={`fixed bottom-0 md:bottom-auto md:top-4 left-0 md:left-auto md:right-4 w-full md:w-auto z-[40] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md md:shadow-lg border-t md:border border-slate-200 dark:border-slate-700 md:rounded-xl py-1.5 px-3 md:p-2 transition-all duration-300 transform md:pointer-events-none flex justify-between md:flex-col items-center md:items-end ${isHeaderPinned ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 md:-translate-y-12 opacity-0 md:scale-95'}`}>
+                <div className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
+                <div className="text-base md:text-lg font-extrabold text-green-600 dark:text-green-500 tracking-tight leading-tight">
                     {projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
                 </div>
             </div>
@@ -129,37 +129,44 @@ export const DashboardView: React.FC = () => {
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Yapı Maliyet ve Yönetim -Test- </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                    
+                    {/* YENİDEN DÜZENLENEN SAĞ TARAF (BUTONLAR VE MALİYET) */}
+                    <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
+                        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4">
+                            <button onClick={() => openModal('projectManagement')} className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold text-xs sm:text-sm transition border border-slate-200 dark:border-slate-700 flex items-center gap-2 shrink-0">
+                                <i className="fas fa-folder-open text-blue-500 text-sm sm:text-base"></i>
+                                <span className="hidden sm:inline">Projelerim</span>
+                            </button>
 
-                        <button onClick={() => openModal('projectManagement')} className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-4 py-2 rounded-lg font-bold text-sm transition border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                            <i className="fas fa-folder-open text-blue-500"></i>
-                            <span className="hidden sm:inline">Projelerim</span>
-                        </button>
+                            <button
+                                id="tour-report-btn"
+                                onClick={navigateToReport}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-indigo-700 shadow-sm shrink-0"
+                            >
+                                <i className="fas fa-file-pdf text-sm sm:text-base"></i>
+                                <span className="hidden sm:inline">Raporla</span>
+                            </button>
 
-                        <button
-                            id="tour-report-btn"
-                            onClick={navigateToReport}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border border-indigo-700 shadow-sm"
-                        >
-                            <i className="fas fa-file-pdf"></i>
-                            <span className="hidden sm:inline">Raporla</span>
-                        </button>
+                            <button
+                                onClick={startTutorial}
+                                className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-indigo-200 dark:border-indigo-700/50 shrink-0"
+                                title="Program Nasıl Kullanılır?"
+                            >
+                                <i className="fas fa-graduation-cap text-sm sm:text-base"></i>
+                                <span className="hidden sm:inline">Nasıl Çalışır?</span>
+                            </button>
 
-                        <button
-                            onClick={startTutorial}
-                            className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 px-3 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2 border border-indigo-200 dark:border-indigo-700/50"
-                            title="Program Nasıl Kullanılır?"
-                        >
-                            <i className="fas fa-graduation-cap"></i>
-                            <span className="hidden sm:inline">Nasıl Çalışır?</span>
-                        </button>
-
-                        <button onClick={toggleTheme} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">
-                            <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
-                        </button>
-                        <div id="tour-total-cost" className="text-right pl-4 md:pl-6 border-l border-slate-200 dark:border-slate-800">
-                            <div className="text-xs md:text-sm text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
-                            <div className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-500">{projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</div>
+                            <button onClick={toggleTheme} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">
+                                <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-xs sm:text-base`}></i>
+                            </button>
+                        </div>
+                        
+                        {/* FİYAT KISMI */}
+                        <div id="tour-total-cost" className="text-right pl-2 sm:pl-4 md:pl-6 border-l border-slate-200 dark:border-slate-800 shrink-0">
+                            <div className="text-[8px] sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider leading-none mb-1">Toplam Maliyet</div>
+                            <div className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
+                                {projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
+                            </div>
                         </div>
                     </div>
                 </div>

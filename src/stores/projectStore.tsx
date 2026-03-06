@@ -517,8 +517,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                             } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
                                                 const match = item.name.match(/\(([\d\.]+) cm\)/);
                                                 if (match && match[1]) {
-                                                    const thicknessCm = parseFloat(match[1]);
-                                                    const calculatedPrice = laborPriceM2 * (thicknessCm / 15);
+                                                    
+                                                    const calculatedPrice = laborPriceM2 ;
                                                     return { ...item, unit_price: Math.round(calculatedPrice) };
                                                 }
                                             }
@@ -749,8 +749,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
                                 const match = item.name.match(/\(([\d\.]+) cm\)/);
                                 if (match && match[1]) {
-                                    const thicknessCm = parseFloat(match[1]);
-                                    const calculatedPrice = laborPriceM2 * (thicknessCm / 15);
+                                    
+                                    const calculatedPrice = laborPriceM2;
                                     return { ...item, unit_price: Math.round(calculatedPrice) };
                                 }
                             }

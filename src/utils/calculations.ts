@@ -399,12 +399,14 @@ export class QuantityTakeoffService {
                 let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
                 const widthM = beam.properties.width / 100, heightM = beam.properties.height / 100, slabThickM = beam.properties.slabThickness / 100;
 
-                // DÜZELTME: Kirişin sadece döşeme altında kalan (sarkan) kısmının betonunu hesapla
+                // Kirişin sadece döşeme altında kalan (sarkan) kısmının betonunu hesapla
                 stats.beam_concrete_volume += widthM * Math.max(0, heightM - slabThickM) * lengthM;
 
                 const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
-                const bottomFormworkArea = (widthM * lengthM) * 0.85;
-                stats.beam_formwork_area += (sideFormworkArea + bottomFormworkArea);
+                
+                // DÜZELTME: Çift sayımı (double counting) önlemek için kiriş taban kalıbı hesaba katılmamıştır. 
+                // Kiriş tabanı zaten 'slab_formwork_area' (döşeme alanı) içinde genel alanla birlikte hesaplanmaktadır.
+                stats.beam_formwork_area += sideFormworkArea;
             });
             let totalSlabIronBase = 0;
             (unit.slabs || []).forEach(slab => {
@@ -1741,7 +1743,7 @@ export const calculateDynamicUnitPrice = (
                 return Math.round(baseMatPrice * (thickness / 100));
             } else {
                 // İşçilik 15cm için referans alınmıştır, kalınlık oranına göre hareketlendirilir.
-                return Math.round(baseLaborPrice * (thickness / 15));
+                return Math.round(baseLaborPrice);
             }
         }
     }
