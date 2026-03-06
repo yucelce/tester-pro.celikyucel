@@ -1111,7 +1111,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const startNewProject = (type: 'apartment' | 'villa') => {
         const isVilla = type === 'villa';
 
-        // Yapı İstatistiklerini Güncelle
+        // Yapı İstatistiklerini Güncelle ve Önceki Projenin Kalıntılarını (Havuz vb.) Temizle
         setBuildingStatsState(prev => ({
             ...prev,
             buildingType: type,
@@ -1119,6 +1119,31 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             basementFloorCount: isVilla ? 0 : 1,
             groundFloorHeight: isVilla ? 3.2 : 3.0,
             normalFloorHeight: isVilla ? 3.0 : 2.8,
+            normalFloorArea: isVilla ? 150 : 250,
+            groundFloorArea: isVilla ? 150 : 250,
+            basementFloorArea: isVilla ? 0 : 300,
+            poolArea: 0,
+            parkingArea: 0,
+            verandaArea: 0,
+            hasSmartHome: false,
+            smartHomeLighting: false,
+            smartHomeHeating: false,
+            smartHomeSensors: false,
+            smartHomeBlinds: false,
+            hasRoofFloor: false,
+            roofFloorArea: 0,
+            hasWellFoundation: false,
+            wellFoundationArea: 0,
+            hasExistingBuilding: false,
+            isUrbanTransformation: false,
+            existingUnitCount: 0,
+            monthlyRentPerUnit: 0,
+            evictionCostPerUnit: 0,
+            includeRentCost: false,
+            constructionModel: 'standard',
+            contractorShare: 50,
+            isDurationManual: false,
+            constructionDuration: undefined
         }));
 
         // Daire/Villa Tiplerini Sıfırla
@@ -1128,12 +1153,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 name: isVilla ? 'Villa Planı' : 'Tip A (2+1)',
                 count: 1,
                 rooms: [], walls: [], columns: [], beams: [], slabs: [],
-                floorType: isVilla ? 'ground' : 'normal', imageData: null, scale: 0, lastEdited: Date.now(),
+                floorType: isVilla ? 'normal' : 'normal', 
+                imageData: null, scale: 0, lastEdited: Date.now(),
                 structuralWallSource: 'global_calculated', structuralConcreteSource: 'global_calculated'
             }
         ]);
 
-        // Diğer verileri sıfırla
+        // Finansal Geçmişi ve Zaman Çizelgesi Ayarlarını Tamamen Sıfırla
+        setFinancialSettings(prev => ({
+            ...prev,
+            sales: [],
+            progressPayments: [],
+            fixedPriceTaskIds: [],
+            revenueModel: 'yap_sat'
+        }));
+        setScheduleOverrides({});
+        setAreaValidation(null);
+
+        // Diğer listeleri sıfırla
         setStructuralUnits([]);
         setCustomCosts([]);
         setDuplexPairs([]);
