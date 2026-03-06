@@ -75,16 +75,54 @@ export const ReportView: React.FC = () => {
 
 
     const cashflowTable = useMemo(() => {
-        if (!projectTotalCost || projectSchedule.length === 0) return [];
+        if (!finalTotalCost || projectSchedule.length === 0) return [];
         const inflationRate = (financialSettings.monthlyInflationRate || 0) / 100;
+        const fixedTasks = financialSettings.fixedPriceTaskIds || []; // Fiyatı sabitlenen işler
         const expensesByMonth: Record<string, number> = {};
         const projectStartMonthDate = new Date((buildingStats.projectStartDate || formatMonth(new Date())) + '-01');
-        const totalCostPerTask = projectTotalCost / projectSchedule.length; 
 
+        // 1. ADIM: Kalemleri doğru iş programına (task) atayan fonksiyon
+        const getTaskForCategory = (catId: string, itemName: string): string => {
+            const nameLower = itemName.toLowerCase();
+            if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
+            switch (catId) {
+                case 'arsa_finansman': return 'official';
+                case 'resmi_idari': return nameLower.includes('iskan') ? 'handover' : 'official';
+                case 'santiye_hafriyat': return (nameLower.includes('hafriyat') || nameLower.includes('iksa') || nameLower.includes('jcb')) ? 'excavation' : (nameLower.includes('güvenlik ağı') ? 'structure' : 'site_prep');
+                case 'kaba_insaat': return nameLower.includes('çatı') ? 'roof' : 'structure';
+                case 'duvar_tavan': return (nameLower.includes('kartonpiyer') || nameLower.includes('stropiyer') || nameLower.includes('boya')) ? 'paint' : (nameLower.includes('sıva') || nameLower.includes('alçı') ? 'plaster' : 'walls');
+                case 'dis_cephe': return 'facade';
+                case 'zemin_kaplama': return nameLower.includes('şap') ? 'screed' : 'flooring';
+                case 'mobilya_ahsap': return 'joinery';
+                case 'vitrifiye_ankastre': return 'mep_finish';
+                case 'mekanik_tesisat': return (nameLower.includes('altyapı') || nameLower.includes('tesisat')) ? 'mep_rough' : 'mep_finish';
+                case 'elektrik_tesisat': return (nameLower.includes('kablo') || nameLower.includes('sorti') || nameLower.includes('altyapı') || nameLower.includes('boru')) ? 'mep_rough' : 'mep_finish';
+                case 'peyzaj_cevre': return 'landscape';
+                case 'ozel_kalemler': return 'handover';
+                default: return 'structure';
+            }
+        };
+
+        // 2. ADIM: Kar marjlı güncel maliyetleri (finalCostDetails) iş adımlarına göre topla
+        const taskActualCosts: Record<string, number> = {};
+        finalCostDetails.forEach(cat => {
+            cat.items.forEach(item => {
+                if (item.totalPrice > 0) {
+                    const taskId = getTaskForCategory(cat.id, item.name);
+                    taskActualCosts[taskId] = (taskActualCosts[taskId] || 0) + item.totalPrice;
+                }
+            });
+        });
+
+        // 3. ADIM: Zaman çizelgesine göre aylara dağıt
         projectSchedule.forEach(task => {
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
+            
+            // Eşit bölme MANTIĞI İPTAL EDİLDİ, görevin GEREÇEK maliyeti alınıyor
+            const baseTaskCost = taskActualCosts[task.id] || 0; 
+
             let currentD = new Date(startDate);
             let accumulatedDays = 0;
 
@@ -102,18 +140,24 @@ export const ReportView: React.FC = () => {
 
                 let monthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 monthsDiff = Math.max(0, monthsDiff);
-                let inflatedCost = totalCostPerTask * Math.pow(1 + inflationRate, monthsDiff);
+                
+                // Eğer iş kalemi enflasyondan korunmuşsa (hedge) baz fiyatı al, yoksa enflasyonu uygula
+                let inflatedCost = fixedTasks.includes(task.id) 
+                    ? baseTaskCost 
+                    : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (inflatedCost * costRatio);
                 currentD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
             }
         });
 
+        // Satışları (Gelirleri) hesapla
         const salesByMonth: Record<string, number> = {};
         financialSettings.sales.forEach(sale => {
             if (sale.saleDate) salesByMonth[sale.saleDate] = (salesByMonth[sale.saleDate] || 0) + sale.amount;
         });
 
+        // Ayları sırala ve tabloyu oluştur
         const allMonthsSet = new Set([...Object.keys(expensesByMonth), ...Object.keys(salesByMonth)]);
         const sortedMonths = Array.from(allMonthsSet).sort();
 
@@ -131,8 +175,9 @@ export const ReportView: React.FC = () => {
                 balance: cumulativeBalance
             });
         });
+        
         return table;
-    }, [projectSchedule, projectTotalCost, financialSettings, buildingStats.projectStartDate]);
+    }, [projectSchedule, finalTotalCost, finalCostDetails, financialSettings, buildingStats.projectStartDate]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'render') => {
         const file = e.target.files?.[0];

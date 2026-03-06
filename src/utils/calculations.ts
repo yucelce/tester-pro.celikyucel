@@ -102,7 +102,8 @@ export class GeometryAnalyzer {
             }
 
             const roomWaste = calculateWasteFactor(room.points, room.manualAreaM2, room.manualPerimeterM);
-            const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM - 0.04);
+
+            const roomHeight = room.properties.ceilingHeight || (defaultFloorHeight - avgSlabThicknessM);
 
             return { ...room, areaM2, perimeterM, roomWaste, roomHeight };
         });
@@ -129,7 +130,7 @@ export class QuantityTakeoffService {
             wet_area: 0, net_wet_area: 0, dry_area: 0, dry_perimeter: 0, net_wall_area: 0, cornice_length: 0,
             mortar_volume: 0, adhesive_weight: 0, calc_plumbing_unit: 0, calc_combi_count: 0,
             calc_radiator_infrastructure: 0, calc_radiator_len: 0, calc_radiator_count: 0,
-            calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0, 
+            calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0,
             calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0,
             calc_window_area: 0, calc_sill_length: 0, calc_window_perimeter: 0, calc_balcony_railing: 0,
             wall_10_area: 0, wall_13_5_area: 0, wall_15_area: 0, wall_20_area: 0, wall_25_area: 0,
@@ -229,17 +230,11 @@ export class QuantityTakeoffService {
 
         if (room.properties.wallFinish === 'boya') {
             stats.calc_paint_wall_area += grossWallArea;
-            stats.calc_plaster_area += grossWallArea;
 
-            if (!isWetAreaCeiling) {
-                stats.calc_plaster_area += room.areaM2; // Asma tavan yoksa tavanı alçı metrajına ekle
-            }
         } else {
             stats.wet_area += grossWallArea; // Duvarlar seramik
+            stats.net_wet_area += grossWallArea; // EKSİK OLAN SATIR: Yapıştırıcı için duvarı da dahil et
 
-            if (!isWetAreaCeiling) {
-                stats.calc_plaster_area += room.areaM2; // Asma tavan yoksa tavanı alçı metrajına ekle
-            }
         }
 
 
@@ -347,8 +342,7 @@ export class QuantityTakeoffService {
             if (unit.rooms.length > 0) {
                 let totalRoomWallArea = 0;
                 unit.rooms.forEach(r => {
-                    const h = r.properties.ceilingHeight || (metrics.defaultFloorHeight - metrics.avgSlabThicknessM - 0.04);
-                    const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
+                    const h = r.properties.ceilingHeight || (metrics.defaultFloorHeight - metrics.avgSlabThicknessM); const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
                     totalRoomWallArea += (p * h * (r.type === 'balcony' ? 0.5 : 1.0));
                 });
                 stats.net_wall_area = totalRoomWallArea * 0.85;
@@ -404,7 +398,10 @@ export class QuantityTakeoffService {
             (unit.beams || []).forEach(beam => {
                 let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
                 const widthM = beam.properties.width / 100, heightM = beam.properties.height / 100, slabThickM = beam.properties.slabThickness / 100;
-                stats.beam_concrete_volume += widthM * heightM * lengthM;
+
+                // DÜZELTME: Kirişin sadece döşeme altında kalan (sarkan) kısmının betonunu hesapla
+                stats.beam_concrete_volume += widthM * Math.max(0, heightM - slabThickM) * lengthM;
+
                 const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
                 const bottomFormworkArea = (widthM * lengthM) * 0.85;
                 stats.beam_formwork_area += (sideFormworkArea + bottomFormworkArea);
@@ -463,7 +460,8 @@ export class QuantityTakeoffService {
                 }
                 const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
                 stats.calc_rough_plaster_area = fArea * 2.8; stats.calc_paint_wall_area = fArea * 2.5; stats.calc_ceiling_paint_area = fArea;
-                stats.calc_plaster_area = fArea * 3.5; stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
+
+                stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
                 if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
                 if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
             }
@@ -865,7 +863,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = raftHeight * 1.5;
-        return (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10; 
+        return (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10;
     },
 
 
@@ -950,10 +948,10 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const electricityGuvence = estimatedPowerKW * unitGuvenlikBedeli;
 
         const totalSubscription = electricityGuvence + waterAndOtherFees;
-        
+
         // Sabit 12.000 TL limitini kaldırıp su fiyatının 3 katı dinamik alt limit koyduk
         const dynamicMinLimit = waterAndOtherFees * 3;
-        
+
         return Math.round(Math.max(dynamicMinLimit, totalSubscription));
     },
 
@@ -1038,7 +1036,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const laborBase = totalEstimatedCost * 0.0675;
         return Math.round(laborBase * 0.375);
     },
-    
+
     'calc_demolition_area': ({ buildingStats, totalConstructionArea, item }) => {
         if (buildingStats.hasExistingBuilding && !buildingStats.isUrbanTransformation) {
             const existingArea = buildingStats.existingArea || (totalConstructionArea * 0.5);
@@ -1069,7 +1067,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone);
         const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined ? aggregatedUnitStats['calc_iron_unit'] : ((totalConstructionArea * 0.26) * ironCoeff);
-        
+
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = raftHeight * 1.5;
@@ -1124,16 +1122,16 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             baseCost += (estimatedZones * (baseCost * 0.08));
         }
         if (buildingStats.smartHomeSensors) {
-            let wetAreaZones = 2; 
+            let wetAreaZones = 2;
             if (aggregatedUnitStats && (aggregatedUnitStats['calc_toilet'] > 0 || aggregatedUnitStats['calc_kitchen_sink'] > 0)) {
                 wetAreaZones = (aggregatedUnitStats['calc_toilet'] || 1) + (aggregatedUnitStats['calc_kitchen_sink'] || 1);
             }
-            const floors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1; 
+            const floors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
 
             baseCost += (wetAreaZones * (baseCost * 0.04)) + (1 * (baseCost * 0.05)) + (floors * (baseCost * 0.02)) + (baseCost * 0.12);
         }
         if (buildingStats.smartHomeBlinds) {
-            let windowCount = estimatedZones; 
+            let windowCount = estimatedZones;
             if (aggregatedUnitStats && aggregatedUnitStats['calc_window_area'] > 0) {
                 windowCount = Math.max(estimatedZones, Math.ceil(aggregatedUnitStats['calc_window_area'] / 2.5));
             }
@@ -1142,7 +1140,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         let areaMultiplier = 1.0;
         if (totalConstructionArea > 200) {
-            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003); 
+            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003);
         }
 
         return Math.round(baseCost * areaMultiplier);
@@ -1225,7 +1223,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_formwork_global': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, totalFloors, item }) => {
         const formKatlar = aggregatedUnitStats['calc_formwork_unit'] !== undefined ? aggregatedUnitStats['calc_formwork_unit'] : (totalConstructionArea * 2.6);
-        
+
         const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const formTemel = (perimeter + (8 * (raftHeight * 1.5))) * raftHeight;
@@ -1296,12 +1294,14 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_facade': ({ buildingStats, aggregatedUnitStats }) => {
         // 1. Toplam pencere alanını ünitelerden (dairelerden) çekiyoruz
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
-
         const deductibleWindowArea = totalWindowArea;
 
         if (buildingStats.buildingType === 'villa') {
             const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
-            const groundFacade = groundPerim * (buildingStats.groundFloorHeight + 0.80);
+
+            // DÜZELTME: Sabit 0.80 yerine kullanıcının belirlediği subasman yüksekliğini (veya varsayılan 0.50'yi) alıyoruz
+            const subH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            const groundFacade = groundPerim * (buildingStats.groundFloorHeight + subH);
 
             let normalFacade = 0;
             if (buildingStats.normalFloorCount > 0) {
@@ -1315,6 +1315,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return netFacade * 1.15; // %15 zayiat
 
         } else {
+            // Apartman için mevcut kodlar aynen kalır...
             const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
 
@@ -1325,6 +1326,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return netFacade * facadeWaste;
         }
     },
+
+
     'calc_hard_ground': ({ buildingStats, item }) => {
         const landArea = buildingStats.landArea || 0;
         const footprintArea = buildingStats.groundFloorArea || 0;
@@ -1525,7 +1528,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         }
         return Math.round(totalRailingMt * 100) / 100;
     },
-    
+
     'calc_marble_mortar': ({ buildingStats, totalBuildingHeight }) => {
         if (buildingStats.buildingType === 'villa') return 0;
         const stairsArea = (totalBuildingHeight / 0.17) * 0.45;
@@ -1709,17 +1712,20 @@ export const calculateDynamicUnitPrice = (
     globalWallMaterial?: WallMaterial    // YENİ EKLENDİ
 ): number => {
     // --- YENİ DUVAR DİNAMİK FİYAT HESAPLAMASI ---
-    if (item.name.startsWith("Duvar Malzemesi (") || item.name.startsWith("Duvar İşçiliği (")) {
-        const match = item.name.match(/\(([\d\.]+) cm\)/);
-        if (item.name === "Kuyu Temel Betonu") {
+    if (item.name === "Kuyu Temel Betonu") {
         return getGlobalPrice(currentCosts, "Betonarme Betonu");
     }
     if (item.name === "Kuyu Temel Demiri") {
         return getGlobalPrice(currentCosts, "İnşaat Demiri");
     }
+
+    // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
+    if (item.name.startsWith("Duvar Malzemesi (") || item.name.startsWith("Duvar İşçiliği (")) {
+        const match = item.name.match(/\(([\d\.]+) cm\)/);
         if (match && currentCosts && globalWallMaterial) {
             const thickness = parseFloat(match[1]);
-            const wallCat = currentCosts.find(c => c.id === 'duvar_tavan');
+
+            // wallCat tanımı KULLANILMADIĞI için tamamen SİLİNDİ
 
             const matItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton Blok (m3)" :
                 globalWallMaterial === 'tugla' ? "Tuğla Blok (m3)" : "Bims Blok (m3)";
@@ -1766,30 +1772,17 @@ export const calculateDynamicUnitPrice = (
         if (buildingStats) {
             const groundArea = buildingStats.groundFloorArea || 0;
             const totalFloors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
-
-            // needsTowerCrane fonksiyonunuzdaki aynı mantık
             const hasTowerCrane = totalConstructionArea > 5000 || (groundArea > 650 && totalFloors > 6);
 
             if (hasTowerCrane) {
-                // Kule vinç varsa aylık ortalama 2000 kWh ekstra yük biner
                 totalMonthlyKw += 1000;
             }
         }
 
-        const areaBasedCost = totalMonthlyKw * kwPrice;
+        // DÜZELTME: Personel maaşı yerine mantıklı bir "Asgari Şantiye Tüketimi" (Örn: Aylık minimum 500 kW)
+        totalMonthlyKw = Math.max(totalMonthlyKw, 500);
 
-        // 3. Alt limit için Personel maliyetini bul (Mevcut mantığınız)
-        let personelMonthlyCost = 35000; // Fallback
-        if (currentCosts) {
-            const santiyeCat = currentCosts.find(c => c.id === 'santiye_hafriyat');
-            const personelItem = santiyeCat?.items.find(i => i.name === 'Şantiye Personel Giderleri (Bekçi vb.)');
-            if (personelItem) personelMonthlyCost = personelItem.unit_price;
-        }
-
-        const lowerBound = (personelMonthlyCost / 30) * 1.8;
-
-        // İkisinden büyük olanı döndür
-        return Math.max(areaBasedCost, lowerBound);
+        return totalMonthlyKw * kwPrice;
     }
 
     if (item.name === "Şantiye Personel Giderleri (Bekçi vb.)" || item.name === "Şantiye Araç Giderleri (Aylık)") {
@@ -1807,25 +1800,15 @@ export const calculateDynamicUnitPrice = (
 
     // --- ŞANTİYE SU GİDERİ HESABI ---
     if (item.name === "Şantiye Su Tüketimi (Aylık)") {
-        const m3Price = item.unit_price; // Wix'ten gelen 1 m3 su fiyatı (Örn: 25 TL)
+        const m3Price = item.unit_price; // Wix'ten gelen 1 m3 su fiyatı
 
         // Alan bazlı aylık tüketim tahmini (1000m2 başına 50 m3)
-        const areaConsumption = (totalConstructionArea / 1000) * 50;
-        const areaBasedCost = areaConsumption * m3Price;
+        let areaConsumption = (totalConstructionArea / 1000) * 50;
 
-        // Alt limit için Personel maliyetini bul
-        let personelMonthlyCost = 35000; // Varsayılan
-        if (currentCosts) {
-            const santiyeCat = currentCosts.find(c => c.id === 'santiye_hafriyat');
-            const personelItem = santiyeCat?.items.find(i => i.name === 'Şantiye Personel Giderleri (Bekçi vb.)');
-            if (personelItem) personelMonthlyCost = personelItem.unit_price;
-        }
+        // DÜZELTME: Personel maaşı yerine asgari şantiye su tüketimi (Örn: Aylık minimum 20 m3)
+        areaConsumption = Math.max(areaConsumption, 20);
 
-        // Formülünüz: Personel Günlük Maliyeti * 1
-        const lowerBound = (personelMonthlyCost / 30) * 1.0;
-
-        // İkisinden büyük olanı "Aylık Su Faturası (Birim Fiyat)" olarak döndür
-        return Math.max(areaBasedCost, lowerBound);
+        return areaConsumption * m3Price;
     }
 
     if (item.name === "Ruhsat Harcı" || item.name === "İskan Harcı") {

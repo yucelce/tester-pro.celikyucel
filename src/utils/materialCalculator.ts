@@ -57,17 +57,17 @@ export const generateProcurementPlan = (
         kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
         kereste: getGlobalPrice(costs, "Kereste (m3)"),
         bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
-        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)") ) * 35, // Wix'ten kg gelir, 35kg torba fiyatına çevrilir
-        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)") ) * 25, // Wix'ten kg gelir, 25kg torba fiyatına çevrilir
-        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)") ) * 20, // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
-        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)") ) * 20 // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
+        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)")) * 35, // Wix'ten kg gelir, 35kg torba fiyatına çevrilir
+        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)")) * 25, // Wix'ten kg gelir, 25kg torba fiyatına çevrilir
+        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)")) * 20, // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
+        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)")) * 20 // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
     };
 
     // Listeye Ekleme Fonksiyonu
     const addCalculatedMaterial = (id: string, name: string, unit: string, qty: number, taskId: string, unitPrice: number) => {
         if (qty <= 0) return;
         const task = schedule.find(s => s.id === taskId);
-        
+
         const existing = procurementList.find(p => p.id === id && p.taskId === taskId);
         if (existing) {
             existing.quantity += qty;
@@ -83,7 +83,7 @@ export const generateProcurementPlan = (
                 taskId: task ? task.id : 'other',
                 taskName: task ? task.name : 'Genel',
                 // Şantiye dinamiği: Malzeme iş başlamadan 3 gün önce sahaya insin
-                deliveryDate: task ? new Date(task.startDate.getTime() - 3 * 24 * 60 * 60 * 1000) : new Date() 
+                deliveryDate: task ? new Date(task.startDate.getTime() - 3 * 24 * 60 * 60 * 1000) : new Date()
             });
         }
     };
@@ -118,11 +118,10 @@ export const generateProcurementPlan = (
     addCalculatedMaterial('kum_sap', 'Şap Kumu', 'm³', screedArea * 0.05, 'screed', prices.sand);
 
     const paintArea = (stats.calc_paint_wall_area || 0) + (stats.calc_ceiling_paint_area || 0);
-    addCalculatedMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'Torba (35kg)', (paintArea * 3)/35, 'plaster', prices.sivaAlcisi);
-    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1)/25, 'plaster', prices.satenAlci);
-    addCalculatedMaterial('astar_boya', 'İç Cephe Astarı', 'Kova (20kg)', (paintArea * 0.15)/20, 'paint', prices.astarBoya);
-    addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45)/20, 'paint', prices.icCepheBoya);
-    
+    // DÜZELTME: Makine sıvası m2 başına ortalama 9.5 kg sarfiyat yapar (1 cm kalınlık için).
+    addCalculatedMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'Torba (35kg)', (paintArea * 9.5) / 35, 'plaster', prices.sivaAlcisi);
+    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1) / 25, 'plaster', prices.satenAlci); addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45) / 20, 'paint', prices.icCepheBoya);
+
     const wetArea = stats.wet_area || 0;
     const netWetArea = stats.net_wet_area || wetArea;
     addCalculatedMaterial('seramik_karo', 'Seramik / Fayans', 'm²', wetArea, 'flooring', prices.ceramicTile * 0.7);
@@ -130,11 +129,11 @@ export const generateProcurementPlan = (
     addCalculatedMaterial('derz_dolgu', 'Derz Dolgusu', 'kg', netWetArea * 0.5, 'flooring', prices.jointFiller);
 
     // --- 2. AŞAMA: PROJEDEKİ DİĞER "FİZİKSEL" MALZEMELERİN EKLENMESİ ---
-    
+
     // Zaten üstte sarfiyata çevirdiğimiz montajlı paket isimleri listeye tekrar girmesin diye süzüyoruz
     const brokenDownItems = [
         "betonarme betonu", "inşaat demiri", "kalıp işçiliği & malzeme", "duvar örme harcı", "gazbeton yapıştırıcısı",
-        "iç sıva", "alçı sıva", "iç cephe boyası", "tavan boyası", "şap malzemesi", "şap işçiliği", 
+        "iç sıva", "alçı sıva", "iç cephe boyası", "tavan boyası", "şap malzemesi", "şap işçiliği",
         "seramik yapıştırıcısı", "seramik derz dolgusu", "seramik kaplama"
     ];
 
@@ -153,7 +152,7 @@ export const generateProcurementPlan = (
             if (item.totalPrice <= 0) return;
 
             const nameLower = item.name.toLowerCase();
-            
+
             const isBrokenDown = brokenDownItems.some(kw => nameLower.includes(kw));
             const isNonPhysical = nonPhysicalKeywords.some(kw => nameLower.includes(kw));
 
@@ -161,7 +160,7 @@ export const generateProcurementPlan = (
             if (!isBrokenDown && !isNonPhysical && item.unit !== 'Ay') {
                 const taskId = getTaskForCategory(cat.id, item.name);
                 const task = schedule.find(t => t.id === taskId);
-                
+
                 procurementList.push({
                     id: item.name,
                     name: item.name,

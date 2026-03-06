@@ -886,7 +886,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
             
             // Eğer "Alçı Sıva (Kaba+Saten)" kullanılıyorsa ona da ilave et
-            aggregatedUnitStats['calc_plaster_area'] = (aggregatedUnitStats['calc_plaster_area'] || 0) + totalHallCeilingArea + totalHallWallArea;
         }
 
         // Üst katlarda çelik kapı, pano, diafon vb. olmaz. Bunları toplam sayıdan düşüyoruz.
