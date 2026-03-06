@@ -298,7 +298,11 @@ export const COST_DATA: CostCategory[] = [
       { name: "Bims Blok (m3)", unit: "m3", unit_price: 2800, auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Gazbeton İşçiliği (m2)", unit: "m2", unit_price: 250, auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Tuğla İşçiliği (m2)", unit: "m2", unit_price: 280, auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Bims İşçiliği (m2)", unit: "m2", unit_price: 240, auto_source: "manual", multiplier: 0, scope: 'hidden' }
+      { name: "Bims İşçiliği (m2)", unit: "m2", unit_price: 240, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Sıva Alçısı (kg)", unit: "kg", unit_price: 4, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Saten Alçı (kg)", unit: "kg", unit_price: 6.4, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Astar Boya (kg)", unit: "kg", unit_price: 47.5, auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "İç Cephe Boyası (kg)", unit: "kg", unit_price: 105, auto_source: "manual", multiplier: 0, scope: 'hidden' }
     ]
   }
 ];

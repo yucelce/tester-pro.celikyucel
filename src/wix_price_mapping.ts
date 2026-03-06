@@ -33,7 +33,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Yeşil Etiket (Asansör Ruhsat)": "asansoryesiletiketisc",
   "Sıva Alçısı (kg)": "alcimal",
   "Saten Alçı (kg)": "satenalcimal",
-  "Astar Boya (kg)": "boyaastar",
+  "Astar Boya (kg)": "boyaastarmal",
   "İç Cephe Boyası (kg)": "boyamal",
 
   "Yapı Sınıfı 3A": "yapi3asinifipaket",

@@ -57,10 +57,10 @@ export const generateProcurementPlan = (
         kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
         kereste: getGlobalPrice(costs, "Kereste (m3)"),
         bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
-        sivaAlcisi: getGlobalPrice(costs, "Sıva Alçısı (Torba)") || 140, 
-        satenAlci: getGlobalPrice(costs, "Saten Alçı (Torba)") || 160,
-        astarBoya: getGlobalPrice(costs, "Astar Boya (Kova)") || 950,
-        icCepheBoya: getGlobalPrice(costs, "İç Cephe Boyası (Kova)") || 2100
+        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)") ) * 35, // Wix'ten kg gelir, 35kg torba fiyatına çevrilir
+        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)") ) * 25, // Wix'ten kg gelir, 25kg torba fiyatına çevrilir
+        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)") ) * 20, // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
+        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)") ) * 20 // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
     };
 
     // Listeye Ekleme Fonksiyonu

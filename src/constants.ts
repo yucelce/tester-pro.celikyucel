@@ -369,19 +369,18 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Şantiye Personel Giderleri (Bekçi vb.)": 70875, // santiyepersonelisc
     "Şantiye Şefi (Aylık)": 147656.3,         // santiyesefiisc
 
-    "Çimento (kg)": 4.6,                     // cimentomal
-    "Kum (m3)": 1023,  
-    "Kireç (kg)": 4,                      // kummal
-    "Gazbeton Yapıştırıcısı": 5,             // ytongyapistiricimal
-    "İnşaat Çivisi (kg)": 45,                // Mevcut değer korundu
-    "Kalıp Yağı (Litre)": 51.1,               // kalipyagiltmal
-    "Kereste (m3)": 9205,                    // kerestem3mal
-    "Bağ Teli (kg)": 55,                     // Mevcut değer korundu
-    "Sıva Alçısı (Torba)": 140,              // Mevcut değer korundu
-    "Saten Alçı (Torba)": 160,  
-    "Asma Tavan (Alçıpan)": 1100,             // Mevcut değer korundu
-    "Astar Boya (Kova)": 950,                // Mevcut değer korundu
-    "İç Cephe Boyası (Kova)": 2100,          // Mevcut değer korundu
+    "Çimento (kg)": 4.6,                     
+    "Kum (m3)": 1025,  // Sizin verinizdeki 1025 olarak güncellendi
+    "Kireç (kg)": 6.37, // Sizin verinizdeki 6.37 olarak güncellendi
+    "Gazbeton Yapıştırıcısı": 5,             
+    "İnşaat Çivisi (kg)": 45,                
+    "Kalıp Yağı (Litre)": 51.2, // Sizin verinizdeki 51.2 olarak güncellendi
+    "Kereste (m3)": 9225, // Sizin verinizdeki 9225 olarak güncellendi                    
+    "Bağ Teli (kg)": 55,                     
+    "Sıva Alçısı (kg)": 6.1,              
+    "Saten Alçı (kg)": 7.7,  
+    "Astar Boya (kg)": 51.2,                
+    "İç Cephe Boyası (kg)": 97.4,
 };
 
 // src/constants.ts dosyasının en altına ekleyin:
