@@ -403,7 +403,7 @@ export class QuantityTakeoffService {
                 stats.beam_concrete_volume += widthM * Math.max(0, heightM - slabThickM) * lengthM;
 
                 const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
-                
+
                 // DÜZELTME: Çift sayımı (double counting) önlemek için kiriş taban kalıbı hesaba katılmamıştır. 
                 // Kiriş tabanı zaten 'slab_formwork_area' (döşeme alanı) içinde genel alanla birlikte hesaplanmaktadır.
                 stats.beam_formwork_area += sideFormworkArea;
@@ -1787,13 +1787,18 @@ export const calculateDynamicUnitPrice = (
         return totalMonthlyKw * kwPrice;
     }
 
-    if (item.name === "Şantiye Personel Giderleri (Bekçi vb.)" || item.name === "Şantiye Araç Giderleri (Aylık)") {
+    if (item.name === "Şantiye Personel Giderleri (Bekçi vb.)") {
+        // Personel maaşı alan ne olursa olsun piyasa rayicidir, miktar (ay) ile çarpılır.
+        return item.unit_price;
+    }
+
+    // --- ŞANTİYE ARAÇ GİDERLERİ (ALANLA DEĞİŞKEN) ---
+    if (item.name === "Şantiye Araç Giderleri (Aylık)") {
         const basePrice = item.unit_price;
 
-        // 3000 m²'nin altındaki şantiyelerde özel araç tahsisi veya 7/24 bekçi genelde olmaz.
-        // Giderler diğer küçük şantiyelerle ortak bölüşülür.
+        // Küçük projelerde (3000 m² altı) araç gideri tam yansıtılmaz.
+        // Paylaşımlı araç kullanımı veya lojistik kolaylığı varsayılır.
         if (totalConstructionArea < 3000) {
-            // Oransal düşüş uygulanır, ancak belirli bir asgari gider (min %25) korunur.
             const factor = Math.max(0.25, totalConstructionArea / 3000);
             return basePrice * factor;
         }

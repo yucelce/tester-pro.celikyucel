@@ -126,7 +126,7 @@ export const DashboardView: React.FC = () => {
                         </div>
                         <div>
                             <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">CY Pro İnşaat <span className="text-blue-500 dark:text-blue-400">Manager</span></h1>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Yapı Maliyet ve Yönetim -Test- </p>
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Yapı Maliyet ve Yönetim </p>
                         </div>
                     </div>
                     

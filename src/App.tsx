@@ -35,8 +35,7 @@ const AppLayout = () => {
 
             if (!apiKey) {
                 setAuthStatus('error');
-                setAuthStatus('success'); //SİLİNECEK
-                return
+               
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
             }
@@ -54,16 +53,14 @@ const AppLayout = () => {
                         setAccountId(data.memberId);
                     }
                 } else {
-                    setAuthStatus('success'); //SİLİNECEK
-                    return
+                    
                     setAuthStatus('error');
                     setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
                 }
             } catch (error) {
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('error');
-                setAuthStatus('success'); //SİLİNECEK
-                return
+               
                 setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
             }
         };
