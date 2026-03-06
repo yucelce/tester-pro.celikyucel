@@ -728,10 +728,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 const laborItemName = material === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
                     material === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
 
-                // DÜZELTME: let kullanılmadan dışarıdaki değişkenler güncellendi
                 rawMaterialPriceM3 = getGlobalPrice(prevCosts, matItemName) || (material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843);
                 laborPriceM2 = getGlobalPrice(prevCosts, laborItemName) || 250;
-            } // DÜZELTME: Eksik olan kapatma parantezi eklendi
+            }
 
             return prevCosts.map(cat => {
                 if (cat.id === 'duvar_tavan') {
@@ -744,14 +743,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                     const thicknessCm = parseFloat(match[1]);
                                     const thicknessM = thicknessCm / 100;
                                     const calculatedPrice = rawMaterialPriceM3 * thicknessM;
-                                    return { ...item, unit_price: Math.round(calculatedPrice) };
+                                    // DÜZELTME 1: Malzeme değiştiğinde eski manuel fiyat sıfırlanmalı!
+                                    return { ...item, unit_price: Math.round(calculatedPrice), manualPrice: undefined };
                                 }
                             } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
                                 const match = item.name.match(/\(([\d\.]+) cm\)/);
                                 if (match && match[1]) {
-                                    
-                                    const calculatedPrice = laborPriceM2;
-                                    return { ...item, unit_price: Math.round(calculatedPrice) };
+                                    // DÜZELTME 2: İşçilik fiyatına kalınlık çarpanı eklendi
+                                    let ratio = 1.0;
+                                    const thick = parseFloat(match[1]);
+                                    if (thick <= 10) ratio = 0.85;
+                                    else if (thick <= 13.5) ratio = 1.0;
+                                    else if (thick <= 15) ratio = 1.1;
+                                    else if (thick <= 20) ratio = 1.4;
+                                    else if (thick <= 25) ratio = 1.7;
+
+                                    const calculatedPrice = laborPriceM2 * ratio;
+                                    // DÜZELTME 1 (Devamı): Manuel fiyat sıfırlandı
+                                    return { ...item, unit_price: Math.round(calculatedPrice), manualPrice: undefined };
                                 }
                             }
                             return item;
