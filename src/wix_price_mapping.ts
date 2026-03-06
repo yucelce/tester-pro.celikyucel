@@ -67,6 +67,14 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Kuyu Temel Kazı İşçiliği": "kuyutemelm3kaziisc",
   "Kuyu Temel Kalıp ve Donatı İşçiliği": "kuyutemelm2iscisc",
 
+  "Isı Pompası (Hava Kaynaklı Dış Ünite)": "isipompasipaket",
+  "VRF Dış Ünite (Merkezi Sistem)": "vrfdisunitepaket",
+  "VRF İç Ünite (Kaset/Duvar Tipi)": "vrficunitepaket",
+  "VRF Bakır Borulama ve Altyapı": "vrfbakirborum2paket",
+  "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)": "havuzmekaniktesisatpaket",
+  "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)": "veranda_m2paket",
+  "Akıllı Ev Altyapı ve Donanım Paketi": "akilli_ev_sistemi_standartpaket",
+
 
   // --- 3. KABA YAPI ---
   "Betonarme Betonu": "betonmal",
