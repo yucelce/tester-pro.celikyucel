@@ -517,8 +517,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                             } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
                                                 const match = item.name.match(/\(([\d\.]+) cm\)/);
                                                 if (match && match[1]) {
-                                                    
-                                                    const calculatedPrice = laborPriceM2 ;
+
+                                                    const calculatedPrice = laborPriceM2;
                                                     return { ...item, unit_price: Math.round(calculatedPrice) };
                                                 }
                                             }
@@ -870,7 +870,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addToAggregated(stats, u.count);
         });
 
-        structuralUnits.forEach(u => {
+        let effectiveStructuralUnits = structuralUnits;
+
+        // Kullanıcı henüz hiç statik kat planı eklememişse ve sistem "Oto" modundaysa,
+        // sistemin duvar ve beton metrajlarını hesaplayabilmesi için yapı istatistiklerine (buildingStats) dayalı sanal kat planları oluşturulur.
+        if (structuralUnits.length === 0 && (globalWallMode === 'auto' || globalConcreteMode === 'auto')) {
+            effectiveStructuralUnits = [];
+
+            if (buildingStats.normalFloorCount > 0) {
+                effectiveStructuralUnits.push({ id: 'auto_n', floorType: 'normal', count: buildingStats.normalFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+            }
+            if (buildingStats.groundFloorArea > 0) {
+                effectiveStructuralUnits.push({ id: 'auto_g', floorType: 'ground', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+            }
+            if (buildingStats.basementFloorCount > 0) {
+                effectiveStructuralUnits.push({ id: 'auto_b', floorType: 'basement', count: buildingStats.basementFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+            }
+            if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea && buildingStats.roofFloorArea > 0) {
+                effectiveStructuralUnits.push({ id: 'auto_r', floorType: 'roof', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+            }
+        }
+
+        effectiveStructuralUnits.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
             addToAggregated(stats, u.count);
         });
@@ -893,7 +914,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             aggregatedUnitStats['calc_ceiling_paint_area'] = (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) + totalHallCeilingArea;
             aggregatedUnitStats['calc_rough_plaster_area'] = (aggregatedUnitStats['calc_rough_plaster_area'] || 0) + totalHallWallArea;
             aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
-            
+
             // Eğer "Alçı Sıva (Kaba+Saten)" kullanılıyorsa ona da ilave et
         }
 
@@ -1153,7 +1174,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 name: isVilla ? 'Villa Planı' : 'Tip A (2+1)',
                 count: 1,
                 rooms: [], walls: [], columns: [], beams: [], slabs: [],
-                floorType: isVilla ? 'normal' : 'normal', 
+                floorType: isVilla ? 'normal' : 'normal',
                 imageData: null, scale: 0, lastEdited: Date.now(),
                 structuralWallSource: 'global_calculated', structuralConcreteSource: 'global_calculated'
             }

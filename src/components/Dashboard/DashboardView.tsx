@@ -578,10 +578,17 @@ export const DashboardView: React.FC = () => {
                             {/* Kat Planları Listesi */}
                             <div className="space-y-4">
                                 {structuralUnits.length === 0 && (
-                                    <div className="text-slate-500 dark:text-slate-400 text-sm text-center py-10 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                                    <div className="text-slate-500 dark:text-slate-400 text-sm text-center py-10 bg-slate-50/50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 px-4">
                                         <i className="fas fa-drafting-compass text-3xl mb-3 text-slate-300 dark:text-slate-600"></i>
                                         <p>Henüz bir statik kat planı eklenmemiş.</p>
-                                        <p className="text-xs text-slate-400 mt-1">Gelişmiş kaba yapı metrajı için "Yeni Kat Planı Ekle" butonunu kullanın.</p>
+                                        {(globalWallMode === 'auto' && globalConcreteMode === 'auto') ? (
+                                            <p className="text-xs text-green-600 dark:text-green-400 mt-3 font-bold bg-green-50 dark:bg-green-900/20 inline-block px-4 py-2 rounded-lg border border-green-200 dark:border-green-800">
+                                                <i className="fas fa-check-circle mr-1"></i>
+                                                Oto mod aktif olduğu için plan eklemenize gerek yoktur. Sistem metrajları Yapı Genel Bilgileri'nden otomatik hesaplar.
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-slate-400 mt-1">Gelişmiş kaba yapı metrajı (Manuel çizim) için "Yeni Kat Planı Ekle" butonunu kullanın.</p>
+                                        )}
                                     </div>
                                 )}
                                 {structuralUnits.map(unit => (
