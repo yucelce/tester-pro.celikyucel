@@ -285,6 +285,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const [buildingStats, setBuildingStatsState] = useState<BuildingStats>({
         buildingType: 'apartment',
+        visitedTabs: ['general'],
         province: 'İstanbul', district: 'Kadıköy', landArea: 500, heatZone: 2, earthquakeZone: 1,
         normalFloorCount: 5, basementFloorCount: 1,
         normalFloorHeight: 2.9, groundFloorHeight: 3.5, basementFloorHeight: 3.0,

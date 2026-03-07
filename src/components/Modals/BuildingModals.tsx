@@ -22,7 +22,55 @@ interface BuildingModalProps {
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
-    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general'); const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general'); 
+    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+
+    const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor') => {
+        setActiveTab(tabId);
+        const visited = buildingStats.visitedTabs || [];
+        if (!visited.includes(tabId)) {
+            setBuildingStats({
+                ...buildingStats,
+                visitedTabs: [...visited, tabId]
+            });
+        }
+    };
+
+    const renderTab = (id: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor', icon: string, label: string) => {
+        const isActive = activeTab === id;
+        const isVisited = (buildingStats.visitedTabs || []).includes(id);
+        const needsAttention = !isVisited && !isActive; // Ziyaret edilmemişse ve şu an aktif değilse
+
+        let baseClasses = "px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-all duration-300 whitespace-nowrap shrink-0 flex items-center gap-2 relative";
+        
+        if (isActive) {
+            // Aktif Sekme Görünümü
+            return (
+                <button onClick={() => handleTabClick(id)} className={`${baseClasses} border-blue-500 text-blue-400`}>
+                    <i className={`fas ${icon}`}></i> {label}
+                </button>
+            );
+        } else if (needsAttention) {
+            // DİKKAT ÇEKİCİ GÖRÜNÜM (Ziyaret Edilmemiş)
+            return (
+                <button onClick={() => handleTabClick(id)} className={`${baseClasses} border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20`}>
+                    <i className={`fas ${icon} animate-pulse`}></i> {label}
+                    {/* Sağ üstte zıplayan küçük uyarı noktası */}
+                    <span className="absolute top-2 right-2 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                </button>
+            );
+        } else {
+            // Normal (Ziyaret Edilmiş ama inaktif) Görünüm
+            return (
+                <button onClick={() => handleTabClick(id)} className={`${baseClasses} border-transparent text-slate-400 hover:text-slate-200`}>
+                    <i className={`fas ${icon}`}></i> {label}
+                </button>
+            );
+        }
+    };
 
     const handleBuildingTypeChange = (newType: 'apartment' | 'villa') => {
         if (newType !== buildingStats.buildingType) {
@@ -185,24 +233,14 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                 </div>
 
                 {/* Tabs Navigation */}
-                <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
-                    <button onClick={() => setActiveTab('general')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'general' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-file-alt"></i> Genel Bilgiler
-                    </button>
-                    <button onClick={() => setActiveTab('floors')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'floors' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-layer-group"></i> Kat Bilgileri
-                    </button>
-                   
-                    <button onClick={() => setActiveTab('special')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'special' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-tools"></i> Malzeme & Tesisat
-                    </button>
-                     <button onClick={() => setActiveTab('contract')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'contract' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                        <i className="fas fa-file-contract"></i> Sözleşme & Mevcut Yapı
-                    </button>
+               <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
+                    {renderTab('general', 'fa-file-alt', 'Genel Bilgiler')}
+                    {renderTab('floors', 'fa-layer-group', 'Kat Bilgileri')}
+                    {renderTab('special', 'fa-tools', 'Malzeme & Tesisat')}
+                    {renderTab('contract', 'fa-file-contract', 'Sözleşme & Mevcut Yapı')}
+                    
                     {buildingStats.buildingType === 'villa' && (
-                        <button onClick={() => setActiveTab('villa_outdoor')} className={`px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 ${activeTab === 'villa_outdoor' ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-                            <i className="fas fa-tree"></i> Villa Detaylar
-                        </button>
+                        renderTab('villa_outdoor', 'fa-tree', 'Villa Detaylar')
                     )}
                 </div>
 
