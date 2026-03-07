@@ -493,10 +493,9 @@ export const DashboardView: React.FC = () => {
                                                     <input
                                                         type="number"
                                                         min="1"
-                                                        disabled={buildingStats.buildingType === 'villa'}
-                                                        value={buildingStats.buildingType === 'villa' ? 1 : unit.count}
+                                                        value={unit.count}
                                                         onChange={(e) => updateUnitCount(unit.id, parseInt(e.target.value), false)}
-                                                        className={`w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center font-bold text-lg focus:border-blue-500 outline-none ${buildingStats.buildingType === 'villa' ? 'text-slate-400 cursor-not-allowed opacity-60' : 'text-slate-900 dark:text-white'}`}
+                                                        className="w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center font-bold text-lg focus:border-blue-500 outline-none text-slate-900 dark:text-white"
                                                     />
                                                     <span className="text-xs md:text-sm font-normal text-slate-500">Adet</span>
                                                 </div>
