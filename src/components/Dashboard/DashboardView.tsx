@@ -129,7 +129,7 @@ export const DashboardView: React.FC = () => {
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Yapı Maliyet ve Yönetim </p>
                         </div>
                     </div>
-                    
+
                     {/* YENİDEN DÜZENLENEN SAĞ TARAF (BUTONLAR VE MALİYET) */}
                     <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
                         <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4">
@@ -160,7 +160,7 @@ export const DashboardView: React.FC = () => {
                                 <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-xs sm:text-base`}></i>
                             </button>
                         </div>
-                        
+
                         {/* FİYAT KISMI */}
                         <div id="tour-total-cost" className="text-right pl-2 sm:pl-4 md:pl-6 border-l border-slate-200 dark:border-slate-800 shrink-0">
                             <div className="text-[8px] sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider leading-none mb-1">Toplam Maliyet</div>
@@ -390,9 +390,11 @@ export const DashboardView: React.FC = () => {
                         <div>
                             <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <i className={`fas ${buildingStats.buildingType === 'villa' ? 'fa-home' : 'fa-layer-group'} text-purple-500`}></i>
-                                {buildingStats.buildingType === 'villa' ? 'Villa Mimari Planlar' : 'Bağımsız Bölüm Tipleri'}
+                                {buildingStats.buildingType === 'villa' ? 'Villa Kat Planları' : 'Bağımsız Bölüm Tipleri'}
                             </h2>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Daire planları, oda metrajları ve adetleri</p>
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                {buildingStats.buildingType === 'villa' ? 'Villaya ait kat planları ve oda metrajları' : 'Daire planları, oda metrajları ve adetleri'}
+                            </p>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
                             {buildingStats.buildingType === 'apartment' && units.length > 1 && (
@@ -402,7 +404,13 @@ export const DashboardView: React.FC = () => {
                             )}
 
                             <button onClick={addUnit} className="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition flex items-center justify-center gap-2 text-sm shadow-sm border border-purple-700">
-                                <i className="fas fa-plus"></i><span className="hidden md:inline"> Yeni Tip Ekle</span><span className="md:hidden">Tip Ekle</span>
+                                <i className="fas fa-plus"></i>
+                                <span className="hidden md:inline">
+                                    {buildingStats.buildingType === 'villa' ? ' Yeni Kat Ekle' : ' Yeni Tip Ekle'}
+                                </span>
+                                <span className="md:hidden">
+                                    {buildingStats.buildingType === 'villa' ? 'Kat Ekle' : 'Tip Ekle'}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -485,9 +493,10 @@ export const DashboardView: React.FC = () => {
                                                     <input
                                                         type="number"
                                                         min="1"
-                                                        value={unit.count}
+                                                        disabled={buildingStats.buildingType === 'villa'}
+                                                        value={buildingStats.buildingType === 'villa' ? 1 : unit.count}
                                                         onChange={(e) => updateUnitCount(unit.id, parseInt(e.target.value), false)}
-                                                        className="w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center text-slate-900 dark:text-white font-bold text-lg focus:border-blue-500 outline-none"
+                                                        className={`w-12 md:w-16 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1 text-center font-bold text-lg focus:border-blue-500 outline-none ${buildingStats.buildingType === 'villa' ? 'text-slate-400 cursor-not-allowed opacity-60' : 'text-slate-900 dark:text-white'}`}
                                                     />
                                                     <span className="text-xs md:text-sm font-normal text-slate-500">Adet</span>
                                                 </div>

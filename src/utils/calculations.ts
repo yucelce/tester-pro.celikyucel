@@ -947,16 +947,36 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(finalEkbCost);
     },
 
-    'calc_utilities_subscription': ({ currentCosts, totalConstructionArea }) => {
+    'calc_utilities_subscription': ({ currentCosts, totalConstructionArea, buildingStats }) => {
         const unitGuvenlikBedeli = getGlobalPrice(currentCosts, "Elektrik Güvence Birim Bedeli");
         const waterAndOtherFees = getGlobalPrice(currentCosts, "Su Abonelik Paket Bedeli");
 
-        const estimatedPowerKW = (totalConstructionArea / 1000) * 12.5;
-        const electricityGuvence = estimatedPowerKW * unitGuvenlikBedeli;
+        let estimatedPowerKW = 0;
 
+        if (buildingStats.buildingType === 'villa') {
+            // Villalar için temel elektrik gücü asgari 15 kW kabul edilir
+            estimatedPowerKW = Math.max(15, (totalConstructionArea / 100) * 8);
+
+            // Eğer havuz varsa ekstra güç gerekir (+5 kW)
+            if (buildingStats.poolArea && buildingStats.poolArea > 0) {
+                estimatedPowerKW += 5;
+            }
+            // Eğer ısı pompası veya VRF gibi yüksek tüketimli bir ısıtma/soğutma varsa (+10 kW)
+            if (buildingStats.heatingSystem === 'heat_pump' || buildingStats.heatingSystem === 'vrf') {
+                estimatedPowerKW += 10;
+            }
+        } else {
+            // Apartmanların ortak alan sayacı için eski formülü koruyabiliriz
+            estimatedPowerKW = (totalConstructionArea / 1000) * 12.5;
+
+            // Asansör ve Hidrofor gibi donanımlar olacağı için ortak alanın minimum 10 kW olması sağlıklıdır
+            estimatedPowerKW = Math.max(10, estimatedPowerKW);
+        }
+
+        const electricityGuvence = estimatedPowerKW * unitGuvenlikBedeli;
         const totalSubscription = electricityGuvence + waterAndOtherFees;
 
-        // Sabit 12.000 TL limitini kaldırıp su fiyatının 3 katı dinamik alt limit koyduk
+        // Dinamik alt limit
         const dynamicMinLimit = waterAndOtherFees * 3;
 
         return Math.round(Math.max(dynamicMinLimit, totalSubscription));
@@ -1011,20 +1031,20 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_grass_and_irrigation': ({ buildingStats }) => {
-    if (buildingStats.buildingType === 'villa') {
-        const footprintArea = buildingStats.groundFloorArea || 0;
-        const pool = buildingStats.poolArea || 0;
-        const parking = buildingStats.parkingArea || 0;
-        const veranda = buildingStats.verandaArea || 0;
+        if (buildingStats.buildingType === 'villa') {
+            const footprintArea = buildingStats.groundFloorArea || 0;
+            const pool = buildingStats.poolArea || 0;
+            const parking = buildingStats.parkingArea || 0;
+            const veranda = buildingStats.verandaArea || 0;
 
-        // Arsadan sadece evi değil; havuz, otopark ve verandayı da düşüyoruz
-        const totalHardscape = footprintArea + pool + parking + veranda;
-        const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
-        
-        return openArea * 0.70;
-    }
-    return 0;
-},
+            // Arsadan sadece evi değil; havuz, otopark ve verandayı da düşüyoruz
+            const totalHardscape = footprintArea + pool + parking + veranda;
+            const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
+
+            return openArea * 0.70;
+        }
+        return 0;
+    },
 
     'calc_demolition_supervisor': ({ buildingStats, currentCosts }) => {
         if (buildingStats.hasExistingBuilding) {
@@ -1404,18 +1424,18 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_tree_count': ({ buildingStats, item }) => {
-    const footprintArea = buildingStats.groundFloorArea || 0;
-    const pool = buildingStats.poolArea || 0;
-    const parking = buildingStats.parkingArea || 0;
-    const veranda = buildingStats.verandaArea || 0;
+        const footprintArea = buildingStats.groundFloorArea || 0;
+        const pool = buildingStats.poolArea || 0;
+        const parking = buildingStats.parkingArea || 0;
+        const veranda = buildingStats.verandaArea || 0;
 
-    const totalHardscape = footprintArea + pool + parking + veranda;
-    const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
-    
-    // Kalan net yeşil alana göre ağaç sayısı belirlenir
-    const treeCount = Math.ceil(openArea / 30.0);
-    return treeCount * (item.multiplier || 1);
-},
+        const totalHardscape = footprintArea + pool + parking + veranda;
+        const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
+
+        // Kalan net yeşil alana göre ağaç sayısı belirlenir
+        const treeCount = Math.ceil(openArea / 30.0);
+        return treeCount * (item.multiplier || 1);
+    },
 
     'calc_water_tank': ({ aggregatedUnitStats, totalConstructionArea, regulationHeight, item }) => {
         let totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
