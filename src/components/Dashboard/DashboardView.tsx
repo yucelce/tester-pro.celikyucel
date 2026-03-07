@@ -15,6 +15,7 @@ import { TutorialOverlay } from '../Shared/TutorialOverlay';
 import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
 import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
 import { ITEM_DESCRIPTIONS } from '../../cost_data'; // <-- BUNU EKLEYİN
+import { SupplierModal } from '../Modals/SupplierModal';
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -96,6 +97,7 @@ export const DashboardView: React.FC = () => {
     const topProcurementItems = [...procurementList].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 5);
 
     const [showProcurementModal, setShowProcurementModal] = useState(false);
+    const [showSupplierModal, setShowSupplierModal] = useState(false);
 
     const LOCKED_ITEMS = [
         "Mimari Proje", "Statik Proje", "Mekanik Proje", "Elektrik Projesi",
@@ -1031,6 +1033,7 @@ export const DashboardView: React.FC = () => {
                     </section>
 
                     {/* PROCUREMENT SUMMARY - GERÇEK SARF MALZEMELER */}
+                    {/* PROCUREMENT SUMMARY - GERÇEK SARF MALZEMELER */}
                     <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 md:p-6 shadow-lg flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1080,6 +1083,16 @@ export const DashboardView: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* YENİ EKLENEN KISIM: KARTIN ALTINDAKİ BUTON */}
+                        <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700">
+                            <button
+                                onClick={() => setShowSupplierModal(true)}
+                                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 py-2.5 rounded-lg font-bold text-sm shadow-md flex items-center justify-center gap-2 transition active:scale-95"
+                            >
+                                <i className="fas fa-shopping-cart"></i> Bölgedeki Toptancılardan Fiyat Al
+                            </button>
                         </div>
                     </section>
                 </div>
@@ -1159,6 +1172,12 @@ export const DashboardView: React.FC = () => {
                 isOpen={showProcurementModal}
                 onClose={() => setShowProcurementModal(false)}
                 procurementGroups={groupedProcurement}
+            />
+           
+            <SupplierModal 
+                isOpen={showSupplierModal} 
+                onClose={() => setShowSupplierModal(false)} 
+                procurementGroups={groupedProcurement} 
             />
             <TutorialOverlay />
             {showDuplexModal && <DuplexManagerModal onClose={() => setShowDuplexModal(false)} />}
