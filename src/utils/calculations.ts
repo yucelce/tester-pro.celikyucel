@@ -388,7 +388,7 @@ export class QuantityTakeoffService {
 
         // CONCRETE & IRON
         if (useDetailedConcrete) {
-           let totalColumnAreaOnFloor = 0; // YENİ: Kattaki toplam kolon/perde kesit alanı
+            let totalColumnAreaOnFloor = 0; // YENİ: Kattaki toplam kolon/perde kesit alanı
 
             (unit.columns || []).forEach(col => {
                 let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
@@ -396,7 +396,7 @@ export class QuantityTakeoffService {
                 const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
                 stats.column_concrete_volume += areaM2 * height;
                 stats.column_formwork_area += perimeterM * height;
-                
+
                 totalColumnAreaOnFloor += areaM2; // YENİ: Kolon alanını havuzda topla
             });
             (unit.beams || []).forEach(beam => {
@@ -417,26 +417,30 @@ export class QuantityTakeoffService {
                 let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
                 let thicknessM = slab.properties.thickness / 100;
                 let concreteVolume = area * thicknessM;
-                let ironDensity = 0.085; 
+                let ironDensity = 0.085;
 
                 if (slab.properties.type === 'asmolen') {
-                    concreteVolume = concreteVolume * 0.65; 
-                    ironDensity = 0.115; 
+                    concreteVolume = concreteVolume * 0.65;
+                    ironDensity = 0.115;
                 } else if (slab.properties.type === 'mantar') {
-                    ironDensity = 0.125; 
+                    ironDensity = 0.125;
                 }
 
                 stats.slab_concrete_volume += concreteVolume;
-                
+
                 // GÜNCELLEME: Döşeme kalıbından kolon kesişimlerini (alanını) düşürüyoruz.
                 // Eksiye düşmemesi için Math.max ile güvenlik önlemi alıyoruz.
-                stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor); 
-                
+                stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor);
+
                 totalSlabIronBase += concreteVolume * ironDensity;
             });
             const dynamicMultiplier = ironCoeff / 0.125;
-            stats.calc_iron_unit = (stats.column_concrete_volume * 0.135 * dynamicMultiplier) +
-                (stats.beam_concrete_volume * 0.105 * dynamicMultiplier) +
+
+            // TBDY 2018'e uygun olarak güncellenmiş baz donatı yoğunlukları:
+            // Kolon: 140 kg/m³ (0.140) - Sarılma bölgesi etriyeleri, çirozlar ve sık boyuna donatılar
+            // Kiriş: 130 kg/m³ (0.130) - Sıklaştırma bölgeleri, gövde, pilyesiz düz ilave donatılar
+            stats.calc_iron_unit = (stats.column_concrete_volume * 0.140 * dynamicMultiplier) +
+                (stats.beam_concrete_volume * 0.130 * dynamicMultiplier) +
                 (totalSlabIronBase * dynamicMultiplier);
         } else {
             const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
@@ -527,11 +531,11 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
     }
 
     const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
-    
+
     // 1. Zemin Kat Hacmi
     const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
     const volG = buildingStats.groundFloorArea * (hG - 0.12);
-    
+
     // 2. Normal Kat Hacmi
     const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
 
@@ -547,7 +551,7 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
 
     // TÜM HACİMLERİ TOPLA VE NET KULLANIM ALANINA (%75) ÇEVİR
     const totalVolNet = (volG + volN + volB + volR) * 0.75;
-    
+
     return { totalVolNet, hLossFactor };
 };
 
@@ -891,7 +895,16 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = raftHeight * 1.5;
-        return (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10;
+
+        // 1. Temel Altı Grobetonu (10 cm)
+        let totalGrobeton = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10;
+
+        // 2. YENİ: Bodrumsuz binalarda Subasman Dolgusu Üzeri Zemin Betonu (10 cm)
+        if (buildingStats.basementFloorCount === 0) {
+            totalGrobeton += (buildingStats.groundFloorArea || 0) * 0.10;
+        }
+
+        return totalGrobeton;
     },
 
 
@@ -1135,7 +1148,15 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-        return (ironKatlar + ((vTemel + vBodrumPerde) * ironCoeff)) * (item.multiplier || 1);
+
+        let totalIron = ironKatlar + ((vTemel + vBodrumPerde) * ironCoeff);
+
+        // YENİ: Bodrumsuz binalarda zemin taban betonu içine Çelik Hasır ilavesi (Ort. 4 kg/m² = 0.004 ton)
+        if (buildingStats.basementFloorCount === 0) {
+            totalIron += (buildingStats.groundFloorArea || 0) * 0.004;
+        }
+
+        return totalIron * (item.multiplier || 1);
     },
 
     'calc_rainwater_system': ({ buildingStats, item }) => {
@@ -1219,7 +1240,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         // Hafriyat Derinliği = Bodrumlar + Radye Temel Kalınlığı + 40 cm Grobeton/Yalıtım ve Çalışma Payı
         const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
-        
+
         const getExtendedArea = (baseArea: number, basePerimeter: number, ext: number) => {
             return baseArea + (basePerimeter * ext) + (4 * Math.pow(ext, 2));
         };
@@ -1326,7 +1347,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else {
             // Apartmanlarda çatı genellikle en üstteki normal katın (veya sadece zemin varsa zeminin) üzerine oturur
             baseArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : buildingStats.groundFloorArea;
-            basePerim = buildingStats.normalFloorCount > 0 
+            basePerim = buildingStats.normalFloorCount > 0
                 ? (buildingStats.normalFloorPerimeter || Math.sqrt(baseArea) * 4)
                 : (buildingStats.groundFloorPerimeter || Math.sqrt(baseArea) * 4);
         }
@@ -1455,14 +1476,14 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // 2. APARTMAN / SİTE: Planlı Alanlar İmar Yönetmeliğine göre asansörlü (4 kat ve üzeri), 
         // çok katlı veya belirli bir bağımsız bölüm sayısını geçen binalarda ortak alan jeneratörü zorunludur.
         const totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
-        
+
         let count = 0;
-        
+
         // Asansör zorunluluğu olan binalar (Genelde > 3 kat) veya 10'dan fazla daireli binalarda 1 Ortak Alan Jeneratörü
         if (totalFloors > 3 || totalUnits >= 10 || totalConstructionArea >= 800) {
             count = 1;
         }
-        
+
         // Site tarzı çok büyük projelerde (örn: 40+ daire veya 10+ kat) jeneratör kapasite/adet ihtiyacı artar
         if (totalUnits >= 40 || totalFloors >= 10) {
             count = 2;
@@ -1869,9 +1890,9 @@ export const calculateDynamicUnitPrice = (
     }
 
 
-   if (item.name === "İskele Kirası (Aylık)" && buildingStats) {
+    if (item.name === "İskele Kirası (Aylık)" && buildingStats) {
         let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
-        
+
         // EKSİK OLAN KISIMLAR EKLENDİ
         if (buildingStats.basementFloorCount === 0) {
             const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
