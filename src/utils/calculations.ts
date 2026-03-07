@@ -515,17 +515,32 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
     if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
     else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
 
-    // EKSİK OLAN KOD BURAYA EKLENDİ
     if (buildingStats.buildingType === 'villa') {
         materialHeatFactor *= 1.25;
     }
 
     const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
+    
+    // 1. Zemin Kat Hacmi
     const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
     const volG = buildingStats.groundFloorArea * (hG - 0.12);
+    
+    // 2. Normal Kat Hacmi
     const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
 
-    const totalVolNet = (volG + volN) * 0.75;
+    // 3. YENİ: Bodrum Kat Hacmi
+    const volB = buildingStats.basementFloorCount * buildingStats.basementFloorArea * (buildingStats.basementFloorHeight - 0.12);
+
+    // 4. YENİ: Çatı Katı Hacmi
+    let volR = 0;
+    if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
+        // Çatı katı için ortalama yükseklik kullanılır
+        volR = buildingStats.roofFloorArea * ((buildingStats.roofFloorHeight || 1.8) - 0.12);
+    }
+
+    // TÜM HACİMLERİ TOPLA VE NET KULLANIM ALANINA (%75) ÇEVİR
+    const totalVolNet = (volG + volN + volB + volR) * 0.75;
+    
     return { totalVolNet, hLossFactor };
 };
 
@@ -1651,9 +1666,15 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
             buildingStats.groundFloorHeight;
 
-        // Çatı katı varsa iskele yüksekliğine ekle
+        // 1. DÜZELTME: Subasman (Topraktan koparma) yüksekliğini iskeleye ekle
+        if (buildingStats.basementFloorCount === 0) {
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            facadeHeight += subasmanH;
+        }
+
+        // 2. DÜZELTME: Çatı katı varsa iskele yüksekliğini çatının tepe noktasına kadar uzat
         if (buildingStats.hasRoofFloor) {
-            facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0); // İskele çatının en tepe noktasına (mahya) kadar kurulur
+            facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0); // İskele mahyaya kadar kurulur
         }
 
         const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
@@ -1807,12 +1828,22 @@ export const calculateDynamicUnitPrice = (
     }
 
 
-    if (item.name === "İskele Kirası (Aylık)" && buildingStats) {
-        const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+   if (item.name === "İskele Kirası (Aylık)" && buildingStats) {
+        let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+        
+        // EKSİK OLAN KISIMLAR EKLENDİ
+        if (buildingStats.basementFloorCount === 0) {
+            const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+            facadeHeight += subasmanH;
+        }
+        if (buildingStats.hasRoofFloor) {
+            facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0);
+        }
+
         const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
         const scaffoldingPerimeter = basePerim + 16;
         const scaffoldingArea = facadeHeight * scaffoldingPerimeter;
-        return item.unit_price * scaffoldingArea; // basePrice yerine item.unit_price
+        return item.unit_price * scaffoldingArea;
     }
 
     if (item.name === "İnşaat Çivisi (kg)" || item.name === "Bağ Teli (kg)") {
