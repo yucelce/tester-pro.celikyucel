@@ -45,8 +45,8 @@ const AppLayout = () => {
             setAuthStatus('loading');
 
             try {
-                setAccountId("tester")
-                return 
+                setAccountId("tester") // silinecek
+                return // silinecek
                 const response = await fetch(`https://www.celikyucel.com/_functions/validateKey?apiKey=${apiKey}`);
                 const data = await response.json();
 
