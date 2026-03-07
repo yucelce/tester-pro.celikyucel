@@ -1294,37 +1294,42 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_roof': ({ buildingStats }) => {
+        let baseArea = 0;
+        let basePerim = 0;
+
+        // Çatının oturacağı izdüşüm tabanını (alan ve çevre) belirliyoruz.
         if (buildingStats.buildingType === 'villa') {
             const nArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : 0;
             const gArea = buildingStats.groundFloorArea || 0;
 
-            let maxArea = 0;
-            let basePerim = 0;
-
-            // Hangi kat daha geniş oturuyorsa onun alanını ve çevresini baz al
+            // Villalarda hangi kat daha geniş oturuyorsa onun alanını ve çevresini baz alıyoruz
             if (nArea > gArea) {
-                maxArea = nArea;
+                baseArea = nArea;
                 basePerim = buildingStats.normalFloorPerimeter || (Math.sqrt(nArea) * 4);
             } else {
-                maxArea = gArea;
+                baseArea = gArea;
                 basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(gArea) * 4);
             }
-
-            const eaveOverhang = 0.80; // 80 cm saçak payı
-
-            // Gerçek Matematiksel Formül:
-            // Saçaklı İzdüşüm Alanı = Bina Alanı + (Bina Çevresi * Saçak) + (Köşe Boşlukları: 4 * Saçak²)
-            const footprintWithEaves = maxArea + (basePerim * eaveOverhang) + (4 * Math.pow(eaveOverhang, 2));
-
-            // Çatı eğim katsayısı: 30 derece eğim için 1 / cos(30) ≈ 1.154
-            // Zayiat payı: Mahya, dere, eğik kesimler için %10 (1.10)
-            const pitchFactor = 1.154;
-            const wasteFactor = 1.10;
-
-            return footprintWithEaves * pitchFactor * wasteFactor;
+        } else {
+            // Apartmanlarda çatı genellikle en üstteki normal katın (veya sadece zemin varsa zeminin) üzerine oturur
+            baseArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : buildingStats.groundFloorArea;
+            basePerim = buildingStats.normalFloorCount > 0 
+                ? (buildingStats.normalFloorPerimeter || Math.sqrt(baseArea) * 4)
+                : (buildingStats.groundFloorPerimeter || Math.sqrt(baseArea) * 4);
         }
-        // Apartman için mevcut mantık
-        return (buildingStats.normalFloorArea) * 1.45;
+
+        const eaveOverhang = 0.80; // 80 cm standart saçak payı
+
+        // Gerçek Matematiksel Formül:
+        // Saçaklı İzdüşüm Alanı = Bina Alanı + (Bina Çevresi * Saçak) + (Köşe Boşlukları: 4 * Saçak²)
+        const footprintWithEaves = baseArea + (basePerim * eaveOverhang) + (4 * Math.pow(eaveOverhang, 2));
+
+        // Çatı eğim katsayısı: 30 derece eğim için 1 / cos(30) ≈ 1.154
+        // Zayiat payı: Mahya, dere, eğik kesimler için %10 (1.10)
+        const pitchFactor = 1.154;
+        const wasteFactor = 1.10;
+
+        return footprintWithEaves * pitchFactor * wasteFactor;
     },
 
     'calc_wall_global': ({ buildingStats }) => {
