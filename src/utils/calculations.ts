@@ -1903,7 +1903,7 @@ export const calculateDynamicUnitPrice = (
         }
 
         const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
-        const scaffoldingPerimeter = basePerim + 16;
+        const scaffoldingPerimeter = basePerim + 8;
         const scaffoldingArea = facadeHeight * scaffoldingPerimeter;
         return item.unit_price * scaffoldingArea;
     }

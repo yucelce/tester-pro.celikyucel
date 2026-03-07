@@ -6,6 +6,7 @@ import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUIStore } from '../../stores/uiStore';
 import { WallModal, RoomModal, ColumnModal, BeamModal, SlabModal, CalibrationModal } from '../Modals/EditorModals';
+import PolyBool from 'polybooljs'; 
 
 // EditorView now manages its own "editing" state locally, 
 // fetches the initial unit from store, and saves back to store.
@@ -147,88 +148,105 @@ export const EditorView: React.FC = () => {
     };
 
     const handleSyncSlabsToBuilding = () => {
-        if (!sourceUnit || editorScale === 0) {
-            alert("Lütfen önce planı ölçeklendirin ve yapısal eleman (döşeme, kiriş vb.) çizin.");
-            return;
+    if (!sourceUnit || editorScale === 0) {
+        alert("Lütfen önce planı ölçeklendirin ve yapısal eleman (döşeme, kolon vb.) çizin.");
+        return;
+    }
+
+    let totalArea = 0;
+    let manualArea = 0;
+    let manualPerimeter = 0;
+
+    // PolyBool için ana birleştirilmiş poligon nesnesi
+    // Başlangıçta boş bir bölge olarak tanımlıyoruz
+    let combinedPolygon = { regions: [] as number[][][], inverted: false };
+
+    // 1. Döşemeleri (Slabs) Birleştiriciye Ekle
+    editorSlabs.forEach(slab => {
+        if (slab.points && slab.points.length > 2) {
+            totalArea += slab.area_px! / (editorScale * editorScale);
+            
+            // Noktaları doğrudan METRE cinsinden [x, y] dizisine çeviriyoruz
+            const region = slab.points.map(p => [p.x / editorScale, p.y / editorScale]);
+            const slabPoly = { regions: [region], inverted: false };
+
+            // Mevcut birleştirilmiş poligon ile yeni döşemeyi birleştir (UNION)
+            combinedPolygon = PolyBool.union(combinedPolygon, slabPoly);
+            
+        } else if (slab.manualAreaM2 > 0) {
+            manualArea += slab.manualAreaM2;
+            manualPerimeter += Math.sqrt(slab.manualAreaM2) * 4;
         }
+    });
 
-        let totalArea = 0;
-        let manualArea = 0;
-        let manualPerimeter = 0;
-        let allPoints: Point[] = [];
+    // 2. Kolonları/Perdeleri (Columns) Birleştiriciye Ekle
+    // Dışarı taşan çıkma kolonlar veya perdeler dış cepheyi etkiler
+    editorColumns.forEach(col => {
+        if (col.points && col.points.length > 2) {
+            totalArea += col.area_px! / (editorScale * editorScale);
+            
+            const region = col.points.map(p => [p.x / editorScale, p.y / editorScale]);
+            const colPoly = { regions: [region], inverted: false };
 
-        // 1. Döşemeler (Slabs)
-        editorSlabs.forEach(slab => {
-            if (slab.points && slab.points.length > 2) {
-                totalArea += slab.area_px! / (editorScale * editorScale);
-                allPoints.push(...slab.points);
-            } else if (slab.manualAreaM2 > 0) {
-                manualArea += slab.manualAreaM2;
-                manualPerimeter += Math.sqrt(slab.manualAreaM2) * 4; // Manuel eklenmişse kare kabul et
-            }
-        });
-
-        // 2. Kirişler (Beams) - Alanı ve Uç Noktaları Hesaba Kat
-        editorBeams.forEach(beam => {
-            const widthM = beam.properties.width / 100;
-            const lengthM = beam.length_px / editorScale;
-            totalArea += (widthM * lengthM); // Kiriş alanını ekle
-            allPoints.push(beam.startPoint, beam.endPoint); // Sınırlar için uç noktaları ekle
-        });
-
-        // 3. Kolonlar (Columns) - Alanı ve Noktaları Hesaba Kat
-        editorColumns.forEach(col => {
-            if (col.points && col.points.length > 2) {
-                totalArea += col.area_px! / (editorScale * editorScale);
-                allPoints.push(...col.points);
-            }
-        });
-
-        if (totalArea === 0 && manualArea === 0) {
-            alert("Geçerli bir çizim alanı bulunamadı.");
-            return;
+            combinedPolygon = PolyBool.union(combinedPolygon, colPoly);
         }
+    });
 
-        // Tüm noktaların Bounding Box (En dış x, y sınırları) ile çevre hesabı
-        let calculatedPerimeter = 0;
-        if (allPoints.length > 0) {
-            const minX = Math.min(...allPoints.map(p => p.x));
-            const maxX = Math.max(...allPoints.map(p => p.x));
-            const minY = Math.min(...allPoints.map(p => p.y));
-            const maxY = Math.max(...allPoints.map(p => p.y));
+    // Kirişler (Beams) için basit alan hesabı
+    editorBeams.forEach(beam => {
+        const widthM = beam.properties.width / 100;
+        const lengthM = beam.length_px / editorScale;
+        totalArea += (widthM * lengthM);
+        // Not: Kirişlerin çizgi şeklinde (start/end point) olması nedeniyle poligon 
+        // union'a katılması için vektörel kalınlaştırma gerekir. Genelde dış cephe 
+        // sınırını döşemeler ve perdeler belirlediği için çevreyi bunlardan almak yeterlidir.
+    });
 
-            const widthM = (maxX - minX) / editorScale;
-            const heightM = (maxY - minY) / editorScale;
-            calculatedPerimeter = 2 * (widthM + heightM);
+    if (totalArea === 0 && manualArea === 0) {
+        alert("Geçerli bir çizim alanı bulunamadı.");
+        return;
+    }
+
+    // --- YENİ ÇEVRE HESAPLAMA MANTIĞI (POLYGON UNION) ---
+    let calculatedPerimeter = 0;
+
+    // Birleştirilmiş ve tüm iç kesişimleri silinmiş (Sadece Dış Sınırlar) poligonu dönüyoruz
+    combinedPolygon.regions.forEach(region => {
+        for (let i = 0; i < region.length; i++) {
+            const p1 = region[i];
+            const p2 = region[(i + 1) % region.length]; // Son noktayı ilk noktaya bağlayarak kapat
+            
+            // İki nokta arası Öklid mesafesini topla
+            calculatedPerimeter += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
         }
+    });
 
-        const finalArea = totalArea + manualArea;
-        const finalPerimeter = calculatedPerimeter + manualPerimeter;
+    const finalArea = totalArea + manualArea;
+    const finalPerimeter = calculatedPerimeter + manualPerimeter;
 
-        const floorType = sourceUnit.floorType;
-        let updates: Partial<any> = {};
+    const floorType = sourceUnit.floorType;
+    let updates: Partial<any> = {};
 
-        // Kat tipine göre BuildingStats verilerini güncelle
-        if (floorType === 'normal') {
-            updates.normalFloorArea = parseFloat(finalArea.toFixed(2));
-            updates.normalFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-            updates.isNormalPerimeterManual = true; // Otomatik hesaplamayı devre dışı bırak
-        } else if (floorType === 'ground') {
-            updates.groundFloorArea = parseFloat(finalArea.toFixed(2));
-            updates.groundFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-            updates.isGroundPerimeterManual = true;
-        } else if (floorType === 'basement') {
-            updates.basementFloorArea = parseFloat(finalArea.toFixed(2));
-            updates.basementFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-            updates.isBasementPerimeterManual = true;
-        }
+    // Kat tipine göre BuildingStats verilerini güncelle
+    if (floorType === 'normal') {
+        updates.normalFloorArea = parseFloat(finalArea.toFixed(2));
+        updates.normalFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+        updates.isNormalPerimeterManual = true; 
+    } else if (floorType === 'ground') {
+        updates.groundFloorArea = parseFloat(finalArea.toFixed(2));
+        updates.groundFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+        updates.isGroundPerimeterManual = true;
+    } else if (floorType === 'basement') {
+        updates.basementFloorArea = parseFloat(finalArea.toFixed(2));
+        updates.basementFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+        updates.isBasementPerimeterManual = true;
+    }
 
-        // Global state'i güncelle
-        setBuildingStats(prev => ({ ...prev, ...updates }));
+    setBuildingStats(prev => ({ ...prev, ...updates }));
 
-        const floorName = floorType === 'normal' ? 'Normal Kat' : floorType === 'ground' ? 'Zemin Kat' : 'Bodrum Kat';
-        alert(`${floorName} Sınırları Güncellendi!\n\nToplam Alan (Kiriş/Kolon Dahil): ${finalArea.toFixed(2)} m²\nDış Çevre (Dış Limitler): ${finalPerimeter.toFixed(2)} mt.\n\nBu değerler dış cephe ve mantolama hesaplarına yansıtılmıştır.`);
-    };
+    const floorName = floorType === 'normal' ? 'Normal Kat' : floorType === 'ground' ? 'Zemin Kat' : 'Bodrum Kat';
+    alert(`${floorName} Sınırları Güncellendi!\n\nToplam Alan: ${finalArea.toFixed(2)} m²\nGerçek Dış Çevre: ${finalPerimeter.toFixed(2)} mt.`);
+};
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
