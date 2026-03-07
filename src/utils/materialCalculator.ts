@@ -26,7 +26,9 @@ export const generateProcurementPlan = (
 
     // Hangi kategorinin hangi iş programı kalemine (task) denk geldiği
     const getTaskForCategory = (catId: string, itemName: string): string => {
-        const nameLower = itemName.toLowerCase();
+        // TÜRKÇE KARAKTER DÜZELTMESİ (İ -> i dönüşümü için)
+        const nameLower = itemName.toLocaleLowerCase('tr-TR');
+        
         if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
         switch (catId) {
             case 'kaba_insaat': return nameLower.includes('çatı') ? 'roof' : 'structure';
@@ -47,7 +49,7 @@ export const generateProcurementPlan = (
         cement: getGlobalPrice(costs, "Çimento (kg)"),
         sand: getGlobalPrice(costs, "Kum (m3)"),
         lime: getGlobalPrice(costs, "Kireç (kg)"),
-        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000, // Ton fiyatını kg'a çevir
+        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000, 
         concrete: getGlobalPrice(costs, "Betonarme Betonu"),
         adhesive: getGlobalPrice(costs, "Gazbeton Yapıştırıcısı"),
         ceramicTile: getGlobalPrice(costs, "Seramik Kaplama"),
@@ -57,10 +59,10 @@ export const generateProcurementPlan = (
         kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
         kereste: getGlobalPrice(costs, "Kereste (m3)"),
         bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
-        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)")) * 35, // Wix'ten kg gelir, 35kg torba fiyatına çevrilir
-        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)")) * 25, // Wix'ten kg gelir, 25kg torba fiyatına çevrilir
-        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)")) * 20, // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
-        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)")) * 20 // Wix'ten kg gelir, 20kg kova fiyatına çevrilir
+        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)")) * 35, 
+        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)")) * 25, 
+        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)")) * 20, 
+        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)")) * 20 
     };
 
     // Listeye Ekleme Fonksiyonu
@@ -82,13 +84,12 @@ export const generateProcurementPlan = (
                 totalPrice: qty * unitPrice,
                 taskId: task ? task.id : 'other',
                 taskName: task ? task.name : 'Genel',
-                // Şantiye dinamiği: Malzeme iş başlamadan 3 gün önce sahaya insin
                 deliveryDate: task ? new Date(task.startDate.getTime() - 3 * 24 * 60 * 60 * 1000) : new Date()
             });
         }
     };
 
-    // --- 1. AŞAMA: KABA YAPI VE İNCE İŞLER SARFİYATLARI (ÇÖZÜMLEME) ---
+    // --- 1. AŞAMA: KABA YAPI VE İNCE İŞLER SARFİYATLARI ---
     const formworkArea = quantities["Kalıp İşçiliği & Malzeme"] || 0;
     addCalculatedMaterial('civi_kalip', 'İnşaat Çivisi (5-10 cm)', 'kg', formworkArea * 0.20, 'structure', prices.civi);
     addCalculatedMaterial('kalip_yagi', 'Kalıp Ayırıcı Yağ', 'Litre', formworkArea * 0.15, 'structure', prices.kalipYagi);
@@ -118,9 +119,9 @@ export const generateProcurementPlan = (
     addCalculatedMaterial('kum_sap', 'Şap Kumu', 'm³', screedArea * 0.05, 'screed', prices.sand);
 
     const paintArea = (stats.calc_paint_wall_area || 0) + (stats.calc_ceiling_paint_area || 0);
-    // DÜZELTME: Makine sıvası m2 başına ortalama 9.5 kg sarfiyat yapar (1 cm kalınlık için).
     addCalculatedMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'Torba (35kg)', (paintArea * 9.5) / 35, 'plaster', prices.sivaAlcisi);
-    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1) / 25, 'plaster', prices.satenAlci); addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45) / 20, 'paint', prices.icCepheBoya);
+    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1) / 25, 'plaster', prices.satenAlci); 
+    addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45) / 20, 'paint', prices.icCepheBoya);
 
     const wetArea = stats.wet_area || 0;
     const netWetArea = stats.net_wet_area || wetArea;
@@ -130,33 +131,38 @@ export const generateProcurementPlan = (
 
     // --- 2. AŞAMA: PROJEDEKİ DİĞER "FİZİKSEL" MALZEMELERİN EKLENMESİ ---
 
-    // Zaten üstte sarfiyata çevirdiğimiz montajlı paket isimleri listeye tekrar girmesin diye süzüyoruz
+    // Zaten alt kalemlerine böldüğümüz ana kalemler
     const brokenDownItems = [
-        "betonarme betonu", "inşaat demiri", "kalıp işçiliği & malzeme", "duvar örme harcı", "gazbeton yapıştırıcısı",
+        "betonarme betonu", "inşaat demiri", "kalıp işçiliği", "duvar örme harcı", "gazbeton yapıştırıcısı",
         "iç sıva", "alçı sıva", "iç cephe boyası", "tavan boyası", "şap malzemesi", "şap işçiliği",
         "seramik yapıştırıcısı", "seramik derz dolgusu", "seramik kaplama"
     ];
 
-    // Şantiyeye gelmeyen soyut hizmet, harç ve işçilik kelimeleri
+    // Şantiyeye gelmeyen soyut hizmet, harç, işçilik ve operasyonel gider filtreleri (Genişletildi)
     const nonPhysicalKeywords = [
-        "işçiliği", "işçilik", "harcı", "harçları", "proje", "etüdü", "rapor", "hizmet bedeli",
-        "abonelik", "tüketimi", "personel", "şefi", "kira", "kurulum", "söküm", "sgk", "sigorta",
-        "noter", "tapu", "vergi", "makinesi", "vinç", "hafriyat", "yıkım", "osgb", "yardımı", "bedeli", "giderleri"
+        "işçiliği", "işçilik", "harcı", "harçları", "proje", "etüdü", "rapor", "hizmet", "bedeli",
+        "abonelik", "tüketimi", "personel", "şefi", "kira", "kirası", "kurulum", "söküm", "sgk", "sigorta",
+        "noter", "tapu", "vergi", "makinesi", "vinç", "hafriyat", "yıkım", "osgb", "yardımı", "giderleri",
+        "ücreti", "belgesi", "ruhsat", "etiket", "sondaj", "deneyi", "laboratuvar", "fiyatı", "primi", "kırıcı"
     ];
 
     projectCostDetails.forEach(cat => {
-        // Tamamen hizmet veya finansman olan kategorileri atla
-        if (['arsa_finansman', 'resmi_idari', 'santiye_hafriyat'].includes(cat.id)) return;
+        // Sadece Arsa/Finansman ve Resmi işlemleri atlıyoruz. 
+        // Şantiye kurulumu içindeki fiziksel malzemeler (Konteyner, Çit vb.) artık listeye dahil edilecek.
+        if (['arsa_finansman', 'resmi_idari'].includes(cat.id)) return;
 
         cat.items.forEach((item: any) => {
             if (item.totalPrice <= 0) return;
 
-            const nameLower = item.name.toLowerCase();
+            // TÜRKÇE KARAKTER DÜZELTMESİ ("İ" harfinin doğru filtrelenmesi için)
+            const nameLower = item.name.toLocaleLowerCase('tr-TR');
 
             const isBrokenDown = brokenDownItems.some(kw => nameLower.includes(kw));
-            const isNonPhysical = nonPhysicalKeywords.some(kw => nameLower.includes(kw));
+            
+            // "Yerden Isıtma (Strafor+Boru+İşçilik)" içinde "işçilik" geçse de, fiziksel malzeme olduğu için koruyoruz.
+            const isNonPhysical = nonPhysicalKeywords.some(kw => nameLower.includes(kw)) && !nameLower.includes("yerden ısıtma");
 
-            // Eğer malzeme parçalanmamış bir fiziksel ürüneyse (Örn: Kapı, Pencere, Kombi, Radyatör)
+            // Eğer parça fiziksel bir ürüneyse (Örn: Kapı, Pencere, Konteyner, Radyatör)
             if (!isBrokenDown && !isNonPhysical && item.unit !== 'Ay') {
                 const taskId = getTaskForCategory(cat.id, item.name);
                 const task = schedule.find(t => t.id === taskId);
@@ -170,7 +176,7 @@ export const generateProcurementPlan = (
                     totalPrice: item.totalPrice,
                     taskId: task ? task.id : 'other',
                     taskName: task ? task.name : 'Genel',
-                    deliveryDate: task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date() // Montajdan 1 hafta önce
+                    deliveryDate: task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date() 
                 });
             }
         });
