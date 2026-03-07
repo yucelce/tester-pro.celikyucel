@@ -1217,15 +1217,27 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         else if (totalFloorsForExc >= 4) raftHeightExc = 0.40 + (totalFloorsForExc - 4) * 0.10;
         else if (totalFloorsForExc >= 3) raftHeightExc = 0.40;
 
+        // Hafriyat Derinliği = Bodrumlar + Radye Temel Kalınlığı + 40 cm Grobeton/Yalıtım ve Çalışma Payı
         const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
+        
         const getExtendedArea = (baseArea: number, basePerimeter: number, ext: number) => {
             return baseArea + (basePerimeter * ext) + (4 * Math.pow(ext, 2));
         };
 
-        const extensionBase = Math.max(raftHeightExc * 1.5, 1.0);
+        // --- YENİ MÜHENDİSLİK MANTIĞI: İKSA KONTROLÜ ---
+        let extensionBase = Math.max(raftHeightExc * 1.5, 1.0); // Normal şartlarda ampatman payı
+        let isSloped = excavationDepth > 6.0; // Normalde 6m üstü kademeli şev yapılır
+
+        // Eğer Kuyu Temel / Derin İksa varsa şev (eğim) YAPILAMAZ. Kazı dik kesilir.
+        if (buildingStats.hasWellFoundation) {
+            extensionBase = 0.50; // Sadece işçilerin yalıtım yapabilmesi için dar bir çalışma payı
+            isSloped = false;     // Şevli (kademeli) kazı iptal edilir
+        }
+
         let totalExcavationVolume = 0;
 
-        if (excavationDepth > 6.0) {
+        if (isSloped) {
+            // Şevli/Kademeli Kazı (İksa olmayan açık araziler için)
             const stepHeight = 6.0;
             const fullSteps = Math.floor(excavationDepth / stepHeight);
             const remainingHeight = excavationDepth - (fullSteps * stepHeight);
@@ -1248,11 +1260,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             }
 
         } else {
+            // Dik Kesim (İksalı veya 6m'den sığ kazılar)
             const finalArea = getExtendedArea(excavationBaseArea, basePerim, extensionBase);
             totalExcavationVolume = excavationDepth * finalArea;
         }
 
-        return totalExcavationVolume * item.multiplier * 1.25;
+        return totalExcavationVolume * item.multiplier * 1.25; // 1.25 -> Kabarma (Döküm) Katsayısı
     },
 
     'calc_radiator_mt': ({ aggregatedUnitStats, buildingStats, globalWallMaterial, item }) => {
@@ -1432,14 +1445,30 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
-    'calc_generator': ({ buildingStats }) => {
-        // 1. Sadece VİLLA senaryosunda jeneratör hesabı yapılır ve 1 adet paket eklenir
+    'calc_generator': ({ buildingStats, totalFloors, totalConstructionArea, aggregatedUnitStats }) => {
+        // 1. VİLLA: Jeneratör zorunlu değildir, tamamen lüks ve opsiyonel bir donanımdır.
+        // (İsteyen kullanıcı özel kalemlerden veya akıllı ev paketinden ekleyebilir)
         if (buildingStats.buildingType === 'villa') {
-            return 1;
+            return 0;
         }
 
-        // 2. Apartman ve diğer bina tiplerinde jeneratör maliyete eklenmez
-        return 0;
+        // 2. APARTMAN / SİTE: Planlı Alanlar İmar Yönetmeliğine göre asansörlü (4 kat ve üzeri), 
+        // çok katlı veya belirli bir bağımsız bölüm sayısını geçen binalarda ortak alan jeneratörü zorunludur.
+        const totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
+        
+        let count = 0;
+        
+        // Asansör zorunluluğu olan binalar (Genelde > 3 kat) veya 10'dan fazla daireli binalarda 1 Ortak Alan Jeneratörü
+        if (totalFloors > 3 || totalUnits >= 10 || totalConstructionArea >= 800) {
+            count = 1;
+        }
+        
+        // Site tarzı çok büyük projelerde (örn: 40+ daire veya 10+ kat) jeneratör kapasite/adet ihtiyacı artar
+        if (totalUnits >= 40 || totalFloors >= 10) {
+            count = 2;
+        }
+
+        return count;
     },
 
     'calc_fire_system': ({ regulationHeight, buildingStats, item }) => {
