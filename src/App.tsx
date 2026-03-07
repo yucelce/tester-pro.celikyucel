@@ -36,7 +36,7 @@ const AppLayout = () => {
             if (!apiKey) {
                 setAuthStatus('error');
                 setAuthStatus('success'); //silinecek
-                    return
+                    return //silinecek
                
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
@@ -45,6 +45,8 @@ const AppLayout = () => {
             setAuthStatus('loading');
 
             try {
+                setAccountId("tester")
+                return 
                 const response = await fetch(`https://www.celikyucel.com/_functions/validateKey?apiKey=${apiKey}`);
                 const data = await response.json();
 
@@ -56,7 +58,7 @@ const AppLayout = () => {
                     }
                 } else {
                     setAuthStatus('success'); //silinecek
-                    return
+                    return //silinecek
                     setAuthStatus('error');
                     setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
                 }
@@ -64,7 +66,7 @@ const AppLayout = () => {
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('error');
                 setAuthStatus('success'); //silinecek
-                    return
+                    return //silinecek
                
                 setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
             }
