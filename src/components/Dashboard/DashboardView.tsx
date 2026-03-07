@@ -531,7 +531,7 @@ export const DashboardView: React.FC = () => {
                     >
                         <div className="flex items-center gap-4">
                             <div className="bg-orange-100 dark:bg-orange-950 p-2.5 rounded-xl border border-orange-200 dark:border-orange-800/50 shadow-inner text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
-                                <i className="fas fa-hard-hat text-2xl"></i>
+                                <i className="fas fa-th text-2xl"></i>
                             </div>
                             <div className="text-left">
                                 <h2 className="text-lg md:text-xl font-bold text-slate-950 dark:text-white flex items-center gap-2">
