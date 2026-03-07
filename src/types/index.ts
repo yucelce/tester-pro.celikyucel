@@ -276,6 +276,7 @@ export interface ReportSettings {
     profitMargin: number;
     selectedBrands: Record<string, string[]>;
 
+    includeBuildingDetails: boolean;
     includeCashflow: boolean;
     includeProcurement: boolean;
     includeSchedule: boolean;

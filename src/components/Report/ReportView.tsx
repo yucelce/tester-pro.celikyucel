@@ -287,6 +287,10 @@ export const ReportView: React.FC = () => {
                                 </label>
                                 <hr className="my-1 border-slate-100" />
                                 <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
+                                    <input type="checkbox" checked={reportSettings.includeBuildingDetails} onChange={(e) => updateReportSettings({ includeBuildingDetails: e.target.checked })} className="accent-blue-600 w-4 h-4" />
+                                    <span className="font-bold text-slate-700">Yapı ve Bağımsız Bölüm Bilgileri</span>
+                                </label>
+                                <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
                                     <input type="checkbox" checked={reportSettings.showUnitDetails} onChange={(e) => updateReportSettings({ showUnitDetails: e.target.checked })} className="accent-blue-600 w-4 h-4" />
                                     <span className="font-bold text-slate-700">Daire (Mahal) İnce Metrajları</span>
                                 </label>
@@ -374,6 +378,173 @@ export const ReportView: React.FC = () => {
                     </div>
                     <div className="mb-4"><h3 className="text-sm font-bold text-slate-900 uppercase mb-4 border-b border-slate-200 pb-2">Bütçe Dağılımı</h3><CostDonutChart /></div>
                 </div>
+
+                {reportSettings.includeBuildingDetails && (
+                    <div className="w-full min-h-[297mm] p-12 bg-white relative print:break-after-page page-break border-t border-slate-200">
+                        <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
+                            <div>
+                                <h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Yapı ve Bağımsız Bölüm Detayları</h2>
+                                <p className="text-slate-500 text-sm mt-1">Kat bilgileri, alanlar ve bağımsız bölüm (daire/ticari) dağılımları</p>
+                            </div>
+                        </div>
+
+                        {/* Kat Bilgileri Tablosu */}
+                        <h3 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Kat Bilgileri</h3>
+                        <table className="w-full text-sm border-collapse mb-10 break-inside-avoid">
+                            <thead className="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th className="py-2 px-3 text-left border-b border-slate-200">Kat Tipi</th>
+                                    <th className="py-2 px-3 text-center border-b border-slate-200">Adet</th>
+                                    <th className="py-2 px-3 text-center border-b border-slate-200">Yükseklik (m)</th>
+                                    <th className="py-2 px-3 text-right border-b border-slate-200">Kat Alanı (m²)</th>
+                                    <th className="py-2 px-3 text-right border-b border-slate-200">Toplam Alan (m²)</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0 && (
+                                    <tr>
+                                        <td className="py-2 px-3 font-medium">Çatı Katı</td>
+                                        <td className="py-2 px-3 text-center">1</td>
+                                        <td className="py-2 px-3 text-center">{buildingStats.roofFloorHeight || 1.8}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.roofFloorArea}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.roofFloorArea}</td>
+                                    </tr>
+                                )}
+                                {buildingStats.normalFloorCount > 0 && (
+                                    <tr>
+                                        <td className="py-2 px-3 font-medium">Normal Kat</td>
+                                        <td className="py-2 px-3 text-center">{buildingStats.normalFloorCount}</td>
+                                        <td className="py-2 px-3 text-center">{buildingStats.normalFloorHeight}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.normalFloorArea}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.normalFloorCount * buildingStats.normalFloorArea}</td>
+                                    </tr>
+                                )}
+                                <tr>
+                                    <td className="py-2 px-3 font-medium">Zemin Kat</td>
+                                    <td className="py-2 px-3 text-center">1</td>
+                                    <td className="py-2 px-3 text-center">{buildingStats.groundFloorHeight}</td>
+                                    <td className="py-2 px-3 text-right font-mono">{buildingStats.groundFloorArea}</td>
+                                    <td className="py-2 px-3 text-right font-mono">{buildingStats.groundFloorArea}</td>
+                                </tr>
+                                {buildingStats.basementFloorCount > 0 && (
+                                    <tr>
+                                        <td className="py-2 px-3 font-medium">Bodrum Kat</td>
+                                        <td className="py-2 px-3 text-center">{buildingStats.basementFloorCount}</td>
+                                        <td className="py-2 px-3 text-center">{buildingStats.basementFloorHeight}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.basementFloorArea}</td>
+                                        <td className="py-2 px-3 text-right font-mono">{buildingStats.basementFloorCount * buildingStats.basementFloorArea}</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                            <tfoot className="bg-slate-50 font-bold border-t-2 border-slate-300">
+                                <tr>
+                                    <td colSpan={4} className="py-2 px-3 text-right uppercase">Toplam İnşaat Alanı</td>
+                                    <td className="py-2 px-3 text-right text-blue-600 font-mono">{totalConstructionArea.toLocaleString()} m²</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        {/* Bağımsız Bölüm Tablosu */}
+                        <h3 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Bağımsız Bölüm Dağılımı</h3>
+                        <table className="w-full text-sm border-collapse break-inside-avoid">
+                            <thead className="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th className="py-2 px-3 text-left border-b border-slate-200">Bölüm Tipi / Adı</th>
+                                    <th className="py-2 px-3 text-center border-b border-slate-200">Yerleşim</th>
+                                    <th className="py-2 px-3 text-center border-b border-slate-200">Adet</th>
+                                    <th className="py-2 px-3 text-right border-b border-slate-200">Ort. Net Alan (m²)</th>
+                                    <th className="py-2 px-3 text-right border-b border-slate-200">Oda Sayısı</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {(() => {
+                                    const displayRows: any[] = [];
+                                    const availableUnitCounts: Record<string, number> = {};
+                                    units.forEach(u => availableUnitCounts[u.id] = u.count);
+
+                                    // Dubleksleri Ayıkla
+                                    duplexPairs.forEach(pair => {
+                                        const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
+                                        const upperUnit = units.find(u => u.id === pair.upperUnitId);
+
+                                        if (lowerUnit && upperUnit) {
+                                            const c = Math.min(pair.count, availableUnitCounts[lowerUnit.id] || 0, availableUnitCounts[upperUnit.id] || 0);
+                                            if (c > 0) {
+                                                availableUnitCounts[lowerUnit.id] -= c;
+                                                availableUnitCounts[upperUnit.id] -= c;
+                                                
+                                                const lowerArea = lowerUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (lowerUnit.scale > 0 ? r.area_px / (lowerUnit.scale ** 2) : 0)), 0);
+                                                const upperArea = upperUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (upperUnit.scale > 0 ? r.area_px / (upperUnit.scale ** 2) : 0)), 0);
+                                                
+                                                displayRows.push({
+                                                    id: `duplex-${pair.id}`,
+                                                    name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
+                                                    floorLabel: `${lowerUnit.floorType} + ${upperUnit.floorType}`,
+                                                    count: c,
+                                                    netArea: lowerArea + upperArea,
+                                                    roomCount: lowerUnit.rooms.length + upperUnit.rooms.length
+                                                });
+                                            }
+                                        }
+                                    });
+
+                                    // Normal Daireleri Ekle
+                                    units.forEach(u => {
+                                        if (availableUnitCounts[u.id] > 0) {
+                                            const area = u.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (u.scale > 0 ? r.area_px / (u.scale ** 2) : 0)), 0);
+                                            displayRows.push({
+                                                id: u.id,
+                                                name: u.name,
+                                                floorLabel: u.floorType,
+                                                count: availableUnitCounts[u.id],
+                                                netArea: area,
+                                                roomCount: u.rooms.length
+                                            });
+                                        }
+                                    });
+
+                                    const floorTypeMap: Record<string, string> = {
+                                        'normal': 'Normal Kat',
+                                        'ground': 'Zemin Kat',
+                                        'basement': 'Bodrum Kat',
+                                        'roof': 'Çatı Katı'
+                                    };
+
+                                    if (displayRows.length === 0) {
+                                        return <tr><td colSpan={5} className="py-4 text-center text-slate-500">Tanımlı bağımsız bölüm bulunamadı.</td></tr>;
+                                    }
+
+                                    let totalUnits = 0;
+
+                                    const renderRows = displayRows.map(row => {
+                                        totalUnits += row.count;
+                                        const formattedFloor = row.floorLabel.split(' + ').map((f:string) => floorTypeMap[f] || f).join(' + ');
+
+                                        return (
+                                            <tr key={row.id}>
+                                                <td className="py-2 px-3 font-medium">{row.name}</td>
+                                                <td className="py-2 px-3 text-center text-xs text-slate-500 uppercase">{formattedFloor}</td>
+                                                <td className="py-2 px-3 text-center font-bold">{row.count}</td>
+                                                <td className="py-2 px-3 text-right font-mono">{row.netArea.toFixed(2)}</td>
+                                                <td className="py-2 px-3 text-right">{row.roomCount}</td>
+                                            </tr>
+                                        );
+                                    });
+
+                                    renderRows.push(
+                                        <tr key="total" className="bg-slate-50 font-bold border-t-2 border-slate-300">
+                                            <td className="py-3 px-3 text-right uppercase" colSpan={2}>Toplam Bağımsız Bölüm:</td>
+                                            <td className="py-3 px-3 text-center text-blue-600 text-lg">{totalUnits} Adet</td>
+                                            <td colSpan={2}></td>
+                                        </tr>
+                                    );
+
+                                    return renderRows;
+                                })()}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
 
                 {reportSettings.selectedBrands && Object.keys(reportSettings.selectedBrands).length > 0 && (
                     <div className="w-full min-h-[150mm] p-12 bg-slate-50 relative print:break-after-page page-break border-t border-slate-200">

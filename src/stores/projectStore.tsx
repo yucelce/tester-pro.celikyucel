@@ -186,9 +186,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         projectDescription: 'Bu proje modern mimari standartlarına uygun olarak tasarlanmış olup, 1. sınıf malzemelerle inşa edilecektir.',
         firmLogo: null,
         projectRender: null,
-        showUnitDetails: false, // Firma içi detaylar varsayılan olarak kapalı
+        showUnitDetails: false, 
         profitMargin: 0,
         selectedBrands: {},
+        includeBuildingDetails: true, // YENİ EKLENEN SATIR (Varsayılan olarak açık gelsin)
         includeCashflow: false,
         includeProcurement: false,
         includeSchedule: false,
