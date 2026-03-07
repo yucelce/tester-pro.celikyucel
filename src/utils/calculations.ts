@@ -747,8 +747,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts }) => {
-        const totalApartments = aggregatedUnitStats['calc_unit_count'] || 1;
-
+        const totalApartments = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         const verticalPipePrice = getGlobalPrice(currentCosts, "Doğalgaz Kolon Hattı (mt) Birim");
         const connectionSetPrice = getGlobalPrice(currentCosts, "Doğalgaz Daire Başı Set Birim");
         const horizontalPipePrice = verticalPipePrice * 0.636;
@@ -895,7 +894,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_vrf_outdoor': ({ buildingStats, aggregatedUnitStats }) => {
         if (buildingStats.heatingSystem === 'vrf') {
-            return aggregatedUnitStats['calc_unit_count'] || 1;
+            // Villa ise her halükarda 1 adet dış ünite al
+            return buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         }
         return 0;
     },
@@ -1030,8 +1030,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(totalConstructionArea * classUnitPrice * 0.002);
     },
 
-    'calc_sgk_premium': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
-        const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
+    'calc_sgk_premium': ({ buildingStats,aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
+        const totalUnits = buildingStats.buildingType === 'villa' ? 1 : getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
         const totalEstimatedCost = totalConstructionArea * classUnitPrice;

@@ -892,6 +892,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
         }
 
+        
+
         effectiveStructuralUnits.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
             addToAggregated(stats, u.count);
@@ -951,6 +953,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
             }
         });
+
+        if (buildingStats.buildingType === 'villa') {
+            // Villa tek bir bağımsız bölümdür, kaç kat çizilirse çizilsin 1 kabul edilir.
+            aggregatedUnitStats['calc_unit_count'] = 1;
+            
+            // Sadece 1 adet ana çelik kapı olmalı
+            aggregatedUnitStats['calc_steel_door'] = 1; 
+            
+            // Isıtma sistemleri dış/ana üniteleri villada 1 adettir
+            if (aggregatedUnitStats['calc_heat_pump'] !== undefined) aggregatedUnitStats['calc_heat_pump'] = 1;
+            if (aggregatedUnitStats['calc_combi_count'] !== undefined) aggregatedUnitStats['calc_combi_count'] = 1;
+        }
 
         const details = costs.map(cat => {
             let catTotal = 0;
