@@ -168,6 +168,8 @@ export interface BuildingStats {
     smartHomeSensors?: boolean;
     smartHomeBlinds?: boolean;
 
+    hasElevator?: boolean;
+
     province: string;
     district: string;
     landArea: number;

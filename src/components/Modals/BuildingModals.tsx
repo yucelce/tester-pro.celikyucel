@@ -22,7 +22,7 @@ interface BuildingModalProps {
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
-    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general'); 
+    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general');
     const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
 
     const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor') => {
@@ -42,7 +42,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
         const needsAttention = !isVisited && !isActive; // Ziyaret edilmemişse ve şu an aktif değilse
 
         let baseClasses = "px-4 py-3 font-bold text-xs md:text-sm border-b-2 transition-all duration-300 whitespace-nowrap shrink-0 flex items-center gap-2 relative";
-        
+
         if (isActive) {
             // Aktif Sekme Görünümü
             return (
@@ -57,8 +57,8 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     <i className={`fas ${icon} animate-pulse`}></i> {label}
                     {/* Sağ üstte zıplayan küçük uyarı noktası */}
                     <span className="absolute top-2 right-2 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                     </span>
                 </button>
             );
@@ -233,12 +233,12 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                 </div>
 
                 {/* Tabs Navigation */}
-               <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
+                <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
                     {renderTab('general', 'fa-file-alt', 'Genel Bilgiler')}
                     {renderTab('floors', 'fa-layer-group', 'Kat Bilgileri')}
                     {renderTab('special', 'fa-tools', 'Malzeme & Tesisat')}
                     {renderTab('contract', 'fa-file-contract', 'Sözleşme & Mevcut Yapı')}
-                    
+
                     {buildingStats.buildingType === 'villa' && (
                         renderTab('villa_outdoor', 'fa-tree', 'Villa Detaylar')
                     )}
@@ -1061,6 +1061,23 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         />
                                     </div>
                                 </div>
+                            </div>
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl mt-4">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={buildingStats.hasElevator || false}
+                                        onChange={(e) => setBuildingStats({ ...buildingStats, hasElevator: e.target.checked })}
+                                        className="w-5 h-5 accent-blue-500 rounded cursor-pointer"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                                            <i className="fas fa-arrow-up-down text-blue-400"></i>
+                                            Villa İçi Asansör Sistemi
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 mt-1 block">Katlar arası asansör istiyorsanız işaretleyin (Opsiyonel donanım).</span>
+                                    </div>
+                                </label>
                             </div>
                         </div>
                     )}

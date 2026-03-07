@@ -515,6 +515,11 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
     if (globalWallMaterial === 'gazbeton') materialHeatFactor = 0.85;
     else if (globalWallMaterial === 'bims') materialHeatFactor = 0.92;
 
+    // EKSİK OLAN KOD BURAYA EKLENDİ
+    if (buildingStats.buildingType === 'villa') {
+        materialHeatFactor *= 1.25;
+    }
+
     const hLossFactor = (30 + (zone * 5)) * materialHeatFactor;
     const hG = buildingStats.groundFloorHeight || buildingStats.normalFloorHeight;
     const volG = buildingStats.groundFloorArea * (hG - 0.12);
@@ -1006,13 +1011,20 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_grass_and_irrigation': ({ buildingStats }) => {
-        if (buildingStats.buildingType === 'villa') {
-            const footprintArea = buildingStats.groundFloorArea || 0;
-            const openArea = Math.max(0, buildingStats.landArea - footprintArea);
-            return openArea * 0.70;
-        }
-        return 0;
-    },
+    if (buildingStats.buildingType === 'villa') {
+        const footprintArea = buildingStats.groundFloorArea || 0;
+        const pool = buildingStats.poolArea || 0;
+        const parking = buildingStats.parkingArea || 0;
+        const veranda = buildingStats.verandaArea || 0;
+
+        // Arsadan sadece evi değil; havuz, otopark ve verandayı da düşüyoruz
+        const totalHardscape = footprintArea + pool + parking + veranda;
+        const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
+        
+        return openArea * 0.70;
+    }
+    return 0;
+},
 
     'calc_demolition_supervisor': ({ buildingStats, currentCosts }) => {
         if (buildingStats.hasExistingBuilding) {
@@ -1030,7 +1042,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(totalConstructionArea * classUnitPrice * 0.002);
     },
 
-    'calc_sgk_premium': ({ buildingStats,aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
+    'calc_sgk_premium': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
         const totalUnits = buildingStats.buildingType === 'villa' ? 1 : getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
@@ -1294,14 +1306,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_facade': ({ buildingStats, aggregatedUnitStats }) => {
-        // 1. Toplam pencere alanını ünitelerden (dairelerden) çekiyoruz
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
         const deductibleWindowArea = totalWindowArea;
 
+        // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI ---
+        let roofFacade = 0;
+        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
+            const roofPerim = buildingStats.roofFloorPerimeter || (Math.sqrt(buildingStats.roofFloorArea) * 4);
+            // Kalkan duvar ve parapetlerin ortalama yüksekliği olarak roofFloorHeight (veya min 1.5m) alınır
+            roofFacade = roofPerim * (buildingStats.roofFloorHeight || 1.8);
+        }
+
         if (buildingStats.buildingType === 'villa') {
             const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
-
-            // DÜZELTME: Sabit 0.80 yerine kullanıcının belirlediği subasman yüksekliğini (veya varsayılan 0.50'yi) alıyoruz
             const subH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             const groundFacade = groundPerim * (buildingStats.groundFloorHeight + subH);
 
@@ -1311,14 +1328,17 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
 
-            const grossFacade = groundFacade + normalFacade;
-            // Brüt cepheden, düşülebilir pencere alanını çıkarıp zayiat ekliyoruz
+            // Çatı katını toplama dahil ediyoruz
+            const grossFacade = groundFacade + normalFacade + roofFacade;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
             return netFacade * 1.15; // %15 zayiat
 
         } else {
-            // Apartman için mevcut kodlar aynen kalır...
-            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+            // Apartman için
+            let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+            if (buildingStats.hasRoofFloor) {
+                facadeHeight += (buildingStats.roofFloorHeight || 1.8);
+            }
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
 
             const grossFacade = perim * facadeHeight;
@@ -1343,8 +1363,11 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_elevator': ({ buildingStats, totalFloors, item, totalConstructionArea }) => {
         if (buildingStats.buildingType === 'villa') {
-            return totalFloors > 2 ? 1 : 0;
+            // Artık kat sayısına göre değil, kullanıcının seçimine göre ekliyoruz
+            return buildingStats.hasElevator ? 1 : 0;
         }
+
+        // Apartmanlar için mevcut mantık aynen kalabilir
         if (item.manualQuantity !== undefined && item.manualQuantity > 0) {
             return item.manualQuantity;
         }
@@ -1381,11 +1404,18 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_tree_count': ({ buildingStats, item }) => {
-        const footprintArea = buildingStats.groundFloorArea || 0;
-        const openArea = Math.max(0, buildingStats.landArea - footprintArea);
-        const treeCount = Math.ceil(openArea / 30.0);
-        return treeCount * (item.multiplier || 1);
-    },
+    const footprintArea = buildingStats.groundFloorArea || 0;
+    const pool = buildingStats.poolArea || 0;
+    const parking = buildingStats.parkingArea || 0;
+    const veranda = buildingStats.verandaArea || 0;
+
+    const totalHardscape = footprintArea + pool + parking + veranda;
+    const openArea = Math.max(0, buildingStats.landArea - totalHardscape);
+    
+    // Kalan net yeşil alana göre ağaç sayısı belirlenir
+    const treeCount = Math.ceil(openArea / 30.0);
+    return treeCount * (item.multiplier || 1);
+},
 
     'calc_water_tank': ({ aggregatedUnitStats, totalConstructionArea, regulationHeight, item }) => {
         let totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
@@ -1598,10 +1628,18 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_scaffolding_area': ({ buildingStats }) => {
-        const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
+        let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
             buildingStats.groundFloorHeight;
+
+        // Çatı katı varsa iskele yüksekliğine ekle
+        if (buildingStats.hasRoofFloor) {
+            facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0); // İskele çatının en tepe noktasına (mahya) kadar kurulur
+        }
+
         const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
+        // İskele binadan 1'er metre açık kurulur, çevre genişler (4 kenar x 2'şer taraf = 16)
         const scaffoldingPerimeter = basePerim + 16;
+
         return facadeHeight * scaffoldingPerimeter;
     },
 
@@ -2006,7 +2044,7 @@ export const calculateDynamicUnitPrice = (
     if (buildingStats?.buildingType === 'villa') {
         // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
         const structuralPremium = [
-            "Mantolama Malzemesi", "Mantolama İşçiliği", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)", "Pencere Söveleri"
+            "Mantolama Malzemesi", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
         ];
 
         // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler (Yüksek çarpan)
