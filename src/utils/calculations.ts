@@ -388,12 +388,16 @@ export class QuantityTakeoffService {
 
         // CONCRETE & IRON
         if (useDetailedConcrete) {
+           let totalColumnAreaOnFloor = 0; // YENİ: Kattaki toplam kolon/perde kesit alanı
+
             (unit.columns || []).forEach(col => {
                 let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
                 let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
                 const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
                 stats.column_concrete_volume += areaM2 * height;
                 stats.column_formwork_area += perimeterM * height;
+                
+                totalColumnAreaOnFloor += areaM2; // YENİ: Kolon alanını havuzda topla
             });
             (unit.beams || []).forEach(beam => {
                 let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
@@ -413,18 +417,21 @@ export class QuantityTakeoffService {
                 let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
                 let thicknessM = slab.properties.thickness / 100;
                 let concreteVolume = area * thicknessM;
-                let ironDensity = 0.085; // Plak döşeme için varsayılan donatı yoğunluğu (ton/m3)
+                let ironDensity = 0.085; 
 
-                // Döşeme tipine göre beton hacmi ve demir yoğunluğu ayarı
                 if (slab.properties.type === 'asmolen') {
-                    concreteVolume = concreteVolume * 0.65; // Asmolen dolgusu nedeniyle beton hacmi azalır
-                    ironDensity = 0.115; // Nervür donatıları arttığı için demir yoğunluğu yüksektir
+                    concreteVolume = concreteVolume * 0.65; 
+                    ironDensity = 0.115; 
                 } else if (slab.properties.type === 'mantar') {
-                    ironDensity = 0.125; // Zımbalama ve ilave eğilme donatıları yoğundur
+                    ironDensity = 0.125; 
                 }
 
                 stats.slab_concrete_volume += concreteVolume;
-                stats.slab_formwork_area += area;
+                
+                // GÜNCELLEME: Döşeme kalıbından kolon kesişimlerini (alanını) düşürüyoruz.
+                // Eksiye düşmemesi için Math.max ile güvenlik önlemi alıyoruz.
+                stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor); 
+                
                 totalSlabIronBase += concreteVolume * ironDensity;
             });
             const dynamicMultiplier = ironCoeff / 0.125;
