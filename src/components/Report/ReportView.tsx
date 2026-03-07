@@ -747,12 +747,19 @@ export const ReportView: React.FC = () => {
                         </div>
                         <table className="w-full text-xs text-left border-collapse">
                             <thead className="bg-slate-800 text-white">
-                                <tr><th className="p-3">Dönem</th><th className="p-3 text-right">Gelir (Satış)</th><th className="p-3 text-right">Gider (İnşaat)</th><th className="p-3 text-right">Kasa (Bakiye)</th></tr>
+                                <tr>
+                                    <th className="p-3 w-32">Dönem</th>
+                                    <th className="p-3">Açıklama</th> {/* YENİ EKLENEN SÜTUN */}
+                                    <th className="p-3 text-right">Gelir (Satış)</th>
+                                    <th className="p-3 text-right">Gider (İnşaat)</th>
+                                    <th className="p-3 text-right">Kasa (Bakiye)</th>
+                                </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
                                 {cashflowTable.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
-                                        <td className="p-3 font-bold">{row.month}</td>
+                                        <td className="p-3 font-bold whitespace-nowrap">{row.month}</td>
+                                        <td className="p-3 text-slate-500 max-w-[200px] truncate" title={row.description}>{row.description}</td> {/* YENİ EKLENEN VERİ */}
                                         <td className="p-3 text-right font-mono text-green-600">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
                                         <td className="p-3 text-right font-mono text-red-600">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
                                         <td className={`p-3 text-right font-mono font-bold ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
