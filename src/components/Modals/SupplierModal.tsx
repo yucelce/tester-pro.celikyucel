@@ -50,25 +50,29 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const fetchSuppliers = async () => {
         setIsLoading(true);
         try {
-            // Google Sheets TSV formatı ile çekiyoruz (virgül kaynaklı hataları önler)
-            const sheetUrl = "https://docs.google.com/spreadsheets/d/1m2GW2rLwcQDmj2dwnpxWcQdR0zfSemZxQe0VgerfWKw/export?format=tsv&gid=278780992";
+            // SİZİN LİNKİNİZİN DÜZELTİLMİŞ TSV FORMATI:
+            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7I9ioyi6FWmgpt3BimD2IDCBu0C0FzjGrC3MWMGDraun2cjS4RCC7XPtuGXnux-Rcy6UwhhSJLlVR/pub?output=tsv";
             
             const response = await fetch(sheetUrl);
-            const text = await response.text();
+            
+            if (!response.ok) {
+                throw new Error("Veri çekilemedi: " + response.statusText);
+            }
 
-            const rows = text.split('\n').slice(1);
+            const text = await response.text();
+            const rows = text.split('\n').slice(1); // İlk satırı (Başlıkları) atla
             
             const parsedSuppliers: Supplier[] = rows.map(row => {
                 const cols = row.split('\t');
                 return {
-                    il: cols[0]?.trim(),
-                    ilce: cols[1]?.trim(),
-                    firmaAdi: cols[2]?.trim(),
-                    telefon: cols[3]?.trim(),
-                    eposta: cols[4]?.trim(),
-                    adres: cols[5]?.trim()
+                    il: cols[0]?.trim() || '',
+                    ilce: cols[1]?.trim() || '',
+                    firmaAdi: cols[2]?.trim() || '',
+                    telefon: cols[3]?.trim() || '',
+                    eposta: cols[4]?.trim() || '',
+                    adres: cols[5]?.trim() || ''
                 };
-            }).filter(s => s.il && s.firmaAdi);
+            }).filter(s => s.il && s.firmaAdi); // Sadece ili ve firma adı dolu olanları al
 
             // 1. Önce kullanıcının İli ve İlçesiyle tam eşleşenleri bul
             let filtered = parsedSuppliers.filter(s => s.il === buildingStats.province && s.ilce === buildingStats.district);
@@ -81,6 +85,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             setSuppliers(filtered);
         } catch (error) {
             console.error("Tedarikçi listesi çekilemedi:", error);
+            alert("Tedarikçi listesi şu an yüklenemiyor. Bağlantınızı kontrol edin.");
         } finally {
             setIsLoading(false);
         }
