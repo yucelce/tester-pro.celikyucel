@@ -79,6 +79,7 @@ export const ReportView: React.FC = () => {
         const inflationRate = (financialSettings.monthlyInflationRate || 0) / 100;
         const fixedTasks = financialSettings.fixedPriceTaskIds || []; // Fiyatı sabitlenen işler
         const expensesByMonth: Record<string, number> = {};
+        const tasksByMonth: Record<string, string[]> = {}; // YENİ: Aylara göre görevleri tutacağımız liste
         const projectStartMonthDate = new Date((buildingStats.projectStartDate || formatMonth(new Date())) + '-01');
 
         // 1. ADIM: Kalemleri doğru iş programına (task) atayan fonksiyon
@@ -120,7 +121,6 @@ export const ReportView: React.FC = () => {
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
             
-            // Eşit bölme MANTIĞI İPTAL EDİLDİ, görevin GEREÇEK maliyeti alınıyor
             const baseTaskCost = taskActualCosts[task.id] || 0; 
 
             let currentD = new Date(startDate);
@@ -141,12 +141,18 @@ export const ReportView: React.FC = () => {
                 let monthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 monthsDiff = Math.max(0, monthsDiff);
                 
-                // Eğer iş kalemi enflasyondan korunmuşsa (hedge) baz fiyatı al, yoksa enflasyonu uygula
                 let inflatedCost = fixedTasks.includes(task.id) 
                     ? baseTaskCost 
                     : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (inflatedCost * costRatio);
+
+                // YENİ: Anlamlı bir harcama varsa o ayki işlerin ismini kaydet
+                if (costRatio > 0.01) { 
+                    if (!tasksByMonth[monthStr]) tasksByMonth[monthStr] = [];
+                    if (!tasksByMonth[monthStr].includes(task.name)) tasksByMonth[monthStr].push(task.name);
+                }
+
                 currentD = new Date(currentD.getFullYear(), currentD.getMonth() + 1, 1);
             }
         });
@@ -168,17 +174,31 @@ export const ReportView: React.FC = () => {
             const exp = expensesByMonth[mStr] || 0;
             const sal = salesByMonth[mStr] || 0;
             cumulativeBalance += (sal - exp);
+
+            // YENİ: Açıklamaları oluşturma
+            let descItems = [];
+            if (sal > 0) descItems.push(financialSettings.revenueModel === 'taahhut' ? 'Hakediş/Gelir' : 'Satış/Gelir');
+            if (exp > 0) {
+                const monthTasks = tasksByMonth[mStr] || [];
+                if (monthTasks.length > 0) {
+                    const taskStr = monthTasks.length > 2 ? `${monthTasks.slice(0, 2).join(', ')}...` : monthTasks.join(', ');
+                    descItems.push(`İnşaat (${taskStr})`);
+                } else {
+                    descItems.push('İnşaat Gideri');
+                }
+            }
+
             table.push({
                 month: formatMonthDisplay(mStr),
                 expense: exp,
                 income: sal,
-                balance: cumulativeBalance
+                balance: cumulativeBalance,
+                description: descItems.join(' + ') || '-' // YENİ: Açıklama alanı
             });
         });
         
         return table;
     }, [projectSchedule, finalTotalCost, finalCostDetails, financialSettings, buildingStats.projectStartDate]);
-
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'render') => {
         const file = e.target.files?.[0];
         if (!file) return;
