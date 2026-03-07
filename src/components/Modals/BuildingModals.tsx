@@ -272,7 +272,23 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">İl</label>
-                                        <select value={buildingStats.province} onChange={handleProvinceChange} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500 transition">
+                                        <select
+                                            value={buildingStats.province}
+                                            onChange={(e) => {
+                                                const newProvince = e.target.value;
+                                                // Seçilen yeni ilin ilçelerini bul, eğer liste boşsa "Merkez" ata
+                                                const availableDistricts = Object.keys(TURKEY_HEAT_MAP[newProvince]?.districts || {});
+                                                const firstDistrict = availableDistricts.length > 0 ? availableDistricts[0] : "Merkez";
+
+                                                // Hem ili hem de ilçeyi aynı anda güncelle
+                                                setBuildingStats(prev => ({
+                                                    ...prev,
+                                                    province: newProvince,
+                                                    district: firstDistrict
+                                                }));
+                                            }}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500 transition"
+                                        >
                                             {Object.keys(TURKEY_HEAT_MAP).map(prov => (
                                                 <option key={prov} value={prov}>{prov}</option>
                                             ))}
