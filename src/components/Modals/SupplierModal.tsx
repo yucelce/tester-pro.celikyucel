@@ -92,7 +92,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     };
 
     const generateMessageText = () => {
-        let msg = `Merhaba, CY Pro üzerinden malzeme teklifi almak istiyorum. İhtiyaç listem aşağıdadır:\n\n`;
+        let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum. İhtiyaç listem aşağıdadır:\n\n`;
         msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
         
         procurementGroups.forEach(group => {
