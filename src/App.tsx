@@ -46,8 +46,8 @@ const AppLayout = () => {
 
                 //silinecek TESTER MOD
 
-                if(apiKey=="admin"){
-                    setAuthStatus('success');
+                if(apiKey=="admin"){ //silinecek TESTER MOD
+                    setAuthStatus('success'); 
                     setAccountId("admin")
                     return
                 }
