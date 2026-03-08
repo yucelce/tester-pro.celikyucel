@@ -131,7 +131,7 @@ export class QuantityTakeoffService {
             mortar_volume: 0, adhesive_weight: 0, calc_plumbing_unit: 0, calc_combi_count: 0,
             calc_radiator_infrastructure: 0, calc_radiator_len: 0, calc_radiator_count: 0,
             calc_underfloor_area: 0, calc_underfloor_collector: 0, calc_unit_count: 0,
-            calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0,
+            calc_rough_plaster_area: 0, calc_paint_wall_area: 0, calc_ceiling_paint_area: 0, calc_plaster_area: 0,
             calc_window_area: 0, calc_sill_length: 0, calc_window_perimeter: 0, calc_balcony_railing: 0,
             wall_10_area: 0, wall_13_5_area: 0, wall_15_area: 0, wall_20_area: 0, wall_25_area: 0,
             column_concrete_volume: 0, column_formwork_area: 0, beam_concrete_volume: 0, beam_formwork_area: 0,
@@ -230,7 +230,7 @@ export class QuantityTakeoffService {
 
         if (room.properties.wallFinish === 'boya') {
             stats.calc_paint_wall_area += grossWallArea;
-
+            stats.calc_plaster_area += grossWallArea + (isWetAreaCeiling ? 0 : room.areaM2);
         } else {
             stats.wet_area += grossWallArea; // Duvarlar seramik
             stats.net_wet_area += grossWallArea; // EKSİK OLAN SATIR: Yapıştırıcı için duvarı da dahil et
@@ -321,57 +321,60 @@ export class QuantityTakeoffService {
         const useDetailedWalls = globalWallMode === 'detailed';
         const useDetailedConcrete = globalConcreteMode === 'detailed';
 
-        // WALLS
-        if (useDetailedWalls) {
-            if (unit.walls && unit.walls.length > 0) {
-                unit.walls.forEach(wall => {
-                    let lengthM = wall.manualLengthM !== undefined && wall.manualLengthM > 0 ? wall.manualLengthM : (unit.scale > 0 ? wall.length_px / unit.scale : 0);
-                    let wallHeight = wall.properties.height && wall.properties.height > 0 ? wall.properties.height : metrics.defaultFloorHeight;
-                    if (!(wall.properties.height && wall.properties.height > 0)) {
-                        wallHeight -= wall.properties.isUnderBeam && wall.properties.beamHeight > 0 ? (wall.properties.beamHeight / 100) : metrics.avgSlabThicknessM;
-                    }
-                    const wallArea = lengthM * wallHeight;
-                    const thick = wall.properties.thickness;
-                    let tKey = thick <= 10 ? "wall_10_area" : thick <= 13.5 ? "wall_13_5_area" : thick <= 15 ? "wall_15_area" : thick <= 20 ? "wall_20_area" : "wall_25_area";
-                    stats[tKey] += wallArea;
+        // 1. SADECE STATİK PLANLAR İÇİN BRÜT DUVAR HESABI
+        if (settings.isStructural) {
+            if (useDetailedWalls) {
+                if (unit.walls && unit.walls.length > 0) {
+                    unit.walls.forEach(wall => {
+                        let lengthM = wall.manualLengthM !== undefined && wall.manualLengthM > 0 ? wall.manualLengthM : (unit.scale > 0 ? wall.length_px / unit.scale : 0);
+                        let wallHeight = wall.properties.height && wall.properties.height > 0 ? wall.properties.height : metrics.defaultFloorHeight;
+                        if (!(wall.properties.height && wall.properties.height > 0)) {
+                            wallHeight -= wall.properties.isUnderBeam && wall.properties.beamHeight > 0 ? (wall.properties.beamHeight / 100) : metrics.avgSlabThicknessM;
+                        }
+                        const wallArea = lengthM * wallHeight;
+                        const thick = wall.properties.thickness;
+                        let tKey = thick <= 10 ? "wall_10_area" : thick <= 13.5 ? "wall_13_5_area" : thick <= 15 ? "wall_15_area" : thick <= 20 ? "wall_20_area" : "wall_25_area";
+                        stats[tKey] += wallArea;
 
-                    if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += wallArea * (0.25 * thick);
-                    else stats.mortar_volume += wallArea * (0.002 * thick);
-                });
-            }
-            if (unit.rooms.length > 0) {
-                let totalRoomWallArea = 0;
-                unit.rooms.forEach(r => {
-                    const h = r.properties.ceilingHeight || (metrics.defaultFloorHeight - metrics.avgSlabThicknessM); const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
-                    totalRoomWallArea += (p * h * (r.type === 'balcony' ? 0.5 : 1.0));
-                });
-                stats.net_wall_area = totalRoomWallArea * 0.85;
+                        if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += wallArea * (0.25 * thick);
+                        else stats.mortar_volume += wallArea * (0.002 * thick);
+                    });
+                }
+                if (unit.rooms.length > 0) {
+                    let totalRoomWallArea = 0;
+                    unit.rooms.forEach(r => {
+                        const h = r.properties.ceilingHeight || (metrics.defaultFloorHeight - metrics.avgSlabThicknessM); const p = r.manualPerimeterM || (unit.scale > 0 ? r.perimeter_px / unit.scale : 0);
+                        totalRoomWallArea += (p * h * (r.type === 'balcony' ? 0.5 : 1.0));
+                    });
+                    stats.net_wall_area = totalRoomWallArea * 0.85;
+                } else {
+                    let totalWallArea = 0;
+                    Object.keys(stats).forEach(k => { if (k.startsWith('wall_') && k.endsWith('_area')) totalWallArea += stats[k]; });
+                    stats.net_wall_area = totalWallArea * 2;
+                }
             } else {
-                let totalWallArea = 0;
-                Object.keys(stats).forEach(k => { if (k.startsWith('wall_') && k.endsWith('_area')) totalWallArea += stats[k]; });
-                stats.net_wall_area = totalWallArea * 2;
+                const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
+                let floorPerimeter = Math.sqrt(refArea) * 4;
+                if (unit.floorType === 'normal' && buildingStats.normalFloorPerimeter) floorPerimeter = buildingStats.normalFloorPerimeter;
+                else if (unit.floorType === 'ground' && buildingStats.groundFloorPerimeter) floorPerimeter = buildingStats.groundFloorPerimeter;
+                else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) floorPerimeter = buildingStats.basementFloorPerimeter;
+
+                const heightFactor = Math.max(1, (metrics.defaultFloorHeight / 3.0));
+                const estimatedWallSurface = refArea * 2.2 * heightFactor;
+                const outerWallSurface = floorPerimeter * metrics.defaultFloorHeight;
+                const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
+
+                stats["wall_20_area"] += outerWallSurface;
+                stats["wall_13_5_area"] += innerWallSurface;
+                stats.net_wall_area = estimatedWallSurface * 2;
+
+                if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += (outerWallSurface * 20 * 0.25) + (innerWallSurface * 13.5 * 0.25);
+                else stats.mortar_volume += (outerWallSurface * 20 * 0.002) + (innerWallSurface * 13.5 * 0.002);
             }
-        } else {
-            const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
-            let floorPerimeter = Math.sqrt(refArea) * 4;
-            if (unit.floorType === 'normal' && buildingStats.normalFloorPerimeter) floorPerimeter = buildingStats.normalFloorPerimeter;
-            else if (unit.floorType === 'ground' && buildingStats.groundFloorPerimeter) floorPerimeter = buildingStats.groundFloorPerimeter;
-            else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) floorPerimeter = buildingStats.basementFloorPerimeter;
-
-            const heightFactor = Math.max(1, (metrics.defaultFloorHeight / 3.0));
-            const estimatedWallSurface = refArea * 2.2 * heightFactor;
-            const outerWallSurface = floorPerimeter * metrics.defaultFloorHeight;
-            const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
-
-            stats["wall_20_area"] += outerWallSurface;
-            stats["wall_13_5_area"] += innerWallSurface;
-            stats.net_wall_area = estimatedWallSurface * 2;
-
-            if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += (outerWallSurface * 20 * 0.25) + (innerWallSurface * 13.5 * 0.25);
-            else stats.mortar_volume += (outerWallSurface * 20 * 0.002) + (innerWallSurface * 13.5 * 0.002);
         }
 
-        // Apply Deductions to Walls
+        // 2. DÜŞÜMLER (MİMARİ PLANDAN GELEN BOŞLUK ZAYİATLARI)
+        // Her iki plan tipinde de çalışır ancak mimari planda "negatif" değerler üreterek statikten düşmesini sağlar.
         ['wDed', 'dDed'].forEach((type, idx) => {
             const deductions = idx === 0 ? wDed : dDed;
             Object.keys(deductions).forEach(thickStr => {
@@ -379,81 +382,72 @@ export class QuantityTakeoffService {
                 if (deductionArea > 0) {
                     const tKey = `wall_${thickStr}_area`;
                     const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
-                    stats[tKey] -= deductionArea;
-                    if (globalWallMaterial === 'gazbeton') stats.adhesive_weight -= (deductionArea * (0.25 * thickVal));
-                    else stats.mortar_volume -= (deductionArea * (0.002 * thickVal));
+                    
+                    // Doğrudan eksi (-) olarak biriktiriyoruz
+                    stats[tKey] = (stats[tKey] || 0) - deductionArea;
+                    
+                    // Harç ve yapıştırıcı zayiatlarını da düşüyoruz
+                    if (globalWallMaterial === 'gazbeton') {
+                        stats.adhesive_weight = (stats.adhesive_weight || 0) - (deductionArea * (0.25 * thickVal));
+                    } else {
+                        stats.mortar_volume = (stats.mortar_volume || 0) - (deductionArea * (0.002 * thickVal));
+                    }
                 }
             });
         });
 
-        // CONCRETE & IRON
-        if (useDetailedConcrete) {
-            let totalColumnAreaOnFloor = 0; // YENİ: Kattaki toplam kolon/perde kesit alanı
+        // 3. SADECE STATİK PLANLAR İÇİN BETON VE DEMİR HESABI
+        if (settings.isStructural) {
+            if (useDetailedConcrete) {
+                let totalColumnAreaOnFloor = 0; 
+                (unit.columns || []).forEach(col => {
+                    let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
+                    let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
+                    const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
+                    stats.column_concrete_volume += areaM2 * height;
+                    stats.column_formwork_area += perimeterM * height;
+                    totalColumnAreaOnFloor += areaM2; 
+                });
+                (unit.beams || []).forEach(beam => {
+                    let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
+                    const widthM = beam.properties.width / 100, heightM = beam.properties.height / 100, slabThickM = beam.properties.slabThickness / 100;
+                    stats.beam_concrete_volume += widthM * Math.max(0, heightM - slabThickM) * lengthM;
+                    const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
+                    stats.beam_formwork_area += sideFormworkArea;
+                });
+                let totalSlabIronBase = 0;
+                (unit.slabs || []).forEach(slab => {
+                    let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
+                    let thicknessM = slab.properties.thickness / 100;
+                    let concreteVolume = area * thicknessM;
+                    let ironDensity = 0.085;
+                    if (slab.properties.type === 'asmolen') {
+                        concreteVolume = concreteVolume * 0.65;
+                        ironDensity = 0.115;
+                    } else if (slab.properties.type === 'mantar') {
+                        ironDensity = 0.125;
+                    }
+                    stats.slab_concrete_volume += concreteVolume;
+                    stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor);
+                    totalSlabIronBase += concreteVolume * ironDensity;
+                });
+                const dynamicMultiplier = ironCoeff / 0.125;
+                stats.calc_iron_unit = (stats.column_concrete_volume * 0.140 * dynamicMultiplier) +
+                    (stats.beam_concrete_volume * 0.130 * dynamicMultiplier) +
+                    (totalSlabIronBase * dynamicMultiplier);
+            } else {
+                const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
+                const heightRatio = metrics.defaultFloorHeight / 3.0;
+                const totalConcrete = refArea * 0.38 * heightRatio;
+                stats.slab_concrete_volume = totalConcrete * 0.65; stats.column_concrete_volume = totalConcrete * 0.20; stats.beam_concrete_volume = totalConcrete * 0.15;
+                const totalForm = refArea * 2.8 * heightRatio;
+                stats.slab_formwork_area = totalForm * 0.5; stats.column_formwork_area = totalForm * 0.25; stats.beam_formwork_area = totalForm * 0.25;
+                stats.calc_iron_unit = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * ironCoeff;
+            }
 
-            (unit.columns || []).forEach(col => {
-                let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
-                let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
-                const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
-                stats.column_concrete_volume += areaM2 * height;
-                stats.column_formwork_area += perimeterM * height;
-
-                totalColumnAreaOnFloor += areaM2; // YENİ: Kolon alanını havuzda topla
-            });
-            (unit.beams || []).forEach(beam => {
-                let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
-                const widthM = beam.properties.width / 100, heightM = beam.properties.height / 100, slabThickM = beam.properties.slabThickness / 100;
-
-                // Kirişin sadece döşeme altında kalan (sarkan) kısmının betonunu hesapla
-                stats.beam_concrete_volume += widthM * Math.max(0, heightM - slabThickM) * lengthM;
-
-                const sideFormworkArea = (2 * Math.max(0, heightM - slabThickM)) * lengthM;
-
-                // DÜZELTME: Çift sayımı (double counting) önlemek için kiriş taban kalıbı hesaba katılmamıştır. 
-                // Kiriş tabanı zaten 'slab_formwork_area' (döşeme alanı) içinde genel alanla birlikte hesaplanmaktadır.
-                stats.beam_formwork_area += sideFormworkArea;
-            });
-            let totalSlabIronBase = 0;
-            (unit.slabs || []).forEach(slab => {
-                let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
-                let thicknessM = slab.properties.thickness / 100;
-                let concreteVolume = area * thicknessM;
-                let ironDensity = 0.085;
-
-                if (slab.properties.type === 'asmolen') {
-                    concreteVolume = concreteVolume * 0.65;
-                    ironDensity = 0.115;
-                } else if (slab.properties.type === 'mantar') {
-                    ironDensity = 0.125;
-                }
-
-                stats.slab_concrete_volume += concreteVolume;
-
-                // GÜNCELLEME: Döşeme kalıbından kolon kesişimlerini (alanını) düşürüyoruz.
-                // Eksiye düşmemesi için Math.max ile güvenlik önlemi alıyoruz.
-                stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor);
-
-                totalSlabIronBase += concreteVolume * ironDensity;
-            });
-            const dynamicMultiplier = ironCoeff / 0.125;
-
-            // TBDY 2018'e uygun olarak güncellenmiş baz donatı yoğunlukları:
-            // Kolon: 140 kg/m³ (0.140) - Sarılma bölgesi etriyeleri, çirozlar ve sık boyuna donatılar
-            // Kiriş: 130 kg/m³ (0.130) - Sıklaştırma bölgeleri, gövde, pilyesiz düz ilave donatılar
-            stats.calc_iron_unit = (stats.column_concrete_volume * 0.140 * dynamicMultiplier) +
-                (stats.beam_concrete_volume * 0.130 * dynamicMultiplier) +
-                (totalSlabIronBase * dynamicMultiplier);
-        } else {
-            const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
-            const heightRatio = metrics.defaultFloorHeight / 3.0;
-            const totalConcrete = refArea * 0.38 * heightRatio;
-            stats.slab_concrete_volume = totalConcrete * 0.65; stats.column_concrete_volume = totalConcrete * 0.20; stats.beam_concrete_volume = totalConcrete * 0.15;
-            const totalForm = refArea * 2.8 * heightRatio;
-            stats.slab_formwork_area = totalForm * 0.5; stats.column_formwork_area = totalForm * 0.25; stats.beam_formwork_area = totalForm * 0.25;
-            stats.calc_iron_unit = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * ironCoeff;
+            stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
+            stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
         }
-
-        stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
-        stats.calc_formwork_unit = stats.column_formwork_area + stats.beam_formwork_area + stats.slab_formwork_area;
     }
 
     private static applyFallbacks(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any) {
@@ -472,7 +466,11 @@ export class QuantityTakeoffService {
                     fallbackArea = metrics.defaultFloorArea / Math.max(1, unit.count / floorCount);
                 }
                 const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
-                stats.calc_rough_plaster_area = fArea * 2.8; stats.calc_paint_wall_area = fArea * 2.5; stats.calc_ceiling_paint_area = fArea;
+      
+                stats.calc_rough_plaster_area = fArea * 2.8;
+                stats.calc_paint_wall_area = fArea * 2.5;
+                stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
+                stats.calc_ceiling_paint_area = fArea;
 
                 stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
                 if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
@@ -767,9 +765,25 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalConstructionArea * classUnitPrice * (serviceRate / 100) * 1.20;
     },
 
-    'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts }) => {
+    'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts, totalFloors, regulationHeight }) => {
         const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
-        return calculateTapuNoterFees(totalUnits, buildingStats.province, buildingStats.constructionModel, buildingStats.isUrbanTransformation, 0, currentCosts);
+
+        // ÇÖZÜM: Döngüsel bağımlılığı aşmak için binanın resmi yapı sınıfını (Örn: 3B, 4A) buluyoruz.
+        // Daha sonra sistemdeki güncel ÇŞB metrekare fiyatını çekip gerçekçi bir toplam maliyet tahmini oluşturuyoruz.
+        const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
+        const currentM2Price = getGlobalPrice(currentCosts, buildingClass) || 25000; // Sistemde fiyat yoksa 25.000 yedeği kalır
+
+        const estimatedTotalCost = totalConstructionArea * currentM2Price;
+
+        // Bulduğumuz bu güncel ve dinamik toplam maliyeti (0 yerine) fonksiyona gönderiyoruz
+        return calculateTapuNoterFees(
+            totalUnits,
+            buildingStats.province,
+            buildingStats.constructionModel,
+            buildingStats.isUrbanTransformation,
+            estimatedTotalCost, // <-- 0 yerine bunu koyduk
+            currentCosts
+        );
     },
 
     'calc_acoustic': ({ totalConstructionArea, item }) => {
@@ -1390,12 +1404,25 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
         const deductibleWindowArea = totalWindowArea;
 
-        // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI ---
+        // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI (DÜZELTİLMİŞ) ---
         let roofFacade = 0;
         if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
             const roofPerim = buildingStats.roofFloorPerimeter || (Math.sqrt(buildingStats.roofFloorArea) * 4);
-            // Kalkan duvar ve parapetlerin ortalama yüksekliği olarak roofFloorHeight (veya min 1.5m) alınır
-            roofFacade = roofPerim * (buildingStats.roofFloorHeight || 1.8);
+            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
+            const parapetHeight = 0.60; // Standart çatı parapet (diz duvarı) yüksekliği
+
+            // Kalkan Duvar (Üçgen) Alanı Tahmini:
+            // Varsayım: Çatının iki kısa kenarında kalkan duvar var. Kareye yakın kabul ile kısa kenar ~ Çevre / 4.5
+            const shortSideApprox = roofPerim / 4.5;
+            const triangleHeight = Math.max(0, maxHeight - parapetHeight);
+
+            // 2 adet üçgen kalkan duvar alanı: 2 * (Taban * Yükseklik / 2) -> Taban * Yükseklik
+            const gableWallArea = shortSideApprox * triangleHeight;
+
+            // Parapet Alanı (Tüm çevre boyunca dönen 60cm'lik duvar)
+            const parapetArea = roofPerim * parapetHeight;
+
+            roofFacade = gableWallArea + parapetArea;
         }
 
         if (buildingStats.buildingType === 'villa') {
@@ -1409,20 +1436,18 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
 
-            // Çatı katını toplama dahil ediyoruz
+            // Çatı kalkan/parapet alanını toplama ekliyoruz
             const grossFacade = groundFacade + normalFacade + roofFacade;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
             return netFacade * 1.15; // %15 zayiat
 
         } else {
             // Apartman için
-            let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
-            if (buildingStats.hasRoofFloor) {
-                facadeHeight += (buildingStats.roofFloorHeight || 1.8);
-            }
+            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
 
-            const grossFacade = perim * facadeHeight;
+            // Alt katların dış cephesi (Prizma) + Sadece çatı kalkan/parapet cephesi (Ayrıldı)
+            const grossFacade = (perim * facadeHeight) + roofFacade;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
 
             const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim);
@@ -1741,7 +1766,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
         // İskele binadan 1'er metre açık kurulur, çevre genişler (4 kenar x 2'şer taraf = 16)
-        const scaffoldingPerimeter = basePerim + 16;
+        const scaffoldingPerimeter = basePerim + 8;
 
         return facadeHeight * scaffoldingPerimeter;
     },
@@ -1998,26 +2023,26 @@ export const calculateDynamicUnitPrice = (
         return basePrice * standardMultiplier;
     }
     // Sadece "Mimari Proje" kalemi için bu kuralı uygula
-    if (item.name === "Mimari Proje") {
+    if (["Mimari Proje", "Statik Proje", "Mekanik Proje", "Elektrik Projesi"].includes(item.name)) {
         const basePrice = item.unit_price;
 
         if (totalConstructionArea <= 1000) {
-            // 1000 m2 ve altı sabit taban fiyat
+            // 1000 m² ve altı projelerde (butik/villa) standart taban fiyat
             return basePrice;
-        } else if (totalConstructionArea >= 3000) {
-            // 3000 m2 ve üstü %20 zamlı sabit fiyat
-            return basePrice * 1.20;
+        } else if (totalConstructionArea >= 5000) {
+            // 5000 m² ve üstü (site/kompleks) projelerde ölçek ekonomisi gereği 
+            // birim fiyatta %40'a varan indirim (çarpan 0.60) uygulanır.
+            return basePrice * 0.60;
         } else {
-            // 1000 ile 3000 arası lineer enterpolasyon
-            // Örn: 2000 m2 ise tam ortası olmalı (%10 artış)
-            const range = 3000 - 1000; // 2000
+            // 1000 ile 5000 m² arası için lineer (doğrusal) indirim hesabı
+            const range = 5000 - 1000; // 4000 m²'lik marj
             const excess = totalConstructionArea - 1000;
-            const ratio = excess / range; // 0 ile 1 arasında bir oran
+            const ratio = excess / range; // 0 ile 1 arasında oran
 
-            const maxIncreaseFactor = 0.20; // %20 max artış
-            const currentIncrease = 1 + (maxIncreaseFactor * ratio);
+            const maxDiscount = 0.40; // Maksimum %40 indirim
+            const currentDiscount = maxDiscount * ratio;
 
-            return basePrice * currentIncrease;
+            return basePrice * (1 - currentDiscount);
         }
     }
 
