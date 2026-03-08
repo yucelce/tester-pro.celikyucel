@@ -142,6 +142,8 @@ export class QuantityTakeoffService {
             calc_electrical_points: 0, calc_weak_current_points: 0, calc_switch_socket_count: 0, calc_sub_panel_count: 0,
             calc_heat_pump: 0, calc_vrf_infrastructure: 0, calc_vrf_indoor: 0,
             calc_suspended_ceiling_area: 0, waterproofing_area: 0,
+            wDed_10: 0, wDed_13_5: 0, wDed_15: 0, wDed_20: 0, wDed_25: 0,
+            dDed_10: 0, dDed_13_5: 0, dDed_15: 0, dDed_20: 0, dDed_25: 0,
         };
 
         const windowDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
@@ -278,16 +280,16 @@ export class QuantityTakeoffService {
     private static applySpecificRooms(stats: any, room: any) {
         const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
         if (isKitchen) {
-        stats.calc_plumbing_unit += 0.5;
-        const cabinetLength = Math.min(Math.max(2.5, 2.5 + (room.areaM2 * 0.15)), 7.0);
-        
-        const cabinetArea = cabinetLength * Math.max(0, room.roomHeight - 0.90);
-        stats.calc_kitchen_cabinet += cabinetArea;
-        stats.kitchen_cabinet_length += cabinetArea;
-        stats.calc_kitchen_counter_length += cabinetLength;
-        stats.calc_kitchen_sink += 1; 
-        stats.calc_sink_mixer += 1;
-    }
+            stats.calc_plumbing_unit += 0.5;
+            const cabinetLength = Math.min(Math.max(2.5, 2.5 + (room.areaM2 * 0.15)), 7.0);
+
+            const cabinetArea = cabinetLength * Math.max(0, room.roomHeight - 0.90);
+            stats.calc_kitchen_cabinet += cabinetArea;
+            stats.kitchen_cabinet_length += cabinetArea;
+            stats.calc_kitchen_counter_length += cabinetLength;
+            stats.calc_kitchen_sink += 1;
+            stats.calc_sink_mixer += 1;
+        }
         if (room.type === 'bath') {
             stats.calc_plumbing_unit += 0.5; stats.calc_bathroom_cabinet += 1; stats.calc_toilet += 1;
             stats.calc_basin_mixer += 1; stats.calc_shower_cabin += 1; stats.calc_shower_set += 1;
@@ -338,9 +340,6 @@ export class QuantityTakeoffService {
                         const thick = wall.properties.thickness;
                         let tKey = thick <= 10 ? "wall_10_area" : thick <= 13.5 ? "wall_13_5_area" : thick <= 15 ? "wall_15_area" : thick <= 20 ? "wall_20_area" : "wall_25_area";
                         stats[tKey] += wallArea;
-
-                        if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += wallArea * (0.25 * thick);
-                        else stats.mortar_volume += wallArea * (0.002 * thick);
                     });
                 }
                 if (unit.rooms.length > 0) {
@@ -367,12 +366,12 @@ export class QuantityTakeoffService {
                 const outerWallSurface = floorPerimeter * metrics.defaultFloorHeight;
                 const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
 
-                stats["wall_20_area"] += outerWallSurface;
-                stats["wall_13_5_area"] += innerWallSurface;
-                stats.net_wall_area = estimatedWallSurface * 2;
+                const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
+                const innerThickStr = buildingStats.innerWallThickness === 13.5 ? '13_5' : String(buildingStats.innerWallThickness || 13.5);
 
-                if (globalWallMaterial === 'gazbeton') stats.adhesive_weight += (outerWallSurface * 20 * 0.25) + (innerWallSurface * 13.5 * 0.25);
-                else stats.mortar_volume += (outerWallSurface * 20 * 0.002) + (innerWallSurface * 13.5 * 0.002);
+                stats[`wall_${outerThickStr}_area`] += outerWallSurface;
+                stats[`wall_${innerThickStr}_area`] += innerWallSurface;
+                stats.net_wall_area = estimatedWallSurface * 2;
             }
         }
 
@@ -385,10 +384,10 @@ export class QuantityTakeoffService {
                 if (deductionArea > 0) {
                     const tKey = `wall_${thickStr}_area`;
                     const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
-                    
+
                     // Doğrudan eksi (-) olarak biriktiriyoruz
                     stats[tKey] = (stats[tKey] || 0) - deductionArea;
-                    
+
                     // Harç ve yapıştırıcı zayiatlarını da düşüyoruz
                     if (globalWallMaterial === 'gazbeton') {
                         stats.adhesive_weight = (stats.adhesive_weight || 0) - (deductionArea * (0.25 * thickVal));
@@ -402,14 +401,14 @@ export class QuantityTakeoffService {
         // 3. SADECE STATİK PLANLAR İÇİN BETON VE DEMİR HESABI
         if (settings.isStructural) {
             if (useDetailedConcrete) {
-                let totalColumnAreaOnFloor = 0; 
+                let totalColumnAreaOnFloor = 0;
                 (unit.columns || []).forEach(col => {
                     let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
                     let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
                     const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
                     stats.column_concrete_volume += areaM2 * height;
                     stats.column_formwork_area += perimeterM * height;
-                    totalColumnAreaOnFloor += areaM2; 
+                    totalColumnAreaOnFloor += areaM2;
                 });
                 (unit.beams || []).forEach(beam => {
                     let lengthM = beam.manualLengthM !== undefined && beam.manualLengthM > 0 ? beam.manualLengthM : (unit.scale > 0 ? beam.length_px / unit.scale : 0);
@@ -441,7 +440,7 @@ export class QuantityTakeoffService {
             } else {
                 const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
                 const heightRatio = metrics.defaultFloorHeight / 3.0;
-                const totalConcrete = refArea * 0.38 * heightRatio;
+                const totalConcrete = refArea * 0.35 * heightRatio;
                 stats.slab_concrete_volume = totalConcrete * 0.65; stats.column_concrete_volume = totalConcrete * 0.20; stats.beam_concrete_volume = totalConcrete * 0.15;
                 const totalForm = refArea * 2.8 * heightRatio;
                 stats.slab_formwork_area = totalForm * 0.5; stats.column_formwork_area = totalForm * 0.25; stats.beam_formwork_area = totalForm * 0.25;
@@ -457,8 +456,8 @@ export class QuantityTakeoffService {
         if (settings.isStructural) {
             stats.cornice_length = 0; stats.wet_area = 0; stats.dry_area = 0; stats.radiator_length = 0; stats.kitchen_cabinet_length = 0;
             stats.calc_rough_plaster_area = 0; stats.calc_paint_wall_area = 0; stats.calc_ceiling_paint_area = 0; stats.calc_plaster_area = 0;
-        } else {
-            ['10', '13_5', '15', '20', '25'].forEach(t => stats[`wall_${t}_area`] = Math.min(0, stats[`wall_${t}_area`] || 0));
+        } 
+            
             stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0); stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
             stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
 
@@ -469,7 +468,7 @@ export class QuantityTakeoffService {
                     fallbackArea = metrics.defaultFloorArea / Math.max(1, unit.count / floorCount);
                 }
                 const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
-      
+
                 stats.calc_rough_plaster_area = fArea * 2.8;
                 stats.calc_paint_wall_area = fArea * 2.5;
                 stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
@@ -875,8 +874,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.26);
-        return (vTemel + vBodrumPerde + vKatlar) * (item.multiplier || 1);
+        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); return (vTemel + vBodrumPerde + vKatlar) * (item.multiplier || 1);
     },
 
     'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
@@ -922,12 +920,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_pool_system': ({ buildingStats, item }) => {
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
-        
+
         // Temel havuz (mesela 40 m2) için sistem fiyatı referans alınır.
         // Daha küçük veya büyük havuzlar için fiyat esneklik gösterir (En az %60)
-        const baseArea = 40; 
-        const areaFactor = Math.max(0.6, poolArea / baseArea); 
-        
+        const baseArea = 40;
+        const areaFactor = Math.max(0.6, poolArea / baseArea);
+
         // Paket toplam fiyatını hesaplayıp döndürüyoruz
         return Math.round((item.unit_price || 150000) * areaFactor);
     },
@@ -1198,8 +1196,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone);
-        const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined ? aggregatedUnitStats['calc_iron_unit'] : ((totalConstructionArea * 0.26) * ironCoeff);
-
+        const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined ? aggregatedUnitStats['calc_iron_unit'] : ((totalConstructionArea * 0.35) * ironCoeff);
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = raftHeight * 1.5;
@@ -2125,27 +2122,32 @@ export const calculateDynamicUnitPrice = (
     if (item.name === "Konteyner (Ofis/Depo)") {
         const basePrice = item.unit_price; // Baz Fiyat (Örn: 65.000 TL)
 
-        // 0 - 1000 m2: Sabit Fiyat
+        // --- 1 ADET BANDI (0 - 2000 m2) ---
         if (totalConstructionArea <= 1000) {
-            return basePrice;
+            return basePrice; // Standart 1 Adet
         }
-        // 1000 - 2000 m2: Fiyat 1.0 -> 1.5 katına lineer artar
         else if (totalConstructionArea <= 2000) {
+            // Alan 1000-2000 arası büyürken, 2.yi almak yerine 1 tane "BÜYÜK" konteyner alınır. 
+            // Fiyat doğrusal olarak 1.5 katına kadar çıkar.
             const progress = (totalConstructionArea - 1000) / 1000;
             return basePrice * (1.0 + (0.5 * progress));
         }
-        // 2000 - 3000 m2: Fiyat 1.5 katı (Sabit)
+
+        // --- 2 ADET BANDI (2000 - 5000 m2) ---
         else if (totalConstructionArea <= 3000) {
-            return basePrice * 1.5;
+            // Alan 2000'i geçtiği an miktar (calc_container_complex) otomatik 2'ye çıkar.
+            // Bu yüzden birim fiyatı ŞİŞİRMİYORUZ, tekrar STANDART fiyata SIFIRLIYORUZ. (2 Adet Standart)
+            return basePrice;
         }
-        // 3000 - 5000 m2: Fiyat 1.0 -> 1.5 katına tekrar lineer artar (Resetlenerek)
-        // (Burada 2 adete çıktığı için birim fiyatı tekrar ölçeklendirdik)
         else if (totalConstructionArea <= 5000) {
+            // Alan 3000-5000 arası büyürken 2 adet "BÜYÜK" konteyner alınır. Fiyat yine 1.5 katına kadar çıkar.
             const progress = (totalConstructionArea - 3000) / 2000;
             return basePrice * (1.0 + (0.5 * progress));
         }
-        // 5000 m2 üzeri: Sabit Baz Fiyat (3 adet olduğu için)
+
+        // --- 3 ADET BANDI (5000 m2 Üzeri) ---
         else {
+            // 5000 m2 geçilince miktar 3'e çıkar, birim fiyat yine standarda döner.
             return basePrice;
         }
     }

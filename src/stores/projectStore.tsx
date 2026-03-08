@@ -186,7 +186,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         projectDescription: 'Bu proje modern mimari standartlarına uygun olarak tasarlanmış olup, 1. sınıf malzemelerle inşa edilecektir.',
         firmLogo: null,
         projectRender: null,
-        showUnitDetails: false, 
+        showUnitDetails: false,
         profitMargin: 0,
         selectedBrands: {},
         includeBuildingDetails: true, // YENİ EKLENEN SATIR (Varsayılan olarak açık gelsin)
@@ -303,6 +303,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isNormalPerimeterManual: false,
         isGroundPerimeterManual: false,
         isBasementPerimeterManual: false,
+        outerWallThickness: 20,
+        innerWallThickness: 13.5,
 
 
         heatingSystem: 'radiator',
@@ -905,6 +907,65 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addToAggregated(stats, u.count);
         });
 
+        const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
+        const innerThickStr = buildingStats.innerWallThickness === 13.5 ? '13_5' : String(buildingStats.innerWallThickness || 13.5);
+
+        const outerKey = `wall_${outerThickStr}_area`;
+        const innerKey = `wall_${innerThickStr}_area`;
+
+        ['10', '13_5', '15', '20', '25'].forEach(tStr => {
+            const wDed = aggregatedUnitStats[`wDed_${tStr}`] || 0; // Pencere düşümü
+            const dDed = aggregatedUnitStats[`dDed_${tStr}`] || 0; // Kapı düşümü
+            const currentKey = `wall_${tStr}_area`;
+
+            // Kapı Düşümleri (Öncelikli olarak İç Duvara aktarılır - Rollover)
+            if (dDed > 0) {
+                aggregatedUnitStats[currentKey] = (aggregatedUnitStats[currentKey] || 0) - dDed;
+                if (aggregatedUnitStats[currentKey] < 0) {
+                    const remainder = Math.abs(aggregatedUnitStats[currentKey]);
+                    aggregatedUnitStats[currentKey] = 0; // Negatifi engelle
+                    if (currentKey !== innerKey) {
+                        aggregatedUnitStats[innerKey] = (aggregatedUnitStats[innerKey] || 0) - remainder;
+                    }
+                }
+            }
+
+            // Pencere Düşümleri (Öncelikli olarak Dış Duvara aktarılır - Rollover)
+            if (wDed > 0) {
+                aggregatedUnitStats[currentKey] = (aggregatedUnitStats[currentKey] || 0) - wDed;
+                if (aggregatedUnitStats[currentKey] < 0) {
+                    const remainder = Math.abs(aggregatedUnitStats[currentKey]);
+                    aggregatedUnitStats[currentKey] = 0; // Negatifi engelle
+                    if (currentKey !== outerKey) {
+                        aggregatedUnitStats[outerKey] = (aggregatedUnitStats[outerKey] || 0) - remainder;
+                    }
+                }
+            }
+        });
+
+        // Negatif kalma ihtimaline karşı son bir güvenlik temizliği
+        ['10', '13_5', '15', '20', '25'].forEach(tStr => {
+            const key = `wall_${tStr}_area`;
+            if ((aggregatedUnitStats[key] || 0) < 0) {
+                aggregatedUnitStats[key] = 0;
+            }
+        });
+
+        // --- HARÇ VE YAPIŞTIRICI HESABI (TÜM DÜŞÜMLER BİTTİKTEN SONRA TEMİZ METRAJ ÜZERİNDEN) ---
+        aggregatedUnitStats['adhesive_weight'] = 0;
+        aggregatedUnitStats['mortar_volume'] = 0;
+        
+        ['10', '13_5', '15', '20', '25'].forEach(tStr => {
+            const area = aggregatedUnitStats[`wall_${tStr}_area`] || 0;
+            const thick = tStr === '13_5' ? 13.5 : parseFloat(tStr);
+            
+            if (globalWallMaterial === 'gazbeton') {
+                aggregatedUnitStats['adhesive_weight'] += area * (0.25 * thick);
+            } else {
+                aggregatedUnitStats['mortar_volume'] += area * (0.002 * thick);
+            }
+        });
+
         if (buildingStats.buildingType !== 'villa') {
             const nHallArea = Math.max(0, buildingStats.normalFloorHallArea || 0);
             const gHallArea = Math.max(0, buildingStats.groundFloorHallArea || 0);
@@ -1178,6 +1239,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             wellFoundationArea: 0,
             hasExistingBuilding: false,
             isUrbanTransformation: false,
+            outerWallThickness: 20,
+            innerWallThickness: 13.5,
+
             existingUnitCount: 0,
             monthlyRentPerUnit: 0,
             evictionCostPerUnit: 0,

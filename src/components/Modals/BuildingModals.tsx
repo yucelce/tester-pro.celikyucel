@@ -878,19 +878,49 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     <div className="w-8 h-8 rounded bg-yellow-500/20 text-yellow-400 flex items-center justify-center"><i className="fas fa-th-large"></i></div>
                                     Malzeme Tercihleri
                                 </h4>
-                                <div>
-                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Dış ve İç Duvar Ana Malzemesi</label>
-                                    <select
-                                        value={globalWallMaterial}
-                                        onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
-                                        className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
-                                    >
-                                        <option value="gazbeton">Gazbeton</option>
-                                        <option value="tugla">Tuğla</option>
-                                        <option value="bims">Bims</option>
-                                    </select>
-                                    <p className="text-[10px] text-slate-500 mt-2">Bu seçim tüm projedeki duvar maliyetlerini, işçiliği ve yapıştırıcı/harç türünü (Otomatik/Detaylı Mod fark etmeksizin) güncelleyecektir.</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Duvar Ana Malzemesi</label>
+                                        <select
+                                            value={globalWallMaterial}
+                                            onChange={(e) => setGlobalWallMaterial(e.target.value as WallMaterial)}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
+                                        >
+                                            <option value="gazbeton">Gazbeton</option>
+                                            <option value="tugla">Tuğla</option>
+                                            <option value="bims">Bims</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Dış Duvar Kalınlığı</label>
+                                        <select
+                                            value={buildingStats.outerWallThickness || 20}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, outerWallThickness: parseFloat(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
+                                        >
+                                            <option value={10}>10 cm</option>
+                                            <option value={13.5}>13.5 cm</option>
+                                            <option value={15}>15 cm</option>
+                                            <option value={20}>20 cm</option>
+                                            <option value={25}>25 cm</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">İç Duvar Kalınlığı</label>
+                                        <select
+                                            value={buildingStats.innerWallThickness || 13.5}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, innerWallThickness: parseFloat(e.target.value) })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500 transition"
+                                        >
+                                            <option value={10}>10 cm</option>
+                                            <option value={13.5}>13.5 cm</option>
+                                            <option value={15}>15 cm</option>
+                                            <option value={20}>20 cm</option>
+                                            <option value={25}>25 cm</option>
+                                        </select>
+                                    </div>
                                 </div>
+                                <p className="text-[10px] text-slate-500 mt-3">Bu seçim tüm projedeki duvar maliyetlerini, işçiliği ve yapıştırıcı/harç türünü güncelleyecektir. Kapı ve pencerelerden kaynaklı metraj düşümleri (minha) öncelikle bu kalınlıklara göre yapılır.</p>
                             </div>
 
                             {/* Tesisat Tercihleri */}

@@ -147,7 +147,9 @@ export interface BuildingStats {
 
     buildingType?: 'apartment' | 'villa';
 
-    visitedTabs?: string[]
+    visitedTabs?: string[];
+    outerWallThickness?: number;
+    innerWallThickness?: number;
 
     poolArea?: number;       // Havuz alanı (m2)
     parkingArea?: number;    // Açık otopark alanı (m2)
