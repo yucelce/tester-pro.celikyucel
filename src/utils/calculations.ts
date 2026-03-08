@@ -146,7 +146,6 @@ export class QuantityTakeoffService {
             dDed_10: 0, dDed_13_5: 0, dDed_15: 0, dDed_20: 0, dDed_25: 0,
         };
 
-
         if (!settings.isStructural) {
             stats.calc_unit_count = 1; stats.calc_steel_door = 1; stats.calc_sub_panel_count = 1;
             const heatingSystem = buildingStats.heatingSystem || 'radiator';
@@ -158,7 +157,11 @@ export class QuantityTakeoffService {
         rawMetrics.rooms.forEach((room: any) => {
             if (!settings.isStructural) {
                 this.applyHeating(stats, room, buildingStats, settings.globalWallMaterial);
-                this.applyFinishesAndOpenings(stats, room, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM); this.applySpecificRooms(stats, room);
+                
+                // HATA VEREN KISIM BURASIYDI, ŞU AN TAM UYUMLU:
+                this.applyFinishesAndOpenings(stats, room, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM);
+                
+                this.applySpecificRooms(stats, room);
                 this.applyElectricalPoints(stats, room);
             }
         });
@@ -169,7 +172,9 @@ export class QuantityTakeoffService {
         }
 
         // 2. KABA YAPI (Duvar, Beton, Demir)
+        // ÇAĞRIDA ARTIK wDed VE dDed GÖNDERİLMİYOR:
         this.applyStructure(stats, unit, rawMetrics, buildingStats, settings);
+
         // 3. STATİK & MİMARİ ÇAKIŞMA ÖNLEME (Fallbacks)
         this.applyFallbacks(stats, unit, rawMetrics, buildingStats, settings);
 
@@ -209,13 +214,12 @@ export class QuantityTakeoffService {
         }
     }
 
-    private static applyFinishesAndOpenings(stats: any, room: any, wDed: any, dDed: any, dHeight: number, avgThick: number) {
+    private static applyFinishesAndOpenings(stats: any, room: any, dHeight: number, avgThick: number) {
         const doorDeduction = (room.properties.doorCount || 0) * 1.89;
         const windowDeduction = room.properties.windowArea || 0;
         const grossWallArea = Math.max(0, (room.perimeterM * room.roomHeight) - (doorDeduction + windowDeduction));
 
-
-        // YENİ: Islak hacim tavanı kontrolü (Banyo ve WC'lerde asma tavan yapılır, alçı sıva yapılmaz)
+        // Islak hacim tavanı kontrolü (Banyo ve WC'lerde asma tavan yapılır, alçı sıva yapılmaz)
         const isWetAreaCeiling = room.type === 'bath' || room.type === 'wc';
 
         if (isWetAreaCeiling) {
@@ -231,11 +235,8 @@ export class QuantityTakeoffService {
             stats.calc_plaster_area += grossWallArea + (isWetAreaCeiling ? 0 : room.areaM2);
         } else {
             stats.wet_area += grossWallArea; // Duvarlar seramik
-            stats.net_wet_area += grossWallArea; // EKSİK OLAN SATIR: Yapıştırıcı için duvarı da dahil et
-
+            stats.net_wet_area += grossWallArea; // Yapıştırıcı için duvarı da dahil et
         }
-
-
 
         if (room.properties.hasCornice) stats.cornice_length += room.perimeterM;
         if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
@@ -250,14 +251,13 @@ export class QuantityTakeoffService {
 
         stats.calc_inner_door += (room.properties.doorCount || 0);
 
-        // Windows Deductions
+        // Windows Deductions (Doğrudan stats objesine yazılıyor)
         const wArea = room.properties.windowArea || 0;
         if (wArea > 0) {
             stats.calc_window_area += wArea;
             const wThick = room.properties.windowWallThickness || 20;
             let tKey = wThick <= 10 ? '10' : wThick <= 13.5 ? '13_5' : wThick <= 15 ? '15' : wThick <= 20 ? '20' : '25';
-
-            // DÜZELTİLEN SATIR: Direkt stats objesine yaz
+            
             stats[`wDed_${tKey}`] = (stats[`wDed_${tKey}`] || 0) + wArea;
 
             const wWidth = Math.sqrt(wArea * (4 / 3));
@@ -266,13 +266,12 @@ export class QuantityTakeoffService {
             stats.calc_window_perimeter += 2 * (wWidth + wHeight);
         }
 
-        // Doors Deductions
+        // Doors Deductions (Doğrudan stats objesine yazılıyor)
         const dArea = (room.properties.doorCount || 0) * 1.89;
         if (dArea > 0) {
             const dThick = room.properties.doorWallThickness || 13.5;
             let tKey = dThick <= 10 ? '10' : dThick <= 13.5 ? '13_5' : dThick <= 15 ? '15' : dThick <= 20 ? '20' : '25';
-
-            // DÜZELTİLEN SATIR: Direkt stats objesine yaz
+            
             stats[`dDed_${tKey}`] = (stats[`dDed_${tKey}`] || 0) + dArea;
         }
     }
@@ -321,7 +320,7 @@ export class QuantityTakeoffService {
         stats.calc_switch_socket_count += (sp + wp);
     }
 
-    private static applyStructure(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any, wDed: any, dDed: any) {
+    private static applyStructure(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any) {
         const { globalWallMaterial, globalWallMode, globalConcreteMode, ironCoeff } = settings;
         const useDetailedWalls = globalWallMode === 'detailed';
         const useDetailedConcrete = globalConcreteMode === 'detailed';
@@ -374,6 +373,8 @@ export class QuantityTakeoffService {
                 stats.net_wall_area = estimatedWallSurface * 2;
             }
         }
+
+        // (ÇİFT DÜŞÜM YAPAN wDed / dDed DÖNGÜSÜ BURADAN SİLİNDİ)
 
         // 3. SADECE STATİK PLANLAR İÇİN BETON VE DEMİR HESABI
         if (settings.isStructural) {
@@ -457,7 +458,7 @@ export class QuantityTakeoffService {
         }
     }
 }
-}
+
 
 export const getFoundationMetrics = (buildingStats: BuildingStats) => {
     const area = buildingStats.basementFloorCount > 0
