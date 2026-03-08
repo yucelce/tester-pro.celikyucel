@@ -157,10 +157,10 @@ export class QuantityTakeoffService {
         rawMetrics.rooms.forEach((room: any) => {
             if (!settings.isStructural) {
                 this.applyHeating(stats, room, buildingStats, settings.globalWallMaterial);
-                
+
                 // HATA VEREN KISIM BURASIYDI, ŞU AN TAM UYUMLU:
                 this.applyFinishesAndOpenings(stats, room, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM);
-                
+
                 this.applySpecificRooms(stats, room);
                 this.applyElectricalPoints(stats, room);
             }
@@ -257,7 +257,7 @@ export class QuantityTakeoffService {
             stats.calc_window_area += wArea;
             const wThick = room.properties.windowWallThickness || 20;
             let tKey = wThick <= 10 ? '10' : wThick <= 13.5 ? '13_5' : wThick <= 15 ? '15' : wThick <= 20 ? '20' : '25';
-            
+
             stats[`wDed_${tKey}`] = (stats[`wDed_${tKey}`] || 0) + wArea;
 
             const wWidth = Math.sqrt(wArea * (4 / 3));
@@ -271,7 +271,7 @@ export class QuantityTakeoffService {
         if (dArea > 0) {
             const dThick = room.properties.doorWallThickness || 13.5;
             let tKey = dThick <= 10 ? '10' : dThick <= 13.5 ? '13_5' : dThick <= 15 ? '15' : dThick <= 20 ? '20' : '25';
-            
+
             stats[`dDed_${tKey}`] = (stats[`dDed_${tKey}`] || 0) + dArea;
         }
     }
@@ -368,8 +368,20 @@ export class QuantityTakeoffService {
                 const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
                 const innerThickStr = buildingStats.innerWallThickness === 13.5 ? '13_5' : String(buildingStats.innerWallThickness || 13.5);
 
-                stats[`wall_${outerThickStr}_area`] += outerWallSurface;
-                stats[`wall_${innerThickStr}_area`] += innerWallSurface;
+                // Toplam sıva yüzeyi (iki taraflı)
+                const totalWallSurfaceForPlaster = refArea * 2.2 * heightFactor;
+
+                // Duvar malzemesi için 2D footprint (Toplam yüzeyin yarısı)
+                const totalWall2DArea = totalWallSurfaceForPlaster / 2;
+
+                // Dış duvar 2D alanı
+                const outerWall2DArea = floorPerimeter * metrics.defaultFloorHeight;
+
+                // İç duvar 2D alanı (Toplam 2D alandan dış duvar 2D alanını çıkar)
+                const innerWall2DArea = Math.max(0, totalWall2DArea - outerWall2DArea);
+
+                stats[`wall_${outerThickStr}_area`] += outerWall2DArea;
+                stats[`wall_${innerThickStr}_area`] += innerWall2DArea;
                 stats.net_wall_area = estimatedWallSurface * 2;
             }
         }
