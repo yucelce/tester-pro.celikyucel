@@ -146,8 +146,6 @@ export class QuantityTakeoffService {
             dDed_10: 0, dDed_13_5: 0, dDed_15: 0, dDed_20: 0, dDed_25: 0,
         };
 
-        const windowDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
-        const wallOpeningDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
 
         if (!settings.isStructural) {
             stats.calc_unit_count = 1; stats.calc_steel_door = 1; stats.calc_sub_panel_count = 1;
@@ -160,8 +158,7 @@ export class QuantityTakeoffService {
         rawMetrics.rooms.forEach((room: any) => {
             if (!settings.isStructural) {
                 this.applyHeating(stats, room, buildingStats, settings.globalWallMaterial);
-                this.applyFinishesAndOpenings(stats, room, windowDeductions, wallOpeningDeductions, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM);
-                this.applySpecificRooms(stats, room);
+                this.applyFinishesAndOpenings(stats, room, rawMetrics.defaultFloorHeight, rawMetrics.avgSlabThicknessM); this.applySpecificRooms(stats, room);
                 this.applyElectricalPoints(stats, room);
             }
         });
@@ -172,8 +169,7 @@ export class QuantityTakeoffService {
         }
 
         // 2. KABA YAPI (Duvar, Beton, Demir)
-        this.applyStructure(stats, unit, rawMetrics, buildingStats, settings, windowDeductions, wallOpeningDeductions);
-
+        this.applyStructure(stats, unit, rawMetrics, buildingStats, settings);
         // 3. STATİK & MİMARİ ÇAKIŞMA ÖNLEME (Fallbacks)
         this.applyFallbacks(stats, unit, rawMetrics, buildingStats, settings);
 
@@ -260,7 +256,9 @@ export class QuantityTakeoffService {
             stats.calc_window_area += wArea;
             const wThick = room.properties.windowWallThickness || 20;
             let tKey = wThick <= 10 ? '10' : wThick <= 13.5 ? '13_5' : wThick <= 15 ? '15' : wThick <= 20 ? '20' : '25';
-            wDed[tKey] += wArea;
+
+            // DÜZELTİLEN SATIR: Direkt stats objesine yaz
+            stats[`wDed_${tKey}`] = (stats[`wDed_${tKey}`] || 0) + wArea;
 
             const wWidth = Math.sqrt(wArea * (4 / 3));
             const wHeight = Math.sqrt(wArea * (3 / 4));
@@ -273,7 +271,9 @@ export class QuantityTakeoffService {
         if (dArea > 0) {
             const dThick = room.properties.doorWallThickness || 13.5;
             let tKey = dThick <= 10 ? '10' : dThick <= 13.5 ? '13_5' : dThick <= 15 ? '15' : dThick <= 20 ? '20' : '25';
-            dDed[tKey] += dArea;
+
+            // DÜZELTİLEN SATIR: Direkt stats objesine yaz
+            stats[`dDed_${tKey}`] = (stats[`dDed_${tKey}`] || 0) + dArea;
         }
     }
 
@@ -375,29 +375,6 @@ export class QuantityTakeoffService {
             }
         }
 
-        // 2. DÜŞÜMLER (MİMARİ PLANDAN GELEN BOŞLUK ZAYİATLARI)
-        // Her iki plan tipinde de çalışır ancak mimari planda "negatif" değerler üreterek statikten düşmesini sağlar.
-        ['wDed', 'dDed'].forEach((type, idx) => {
-            const deductions = idx === 0 ? wDed : dDed;
-            Object.keys(deductions).forEach(thickStr => {
-                const deductionArea = deductions[thickStr];
-                if (deductionArea > 0) {
-                    const tKey = `wall_${thickStr}_area`;
-                    const thickVal = thickStr === '13_5' ? 13.5 : parseFloat(thickStr);
-
-                    // Doğrudan eksi (-) olarak biriktiriyoruz
-                    stats[tKey] = (stats[tKey] || 0) - deductionArea;
-
-                    // Harç ve yapıştırıcı zayiatlarını da düşüyoruz
-                    if (globalWallMaterial === 'gazbeton') {
-                        stats.adhesive_weight = (stats.adhesive_weight || 0) - (deductionArea * (0.25 * thickVal));
-                    } else {
-                        stats.mortar_volume = (stats.mortar_volume || 0) - (deductionArea * (0.002 * thickVal));
-                    }
-                }
-            });
-        });
-
         // 3. SADECE STATİK PLANLAR İÇİN BETON VE DEMİR HESABI
         if (settings.isStructural) {
             if (useDetailedConcrete) {
@@ -456,30 +433,30 @@ export class QuantityTakeoffService {
         if (settings.isStructural) {
             stats.cornice_length = 0; stats.wet_area = 0; stats.dry_area = 0; stats.radiator_length = 0; stats.kitchen_cabinet_length = 0;
             stats.calc_rough_plaster_area = 0; stats.calc_paint_wall_area = 0; stats.calc_ceiling_paint_area = 0; stats.calc_plaster_area = 0;
-        } 
-            
-            stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0); stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
-            stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
+        }
 
-            if (stats.calc_rough_plaster_area === 0) {
-                let fallbackArea = metrics.defaultFloorArea;
-                if (unit.count > 0) {
-                    let floorCount = unit.floorType === 'normal' ? Math.max(1, buildingStats.normalFloorCount) : unit.floorType === 'basement' ? Math.max(1, buildingStats.basementFloorCount) : 1;
-                    fallbackArea = metrics.defaultFloorArea / Math.max(1, unit.count / floorCount);
-                }
-                const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
+        stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0); stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
+        stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
 
-                stats.calc_rough_plaster_area = fArea * 2.8;
-                stats.calc_paint_wall_area = fArea * 2.5;
-                stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
-                stats.calc_ceiling_paint_area = fArea;
-
-                stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
-                if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
-                if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
+        if (stats.calc_rough_plaster_area === 0) {
+            let fallbackArea = metrics.defaultFloorArea;
+            if (unit.count > 0) {
+                let floorCount = unit.floorType === 'normal' ? Math.max(1, buildingStats.normalFloorCount) : unit.floorType === 'basement' ? Math.max(1, buildingStats.basementFloorCount) : 1;
+                fallbackArea = metrics.defaultFloorArea / Math.max(1, unit.count / floorCount);
             }
+            const fArea = stats.total_area > 0 ? stats.total_area : fallbackArea;
+
+            stats.calc_rough_plaster_area = fArea * 2.8;
+            stats.calc_paint_wall_area = fArea * 2.5;
+            stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
+            stats.calc_ceiling_paint_area = fArea;
+
+            stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
+            if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
+            if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
         }
     }
+}
 }
 
 export const getFoundationMetrics = (buildingStats: BuildingStats) => {
