@@ -879,11 +879,57 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return (vTemel + vBodrumPerde + vKatlar) * (item.multiplier || 1);
     },
 
-    'calc_pool_concrete': ({ buildingStats }) => buildingStats.poolArea || 0,
+    'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
+        const poolArea = buildingStats.poolArea || 0;
+        if (poolArea <= 0) return 0;
 
-    'calc_pool_system': ({ buildingStats }) => {
-        if (buildingStats.poolArea && buildingStats.poolArea > 0) return 1;
-        return 0;
+        const p_excavation = getGlobalPrice(currentCosts, "Hafriyat (Kazı ve Döküm)");
+        const p_concrete = getGlobalPrice(currentCosts, "Betonarme Betonu");
+        const p_iron = getGlobalPrice(currentCosts, "İnşaat Demiri");
+        const p_formwork = getGlobalPrice(currentCosts, "Kalıp İşçiliği & Malzeme");
+        const p_insulation = getGlobalPrice(currentCosts, "Temel Su Yalıtımı (Bohçalama)");
+        const p_ceramic = getGlobalPrice(currentCosts, "Seramik Kaplama");
+        const p_ceramic_adhesive = getGlobalPrice(currentCosts, "Seramik Yapıştırıcısı");
+        const p_joint_filler = getGlobalPrice(currentCosts, "Seramik Derz Dolgusu");
+
+        const depth = 1.5;
+        const perimeter = 4 * Math.sqrt(poolArea);
+        const wallArea = perimeter * depth;
+        const innerSurfaceArea = poolArea + wallArea;
+
+        // Hassas Metrajlar
+        const excavationVol = (poolArea + perimeter * 0.5) * (depth + 0.3);
+        const concreteVol = (poolArea * 0.20) + (wallArea * 0.20);
+        const ironTon = concreteVol * 0.120;
+        const formworkArea = wallArea * 2;
+
+        // Tutar Hesaplamaları
+        const costExcavation = excavationVol * p_excavation;
+        const costConcrete = concreteVol * p_concrete;
+        const costIron = ironTon * p_iron;
+        const costFormwork = formworkArea * p_formwork;
+        const costInsulation = innerSurfaceArea * p_insulation * 1.5;
+        const costCeramic = innerSurfaceArea * p_ceramic;
+        const costAdhesive = innerSurfaceArea * 5 * p_ceramic_adhesive;
+        const costFiller = innerSurfaceArea * 0.5 * p_joint_filler;
+
+        const totalPoolMaterialCost = costExcavation + costConcrete + costIron + costFormwork + costInsulation + costCeramic + costAdhesive + costFiller;
+
+        // Toplam paket fiyatını (%10 marj ile) döndürüyoruz
+        return Math.round(totalPoolMaterialCost * 1.10);
+    },
+
+    'calc_pool_system': ({ buildingStats, item }) => {
+        const poolArea = buildingStats.poolArea || 0;
+        if (poolArea <= 0) return 0;
+        
+        // Temel havuz (mesela 40 m2) için sistem fiyatı referans alınır.
+        // Daha küçük veya büyük havuzlar için fiyat esneklik gösterir (En az %60)
+        const baseArea = 40; 
+        const areaFactor = Math.max(0.6, poolArea / baseArea); 
+        
+        // Paket toplam fiyatını hesaplayıp döndürüyoruz
+        return Math.round((item.unit_price || 150000) * areaFactor);
     },
 
     'calc_villa_parking': ({ buildingStats }) => buildingStats.parkingArea || 0,
@@ -2049,50 +2095,6 @@ export const calculateDynamicUnitPrice = (
         }
     }
 
-    if (item.name === "Özel Havuz (Hafriyat, İzolasyon ve Beton)" && buildingStats && currentCosts) {
-        const poolArea = buildingStats.poolArea || 0;
-
-        if (poolArea > 0) {
-
-            // Sadece fiyatlar constants dosyasından (merkezden) çekiliyor
-            const p_excavation = getGlobalPrice(currentCosts, "Hafriyat (Kazı ve Döküm)");
-            const p_concrete = getGlobalPrice(currentCosts, "Betonarme Betonu");
-            const p_iron = getGlobalPrice(currentCosts, "İnşaat Demiri");
-            const p_formwork = getGlobalPrice(currentCosts, "Kalıp İşçiliği & Malzeme");
-            const p_insulation = getGlobalPrice(currentCosts, "Temel Su Yalıtımı (Bohçalama)");
-            const p_ceramic = getGlobalPrice(currentCosts, "Seramik Kaplama");
-            const p_ceramic_adhesive = getGlobalPrice(currentCosts, "Seramik Yapıştırıcısı");
-            const p_joint_filler = getGlobalPrice(currentCosts, "Seramik Derz Dolgusu");
-
-            // Ölçüler ve çarpanlar eskisi gibi hesaplama içinde kalıyor
-            const depth = 1.5;
-            const perimeter = 4 * Math.sqrt(poolArea);
-            const wallArea = perimeter * depth;
-            const innerSurfaceArea = poolArea + wallArea;
-
-            // Hassas Metrajlar
-            const excavationVol = (poolArea + perimeter * 0.5) * (depth + 0.3);
-            const concreteVol = (poolArea * 0.20) + (wallArea * 0.20);
-            const ironTon = concreteVol * 0.120;
-            const formworkArea = wallArea * 2;
-
-            // Tutar Hesaplamaları
-            const costExcavation = excavationVol * p_excavation;
-            const costConcrete = concreteVol * p_concrete;
-            const costIron = ironTon * p_iron;
-            const costFormwork = formworkArea * p_formwork;
-            const costInsulation = innerSurfaceArea * p_insulation * 1.5;
-            const costCeramic = innerSurfaceArea * p_ceramic;
-            const costAdhesive = innerSurfaceArea * 5 * p_ceramic_adhesive;
-            const costFiller = innerSurfaceArea * 0.5 * p_joint_filler;
-
-            const totalPoolMaterialCost = costExcavation + costConcrete + costIron + costFormwork + costInsulation + costCeramic + costAdhesive + costFiller;
-
-            const calculatedUnitPrice = totalPoolMaterialCost / poolArea;
-
-            return Math.round(calculatedUnitPrice * 1.10);
-        }
-    }
 
     if (item.name === "Grobeton") {
         const c30Price = getGlobalPrice(currentCosts, "Betonarme Betonu") || 2500;

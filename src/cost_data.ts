@@ -280,9 +280,9 @@ export const COST_DATA: CostCategory[] = [
       { name: "Ağaç Dikimi", unit: "Adet", unit_price: 1500, auto_source: "calc_tree_count", multiplier: 1, scope: 'global' },
       { name: "Çim Ekimi ve Otomatik Sulama Sistemi", unit: "m2", unit_price: 350, auto_source: "calc_grass_and_irrigation", multiplier: 1, scope: 'global' },
       { name: "Sert Zemin / Yürüyüş Yolu", unit: "m2", unit_price: 600, auto_source: "calc_hard_ground", multiplier: 1, scope: 'global' },
-      { name: "Özel Havuz (Hafriyat, İzolasyon ve Beton)", unit: "m2", unit_price: 18500, auto_source: "calc_pool_concrete", multiplier: 1, scope: 'global' },
+{ name: "Özel Havuz Yapımı (Hafriyat, İzolasyon, Beton ve Kaplama)", unit: "Paket", unit_price: 1, auto_source: "calc_pool_concrete", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)", unit: "Paket", unit_price: 150000, auto_source: "calc_pool_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)", unit: "m2", unit_price: 11000, auto_source: "calc_villa_veranda", multiplier: 1, scope: 'global' }
+      { name: "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)", unit: "m2", unit_price: 11000, auto_source: "calc_villa_veranda", multiplier: 1, scope: 'global' }      { name: "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)", unit: "m2", unit_price: 11000, auto_source: "calc_villa_veranda", multiplier: 1, scope: 'global' }
     ]
   },
   {
