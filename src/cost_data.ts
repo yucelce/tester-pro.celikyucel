@@ -32,7 +32,8 @@ export interface CostItem {
   "calc_vrf_indoor" | "calc_vrf_infrastructure" | "calc_villa_stairs" | "calc_cctv_system" |
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
   "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
-  'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area"
+  'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
+  "waterproofing_area"
 
   ;
 
@@ -159,7 +160,8 @@ export const COST_DATA: CostCategory[] = [
       { name: "Duvar Örme Harcı (Kara Harç)", unit: "m3", unit_price: 2195, auto_source: "calc_mortar_volume", multiplier: 1, scope: 'global' },
       { name: "Gazbeton Yapıştırıcısı", unit: "kg", unit_price: 4, auto_source: "calc_adhesive_weight", multiplier: 1, scope: 'global' },
       { name: "İç Sıva (Kara Sıva)", unit: "m2", unit_price: 237.6, auto_source: "calc_rough_plaster_area", multiplier: 1, scope: 'unit' },
-      { name: "Alçı Sıva (Kaba+Saten)", unit: "m2", unit_price: 206, auto_source: "calc_plaster_area", multiplier: 1, scope: 'unit' }, { name: "İç Cephe Boyası", unit: "m2", unit_price: 195.6, auto_source: "calc_paint_wall_area", multiplier: 1, scope: 'unit' },
+      { name: "Alçı Sıva (Kaba+Saten)", unit: "m2", unit_price: 206, auto_source: "calc_plaster_area", multiplier: 1, scope: 'unit' }, 
+      { name: "İç Cephe Boyası", unit: "m2", unit_price: 195.6, auto_source: "calc_paint_wall_area", multiplier: 1, scope: 'unit' },
       { name: "Tavan Boyası", unit: "m2", unit_price: 38, auto_source: "calc_ceiling_paint_area", multiplier: 1, scope: 'unit' },
       { name: "Asma Tavan (Alçıpan)", unit: "m2", unit_price: 650, auto_source: "calc_suspended_ceiling_area", multiplier: 1, scope: 'unit' },
       { name: "Kartonpiyer / Stropiyer", unit: "mt", unit_price: 126, auto_source: "cornice_length", multiplier: 1, scope: 'unit' }
@@ -185,9 +187,10 @@ export const COST_DATA: CostCategory[] = [
     id: "zemin_kaplama",
     title: "6. Zemin Kaplamaları ve Merdiven",
     items: [
-      { name: "Banyo ve Islak Hacim Su Yalıtımı", unit: "m2", unit_price: 400, auto_source: "net_wet_area", multiplier: 1.2, scope: 'unit' },
-      { name: "Şap Malzemesi", unit: "m2", unit_price: 100, auto_source: "total_area", multiplier: 0.85, scope: 'unit' },
-      { name: "Şap İşçiliği", unit: "m2", unit_price: 80, auto_source: "total_area", multiplier: 0.85, scope: 'unit' }, { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, scope: 'unit' },
+      { name: "Banyo ve Islak Hacim Su Yalıtımı", unit: "m2", unit_price: 400, auto_source: "waterproofing_area", multiplier: 1.05, scope: 'unit' },
+      { name: "Şap Malzemesi", unit: "m2", unit_price: 100, auto_source: "total_area", multiplier: 1.05, scope: 'unit' },
+      { name: "Şap İşçiliği", unit: "m2", unit_price: 80, auto_source: "total_area", multiplier: 1, scope: 'unit' }, 
+      { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", unit_price: 750, auto_source: "dry_area", multiplier: 1, scope: 'unit' },
       { name: "Seramik Kaplama", unit: "m2", unit_price: 1100, auto_source: "wet_area", multiplier: 1, scope: 'unit' },
       { name: "Seramik Yapıştırıcısı", unit: "kg", unit_price: 10, auto_source: "net_wet_area", multiplier: 5, scope: 'unit' },
       { name: "Seramik Derz Dolgusu", unit: "kg", unit_price: 25, auto_source: "net_wet_area", multiplier: 0.5, scope: 'unit' },

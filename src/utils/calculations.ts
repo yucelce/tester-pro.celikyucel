@@ -141,7 +141,7 @@ export class QuantityTakeoffService {
             calc_toilet: 0, calc_shower_cabin: 0, calc_shower_set: 0, calc_basin_mixer: 0, calc_sink_mixer: 0,
             calc_electrical_points: 0, calc_weak_current_points: 0, calc_switch_socket_count: 0, calc_sub_panel_count: 0,
             calc_heat_pump: 0, calc_vrf_infrastructure: 0, calc_vrf_indoor: 0,
-            calc_suspended_ceiling_area: 0,
+            calc_suspended_ceiling_area: 0, waterproofing_area: 0,
         };
 
         const windowDeductions: Record<string, number> = { '10': 0, '13_5': 0, '15': 0, '20': 0, '25': 0 };
@@ -243,6 +243,7 @@ export class QuantityTakeoffService {
         if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
             stats.wet_area += room.areaM2 * room.roomWaste;
             stats.net_wet_area += room.areaM2;
+            stats.waterproofing_area += room.areaM2 + (room.perimeterM * 0.30);
         }
         if (room.properties.floorType === 'parke') {
             stats.dry_area += room.areaM2 * room.roomWaste;
@@ -277,14 +278,16 @@ export class QuantityTakeoffService {
     private static applySpecificRooms(stats: any, room: any) {
         const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
         if (isKitchen) {
-            stats.calc_plumbing_unit += 0.5;
-            const cabinetLength = Math.sqrt(room.areaM2 / 12) * 4;
-            const cabinetArea = cabinetLength * Math.max(0, room.roomHeight - 0.90);
-            stats.calc_kitchen_cabinet += cabinetArea;
-            stats.kitchen_cabinet_length += cabinetArea;
-            stats.calc_kitchen_counter_length += cabinetLength;
-            stats.calc_kitchen_sink += 1; stats.calc_sink_mixer += 1;
-        }
+        stats.calc_plumbing_unit += 0.5;
+        const cabinetLength = Math.min(Math.max(2.5, 2.5 + (room.areaM2 * 0.15)), 7.0);
+        
+        const cabinetArea = cabinetLength * Math.max(0, room.roomHeight - 0.90);
+        stats.calc_kitchen_cabinet += cabinetArea;
+        stats.kitchen_cabinet_length += cabinetArea;
+        stats.calc_kitchen_counter_length += cabinetLength;
+        stats.calc_kitchen_sink += 1; 
+        stats.calc_sink_mixer += 1;
+    }
         if (room.type === 'bath') {
             stats.calc_plumbing_unit += 0.5; stats.calc_bathroom_cabinet += 1; stats.calc_toilet += 1;
             stats.calc_basin_mixer += 1; stats.calc_shower_cabin += 1; stats.calc_shower_set += 1;

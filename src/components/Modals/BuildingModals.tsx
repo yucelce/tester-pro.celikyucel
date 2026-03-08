@@ -914,6 +914,28 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                 </div>
                             </div>
 
+                            <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">
+                                <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center"><i className="fas fa-swimming-pool"></i></div>
+                                    Yüzme Havuzu (Opsiyonel)
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-4">Site veya villa için yüzme havuzu alanını girin. Kaba inşaat ve mekanik tesisat maliyetleri hesaplanarak "Paket Fiyat" olarak yansıtılacaktır.</p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Havuz Yüzey Alanı (m²)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.poolArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, poolArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-cyan-500 transition outline-none"
+                                            placeholder="Örn: 40"
+                                        />
+                                        <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">m²</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Kuyu Temel */}
                             <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">
                                 <label className="flex items-center gap-3 cursor-pointer mb-4">
@@ -980,26 +1002,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-orange-900/20 border border-orange-500/30 p-4 rounded-xl">
-                                <h4 className="font-bold text-orange-400 flex items-center gap-2 mb-2">
-                                    <i className="fas fa-swimming-pool"></i> Havuz ve Su Donatıları
-                                </h4>
-                                <p className="text-xs text-orange-200/70 mb-4">Açık yüzme havuzu imalatı (hafriyat, yalıtım, betonarme ve mekanik tesisat sistemi) metrajını belirleyin.</p>
-
-                                <div>
-                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Havuz Yüzey Alanı (m²)</label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            value={buildingStats.poolArea || ''}
-                                            onChange={(e) => setBuildingStats({ ...buildingStats, poolArea: parseFloat(e.target.value) || 0 })}
-                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-orange-500 transition outline-none"
-                                            placeholder="Örn: 30"
-                                        />
-                                        <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">m²</span>
-                                    </div>
-                                </div>
-                            </div>
+                            
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
                                 <label className="flex items-center gap-3 cursor-pointer mb-4">
                                     <input
