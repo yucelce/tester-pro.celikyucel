@@ -361,28 +361,23 @@ export class QuantityTakeoffService {
                 else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) floorPerimeter = buildingStats.basementFloorPerimeter;
 
                 const heightFactor = Math.max(1, (metrics.defaultFloorHeight / 3.0));
-                const estimatedWallSurface = refArea * 2.2 * heightFactor;
-                const outerWallSurface = floorPerimeter * metrics.defaultFloorHeight;
-                const innerWallSurface = Math.max(0, estimatedWallSurface - outerWallSurface);
+
+                // YENİ VE DOĞRU MANTIK:
+                // 1. Dış Duvar = Bina Çevresi x Yükseklik
+                const outerWall2DArea = floorPerimeter * metrics.defaultFloorHeight;
+
+                // 2. İç Duvar = Normal bir dairede m2 başına yaklaşık 1 ile 1.2 m2 arası iç duvar düşer
+                const innerWall2DArea = refArea * 1.1 * heightFactor;
+
+                // 3. Sıva Yüzeyi = (İç duvarların İKİ yüzü) + (Dış duvarın TEK iç yüzü)
+                const estimatedWallSurface = (innerWall2DArea * 2) + outerWall2DArea;
 
                 const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
                 const innerThickStr = buildingStats.innerWallThickness === 13.5 ? '13_5' : String(buildingStats.innerWallThickness || 13.5);
 
-                // Toplam sıva yüzeyi (iki taraflı)
-                const totalWallSurfaceForPlaster = refArea * 2.2 * heightFactor;
-
-                // Duvar malzemesi için 2D footprint (Toplam yüzeyin yarısı)
-                const totalWall2DArea = totalWallSurfaceForPlaster / 2;
-
-                // Dış duvar 2D alanı
-                const outerWall2DArea = floorPerimeter * metrics.defaultFloorHeight;
-
-                // İç duvar 2D alanı (Toplam 2D alandan dış duvar 2D alanını çıkar)
-                const innerWall2DArea = Math.max(0, totalWall2DArea - outerWall2DArea);
-
                 stats[`wall_${outerThickStr}_area`] += outerWall2DArea;
                 stats[`wall_${innerThickStr}_area`] += innerWall2DArea;
-                stats.net_wall_area = estimatedWallSurface * 2;
+                stats.net_wall_area = estimatedWallSurface;
             }
         }
 
