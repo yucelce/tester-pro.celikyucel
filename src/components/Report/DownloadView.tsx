@@ -58,6 +58,19 @@ export const DownloadView = ({ downloadId }: { downloadId: string }) => {
                 <p className="text-slate-400 mb-8 text-sm leading-relaxed">
                     Malzeme listesi ve fiyatlandırma şablonunuz hazır. Dosyayı Excel formatında indirip, birim fiyatlarınızı girerek geri dönüş yapabilirsiniz.
                 </p>
+
+                <div className="max-h-64 overflow-y-auto mb-6 bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-3 tracking-widest text-left">Teklif İçeriği</div>
+                {data.data.map((group: any, i: number) => (
+                    <div key={i} className="text-left text-xs mb-3 last:mb-0 border-b border-slate-600/30 pb-2 last:border-0">
+                        <div className="text-emerald-400 font-bold mb-0.5">{group.taskName}</div>
+                        <div className="text-slate-400 flex justify-between">
+                            <span>Malzeme Kalemi:</span>
+                            <span className="text-white font-mono">{group.items.length} Adet</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
                 
                 <button 
                     onClick={() => exportProcurementToExcel(data.project_name, data.data)}

@@ -122,32 +122,16 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     };
 
     // MEVCUT generateMessageText FONKSİYONUNU BUNUNLA DEĞİŞTİRİN:
-    const generateMessageText = () => {
-        let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
-        msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
+    // SADECE BU TEK FONKSİYONU TUTUN:
+const generateMessageText = () => {
+    let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
+    msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
 
-        if (shareLink) {
-            msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
-            msg += `İyi çalışmalar dilerim.`;
-        } else {
-            // Eğer link oluşturulmadıysa eski usul düz metin at
-            procurementGroups.forEach(group => {
-                msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
-                group.items.forEach(item => {
-                    const qty = item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${item.unit}`;
-                    msg += `• ${item.name}: ${qty}\n`;
-                });
-                msg += `\n`;
-            });
-        }
-
-        return encodeURIComponent(msg);
-    };
-
-    const generateMessageText = () => {
-        let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum. İhtiyaç listem aşağıdadır:\n\n`;
-        msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
-
+    if (shareLink) {
+        // Akıllı Link varsa bunu ekle (Tedarikçi Excel indirebilecek)
+        msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
+    } else {
+        // Link henüz oluşturulmadıysa düz metin listesi oluştur
         procurementGroups.forEach(group => {
             msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
             group.items.forEach(item => {
@@ -156,9 +140,10 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             });
             msg += `\n`;
         });
-
-        return encodeURIComponent(msg);
-    };
+    }
+    msg += `İyi çalışmalar dilerim.`;
+    return encodeURIComponent(msg);
+};
 
     const formatPhoneForWA = (phone: string) => {
         let clean = phone.replace(/\D/g, '');
