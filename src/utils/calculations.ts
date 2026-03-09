@@ -848,7 +848,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return buildingStats.roofTerraceArea * 1.15;
         }
         // Apartmanlarda veya teras girilmemiş durumlarda eski standart formül (toplam inşaat alanının %15'i)
-        return totalConstructionArea * 0.15;
+        return 0
     },
 
     'calc_soil_investigation': ({ buildingStats, currentCosts }) => {
