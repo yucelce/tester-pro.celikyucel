@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { ProjectProvider, useProjectStore } from './stores/projectStore';
 import { UIProvider, useUIStore } from './stores/uiStore';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { DownloadView } from './components/Report/DownloadView';
 
 // Views
 import { DashboardView } from './components/Dashboard/DashboardView';
@@ -18,7 +19,7 @@ import { ProjectManagementModal } from './components/Modals/ProjectManagementMod
 import { BrandSelectionModal } from './components/Modals/BrandSelectionModal';
 
 const AppLayout = () => {
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const downloadId = urlParams.get('downloadId');
 
