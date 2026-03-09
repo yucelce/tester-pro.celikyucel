@@ -388,6 +388,9 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Saten Alçı (kg)": 7.7,  
     "Astar Boya (kg)": 51.2,                
     "İç Cephe Boyası (kg)": 97.4,
+    "Otopark Yüzey Sertleştirici (Helikopter Şap)": 180,
+"Sığınak Kapısı ve Havalandırma Paketi": 65000,
+"Otopark Yangın ve Jet Fan Sistemi": 1200,
 };
 
 // src/constants.ts dosyasının en altına ekleyin:

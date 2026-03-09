@@ -35,7 +35,8 @@ export interface CostItem {
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
   "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
   'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
-  "waterproofing_area" | "calc_terrace_waterproofing";
+  "waterproofing_area" | "calc_terrace_waterproofing" |
+  'calc_indoor_parking_screed' | 'calc_shelter_package' | 'calc_parking_ventilation'
 
   ;
 
@@ -207,7 +208,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Merdiven Mermer Kaplama", unit: "Basamak", auto_source: "calc_stairs", multiplier: 1, scope: 'global' },
       { name: "Merdiven Korkuluğu", unit: "mt", auto_source: "calc_stairs_railing", multiplier: 1, scope: 'global' },
       { name: "Süpürgelik", unit: "mt", auto_source: "dry_perimeter", multiplier: 1, scope: 'unit' },
-      { name: "Mermer Harcı ve Kumu", unit: "m3", auto_source: "calc_marble_mortar", multiplier: 1, scope: 'global' }
+      { name: "Mermer Harcı ve Kumu", unit: "m3", auto_source: "calc_marble_mortar", multiplier: 1, scope: 'global' },
+      { name: "Otopark Yüzey Sertleştirici (Helikopter Şap)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
     ]
   },
   {
@@ -261,7 +263,9 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Hidrofor Sistemi", unit: "Paket", auto_source: "calc_hydrophore", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yangın Tesisatı (Dolap+Hat)", unit: "Adet", auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Asansör (Paket)", unit: "Adet", auto_source: "calc_elevator", multiplier: 1, scope: 'global' },
-      { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' }
+      { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
+      { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "m2", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global' },
     ]
   },
   {
@@ -398,7 +402,11 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
   "Görüntülü Diafon Sistemi": "Daire içindeki ekrandan, bina dış kapısındaki veya şantiye girişindeki ziyaretçiyi sesli ve görüntülü olarak görmeye, iletişim kurmaya ve dış kapıyı otomatiğe basarak açmaya yarayan güvenlikli haberleşme sistemidir.",
   "Yağmur Suyu Hasat Sistemi (Zorunlu)": "Çevre ve Şehircilik Bakanlığı kararınca, belirli bir büyüklüğün (örn: 2000 m²) üzerindeki parsellerde, çatılardan gelen yağmur suyunu toplayıp filtreleyerek bahçe sulamada veya rezervuarlarda kullanmak üzere yeraltı tankında depolayan ekolojik ve zorunlu bir sistemdir.",
   "Bahçe / Çevre Duvarı": "Arsa sınırlarını netleştirmek, sokaktan izinsiz girişleri engellemek ve bahçe kotunun yol kotundan yüksek olması durumunda toprak kaymasını (istinat) durdurmak amacıyla yapılan betonarme veya yığma taş çevre duvarıdır.",
-  "Ağaç Dikimi": "Belediyelerin peyzaj onayı ve iskan (yapı kullanma izni) şartları gereğince, inşaat bitiminde arsanın yeşil alan büyüklüğüne göre hesaplanan asgari sayıda yetişkin ağaç ve fidanın temin edilip dikilmesi maliyetidir."
+  "Ağaç Dikimi": "Belediyelerin peyzaj onayı ve iskan (yapı kullanma izni) şartları gereğince, inşaat bitiminde arsanın yeşil alan büyüklüğüne göre hesaplanan asgari sayıda yetişkin ağaç ve fidanın temin edilip dikilmesi maliyetidir.",
+  "Otopark Yüzey Sertleştirici (Helikopter Şap)": "Kapalı otopark zeminlerinde tozumayı önlemek ve dayanımı artırmak için uygulanan kuvars/korund katkılı helikopter perdahlı beton/şap yüzey işlemidir.",
+  "Sığınak Kapısı ve Havalandırma Paketi": "Sığınak yönetmeliğine uygun çelik sığınak kapıları ve radyoaktif/biyolojik partikül tutucu karbon filtreli havalandırma (santral) sistemidir.",
+  "Otopark Yangın ve Jet Fan Sistemi": "Kapalı otoparklarda egzoz dumanını tahliye etmek (jet fan) ve olası araç yangınlarına müdahale etmek için kurulan sulu söndürme (sprinkler) altyapısıdır.",
+
 };
 
 export const COST_DATA: CostCategory[] = RAW_COST_DATA.map(cat => ({

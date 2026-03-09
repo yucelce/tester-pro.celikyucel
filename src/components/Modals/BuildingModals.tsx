@@ -566,6 +566,35 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </div>
                                     </div>
                                 </div>
+                                {/* Bodrum Kat - Otopark ve Sığınak Detayları */}
+                                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700/50 animate-fadeIn">
+                                    <div>
+                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">
+                                            İçindeki Kapalı Otopark (m²)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={buildingStats.indoorParkingArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, indoorParkingArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-orange-500 outline-none"
+                                            placeholder="Örn: 200"
+                                        />
+                                        <p className="text-[9px] text-slate-500 mt-1">İnce işlerden düşülür, zemin sertleştirici ve Jet Fan eklenir.</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">
+                                            İçindeki Sığınak Alanı (m²)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={buildingStats.shelterArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, shelterArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-orange-500 outline-none"
+                                            placeholder="Örn: 50"
+                                        />
+                                        <p className="text-[9px] text-slate-500 mt-1">İnce işlerden düşülür, çelik kapı ve santral eklenir.</p>
+                                    </div>
+                                </div>
                                 {/* Çatı Katı (Dubleks / Piyes) */}
                                 <div className="space-y-4 bg-slate-800/30 p-4 md:p-5 rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition">
                                     <h4 className="font-bold text-purple-400 text-sm md:text-base flex items-center justify-between border-b border-purple-900/50 pb-2">
@@ -1032,7 +1061,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
                                 <label className="flex items-center gap-3 cursor-pointer mb-4">
                                     <input
@@ -1134,7 +1163,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl mt-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input

@@ -247,7 +247,15 @@ export class QuantityTakeoffService {
         if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
             stats.wet_area += room.areaM2 * room.roomWaste;
             stats.net_wet_area += room.areaM2;
-            stats.waterproofing_area += room.areaM2 + (room.perimeterM * 0.30);
+
+            // Yalıtımı oda tipine göre ayır:
+            const insulationArea = room.areaM2 + (room.perimeterM * 0.30); // 30cm parapet dönüş payı
+
+            if (room.type === 'balcony') {
+                stats.balcony_waterproofing_area = (stats.balcony_waterproofing_area || 0) + insulationArea;
+            } else {
+                stats.waterproofing_area += insulationArea; // Sadece Banyo ve WC'ler burada kalır
+            }
         }
         if (room.properties.floorType === 'parke') {
             stats.dry_area += room.areaM2 * room.roomWaste;
@@ -734,6 +742,15 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalConstructionArea;
     },
 
+    'calc_indoor_parking_screed': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
+    'calc_parking_ventilation': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
+    'calc_shelter_package': ({ buildingStats, item, currentCosts }) => {
+        if (buildingStats.shelterArea && buildingStats.shelterArea > 0) {
+            return getGlobalPrice(currentCosts, item.name);
+        }
+        return 0;
+    },
+
     'calc_satellite_system': ({ aggregatedUnitStats, totalConstructionArea, item }) => {
         const totalApartments = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         return item.unit_price * Math.max(1, totalApartments / 10);
@@ -842,13 +859,27 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return ((side + 8) * 2) + ((side + 6) * 2);
     },
 
-    'calc_terrace_waterproofing': ({ buildingStats, totalConstructionArea }) => {
-        // Eğer villada özel açık teras alanı girilmişse direkt onu al (parapet dönüşleri için %15 pay ekleyerek)
-        if (buildingStats.buildingType === 'villa' && buildingStats.roofTerraceArea && buildingStats.roofTerraceArea > 0) {
-            return buildingStats.roofTerraceArea * 1.15;
+    'calc_terrace_waterproofing': ({ buildingStats, totalConstructionArea, aggregatedUnitStats }) => {
+        let totalTerraceAndBalcony = 0;
+
+        // 1. Dairelerden gelen gerçek balkon yalıtım metrajı (Odalar panelinden)
+        if (aggregatedUnitStats && aggregatedUnitStats['balcony_waterproofing_area'] > 0) {
+            totalTerraceAndBalcony += aggregatedUnitStats['balcony_waterproofing_area'];
         }
-        // Apartmanlarda veya teras girilmemiş durumlarda eski standart formül (toplam inşaat alanının %15'i)
-        return 0
+
+        // 2. Yapı Genel Bilgilerinden girilen Açık Teras alanı (Villa veya Apartman fark etmeksizin)
+        if (buildingStats.roofTerraceArea && buildingStats.roofTerraceArea > 0) {
+            // Teras alanına parapet dönüşleri için %15 pay ekleyelim
+            totalTerraceAndBalcony += buildingStats.roofTerraceArea * 1.15;
+        }
+
+        // 3. FALLBACK (Yedek Güvenlik): Eğer kullanıcı hiç balkon tanımlamamışsa ve teras girmemişse,
+        // projenin balkonsuz kalmaması için eski tahmini formülü (%15) kullanalım.
+        if (totalTerraceAndBalcony === 0) {
+            totalTerraceAndBalcony = totalConstructionArea * 0.15;
+        }
+
+        return totalTerraceAndBalcony;
     },
 
     'calc_soil_investigation': ({ buildingStats, currentCosts }) => {
@@ -1489,7 +1520,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else {
             // Apartman için
             let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
-            
+
             // DÜZELTME: Bodrum yoksa subasman (topraktan koparma) yüksekliğini cephe alanına ekle
             if (buildingStats.basementFloorCount === 0) {
                 const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;

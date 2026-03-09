@@ -157,6 +157,9 @@ export interface BuildingStats {
     subasmanHeight?: number;
     roofTerraceArea?: number;
 
+    indoorParkingArea?: number; // Kapalı otopark alanı (m2)
+    shelterArea?: number;       // Sığınak alanı (m2)
+
     hasRoofFloor?: boolean;
     roofFloorArea?: number;
     roofFloorHeight?: number; // Eğimden dolayı ortalama yükseklik

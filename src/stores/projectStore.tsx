@@ -982,11 +982,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + terraceArea;
                 // Şap Atılması için toplam alana (total_area) ekle
                 aggregatedUnitStats['total_area'] = (aggregatedUnitStats['total_area'] || 0) + terraceArea;
-                
+
                 // Terasın etrafına korkuluk hesabı (Kare kabulüyle yaklaşık 3 açık kenar baz alınır: Çevre = sqrt(Alan)*3)
                 aggregatedUnitStats['calc_balcony_railing'] = (aggregatedUnitStats['calc_balcony_railing'] || 0) + (Math.sqrt(terraceArea) * 3);
             }
         }
+
+        // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
+        const nonResidentialArea = (buildingStats.indoorParkingArea || 0) + (buildingStats.shelterArea || 0);
+
+        if (nonResidentialArea > 0 && buildingStats.buildingType !== 'villa') {
+            // Bodrum kat ortalama tavan yüksekliğine göre tahmini duvar çarpanı
+            const hRatio = buildingStats.basementFloorHeight > 0 ? buildingStats.basementFloorHeight : 3.0;
+            const wallMultiplier = (hRatio * 4) / 3.0;
+
+            // Duvar ve Tavan İnce İşlerinden Düşüm
+            aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - (nonResidentialArea * wallMultiplier));
+            aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - (nonResidentialArea * wallMultiplier));
+            aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - (nonResidentialArea * wallMultiplier));
+            aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - nonResidentialArea);
+
+            // Zemin ve Islak Hacimlerden Düşüm (Otoparka zaten helikopter şapı eklendiği için normal şap ve parke düşülür)
+            aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - nonResidentialArea);
+            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (nonResidentialArea * 0.85)); // Varsayılan %85 kuru alan kabulü
+            aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (nonResidentialArea * 0.15)); // Varsayılan %15 ıslak alan kabulü
+            aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (nonResidentialArea * 0.15));
+        }
+
 
         const details = costs.map(cat => {
             let catTotal = 0;
