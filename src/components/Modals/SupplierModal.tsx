@@ -123,27 +123,27 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
 
     // MEVCUT generateMessageText FONKSİYONUNU BUNUNLA DEĞİŞTİRİN:
     // SADECE BU TEK FONKSİYONU TUTUN:
-const generateMessageText = () => {
-    let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
-    msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
+    const generateMessageText = () => {
+        let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
+        msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
 
-    if (shareLink) {
-        // Akıllı Link varsa bunu ekle (Tedarikçi Excel indirebilecek)
-        msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
-    } else {
-        // Link henüz oluşturulmadıysa düz metin listesi oluştur
-        procurementGroups.forEach(group => {
-            msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
-            group.items.forEach(item => {
-                const qty = item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${item.unit}`;
-                msg += `• ${item.name}: ${qty}\n`;
+        if (shareLink) {
+            // Akıllı Link varsa bunu ekle (Tedarikçi Excel indirebilecek)
+            msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
+        } else {
+            // Link henüz oluşturulmadıysa düz metin listesi oluştur
+            procurementGroups.forEach(group => {
+                msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
+                group.items.forEach(item => {
+                    const qty = item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${item.unit}`;
+                    msg += `• ${item.name}: ${qty}\n`;
+                });
+                msg += `\n`;
             });
-            msg += `\n`;
-        });
-    }
-    msg += `İyi çalışmalar dilerim.`;
-    return encodeURIComponent(msg);
-};
+        }
+        msg += `İyi çalışmalar dilerim.`;
+        return encodeURIComponent(msg);
+    };
 
     const formatPhoneForWA = (phone: string) => {
         let clean = phone.replace(/\D/g, '');
@@ -249,12 +249,25 @@ const generateMessageText = () => {
                                         >
                                             <i className="fab fa-whatsapp text-lg"></i> WhatsApp
                                         </a>
-                                        <a
-                                            href={`mailto:${supplier.eposta}?subject=CY Pro Malzeme Fiyat Teklifi Talebi&body=${generateMessageText()}`}
-                                            className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                                        >
-                                            <i className="fas fa-envelope text-sm"></i> E-Posta
-                                        </a>
+
+                                        {/* YENİ E-POSTA BUTONU KISMI BURAYA GELDİ */}
+                                        {shareLink ? (
+                                            <a
+                                                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${supplier.eposta}&su=${encodeURIComponent("CY Pro Malzeme Fiyat Teklifi Talebi")}&body=${generateMessageText()}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
+                                            >
+                                                <i className="fas fa-envelope text-sm"></i> Gmail ile Gönder
+                                            </a>
+                                        ) : (
+                                            <button
+                                                onClick={() => alert("E-posta göndermeden önce lütfen yukarıdan 'Excel İndirme Linki Üret' butonuna tıklayarak teklif bağlantınızı oluşturun. Bu sayede tedarikçi listeyi Excel olarak görebilecektir.")}
+                                                className="bg-slate-400 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-not-allowed shadow-sm"
+                                            >
+                                                <i className="fas fa-envelope text-sm"></i> Önce Link Üretin
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
