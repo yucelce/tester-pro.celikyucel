@@ -21,6 +21,11 @@ export const getGlobalPrice = (
     return DEFAULT_PRICES[itemName] || 0;
 };
 
+export const estimatePerimeter = (area: number): number => {
+    if (!area || area <= 0) return 0;
+    return 10 * Math.sqrt(area / 6);
+};
+
 export const calculateEstimatedRaftHeight = (totalFloors: number): number => {
     if (totalFloors >= 20) return 2.00;
     if (totalFloors >= 4) return 0.40 + (totalFloors - 4) * 0.10;
@@ -95,7 +100,7 @@ export class GeometryAnalyzer {
 
             if (room.manualAreaM2 !== undefined && room.manualAreaM2 > 0) {
                 areaM2 = room.manualAreaM2;
-                perimeterM = room.manualPerimeterM || (Math.sqrt(areaM2) * 4);
+                perimeterM = room.manualPerimeterM || estimatePerimeter(areaM2);
             } else if (unit.scale > 0) {
                 areaM2 = room.area_px / (unit.scale * unit.scale);
                 perimeterM = room.perimeter_px / unit.scale;
@@ -355,7 +360,7 @@ export class QuantityTakeoffService {
                 }
             } else {
                 const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
-                let floorPerimeter = Math.sqrt(refArea) * 4;
+                let floorPerimeter = estimatePerimeter(refArea);
                 if (unit.floorType === 'normal' && buildingStats.normalFloorPerimeter) floorPerimeter = buildingStats.normalFloorPerimeter;
                 else if (unit.floorType === 'ground' && buildingStats.groundFloorPerimeter) floorPerimeter = buildingStats.groundFloorPerimeter;
                 else if (unit.floorType === 'basement' && buildingStats.basementFloorPerimeter) floorPerimeter = buildingStats.basementFloorPerimeter;
@@ -389,7 +394,7 @@ export class QuantityTakeoffService {
                 let totalColumnAreaOnFloor = 0;
                 (unit.columns || []).forEach(col => {
                     let areaM2 = col.manualAreaM2 !== undefined && col.manualAreaM2 > 0 ? col.manualAreaM2 : (unit.scale > 0 ? col.area_px / (unit.scale * unit.scale) : 0);
-                    let perimeterM = col.manualPerimeterM || (Math.sqrt(areaM2) * 4);
+                    let perimeterM = col.manualPerimeterM || estimatePerimeter(areaM2);
                     const height = (col.properties.height && col.properties.height > 0) ? col.properties.height : metrics.defaultFloorHeight;
                     stats.column_concrete_volume += areaM2 * height;
                     stats.column_formwork_area += perimeterM * height;
@@ -459,7 +464,7 @@ export class QuantityTakeoffService {
             stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
             stats.calc_ceiling_paint_area = fArea;
 
-            stats.cornice_length = Math.sqrt(fArea) * 4 * 1.5;
+            stats.cornice_length = estimatePerimeter(fArea) * 1.5;
             if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
             if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
         }
@@ -473,8 +478,8 @@ export const getFoundationMetrics = (buildingStats: BuildingStats) => {
         : buildingStats.groundFloorArea;
 
     const perimeter = buildingStats.basementFloorCount > 0
-        ? (buildingStats.basementFloorPerimeter || Math.sqrt(area) * 4)
-        : (buildingStats.groundFloorPerimeter || Math.sqrt(area) * 4);
+        ? (buildingStats.basementFloorPerimeter || estimatePerimeter(area))
+        : (buildingStats.groundFloorPerimeter || estimatePerimeter(area));
 
     return { area, perimeter };
 };
@@ -828,10 +833,15 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_fence': ({ buildingStats }) => {
-        if (buildingStats.buildingType === 'villa' && buildingStats.landArea > 0) {
+        // Hem Villa hem de Apartman için öncelikli olarak Arsa Alanı (landArea) baz alınır.
+        // Arsayı kare kabul ederek çevresini (Karekök x 4) buluyoruz.
+        if (buildingStats.landArea > 0) {
             return Math.sqrt(buildingStats.landArea) * 4;
         }
-        const side = Math.sqrt(buildingStats.groundFloorArea);
+        
+        // Eğer kullanıcı arsa alanını 0 girmişse (yedek senaryo), 
+        // bina oturum alanının etrafına biraz pay bırakarak hesapla.
+        const side = Math.sqrt(buildingStats.groundFloorArea || 0);
         return ((side + 8) * 2) + ((side + 6) * 2);
     },
 
@@ -1273,10 +1283,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? buildingStats.basementFloorArea
             : buildingStats.groundFloorArea;
 
-        const basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(excavationBaseArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(excavationBaseArea) * 4);
-
+const basePerim = buildingStats.basementFloorCount > 0
+    ? (buildingStats.basementFloorPerimeter || estimatePerimeter(excavationBaseArea))
+    : (buildingStats.groundFloorPerimeter || estimatePerimeter(excavationBaseArea));
         const totalFloorsForExc = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
         let raftHeightExc = 0.30;
         if (totalFloorsForExc >= 20) raftHeightExc = 2.00;
@@ -1384,17 +1393,17 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             // Villalarda hangi kat daha geniş oturuyorsa onun alanını ve çevresini baz alıyoruz
             if (nArea > gArea) {
                 baseArea = nArea;
-                basePerim = buildingStats.normalFloorPerimeter || (Math.sqrt(nArea) * 4);
+                basePerim = buildingStats.normalFloorPerimeter || estimatePerimeter(nArea);
             } else {
                 baseArea = gArea;
-                basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(gArea) * 4);
+                basePerim = buildingStats.groundFloorPerimeter || estimatePerimeter(gArea);
             }
         } else {
             // Apartmanlarda çatı genellikle en üstteki normal katın (veya sadece zemin varsa zeminin) üzerine oturur
             baseArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : buildingStats.groundFloorArea;
             basePerim = buildingStats.normalFloorCount > 0
-                ? (buildingStats.normalFloorPerimeter || Math.sqrt(baseArea) * 4)
-                : (buildingStats.groundFloorPerimeter || Math.sqrt(baseArea) * 4);
+                ? (buildingStats.normalFloorPerimeter || estimatePerimeter(baseArea)
+                : (buildingStats.groundFloorPerimeter || estimatePerimeter(baseArea));
         }
 
         const eaveOverhang = 0.80; // 80 cm standart saçak payı
@@ -1457,7 +1466,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         }
 
         if (buildingStats.buildingType === 'villa') {
-            const groundPerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
+           const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
             const subH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             const groundFacade = groundPerim * (buildingStats.groundFloorHeight + subH);
 

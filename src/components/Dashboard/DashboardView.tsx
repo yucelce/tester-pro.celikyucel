@@ -311,7 +311,7 @@ export const DashboardView: React.FC = () => {
                                                 type="number"
                                                 value={constructionDuration}
                                                 onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                                className={`bg-transparent w-12 font-bold text-sm outline-none border-b border-transparent hover:border-slate-400 focus:border-blue-500 transition-all p-0 
+                                                className={`bg-transparent w-16 font-bold text-sm outline-none border-b border-transparent hover:border-slate-400 focus:border-blue-500 transition-all p-0 
                         ${buildingStats.isDurationManual ? 'text-orange-600 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'}`}
                                             />
                                             <span className="text-xs font-medium text-slate-500 ml-1">Ay</span>
