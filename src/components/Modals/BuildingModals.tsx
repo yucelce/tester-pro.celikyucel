@@ -1111,6 +1111,30 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl mt-4">
+                                <h4 className="font-bold text-white flex items-center gap-2 mb-2">
+                                    <i className="fas fa-layer-group text-purple-400"></i> Açık Çatı Terası
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-4">
+                                    Binanın üstünde açık teras alanı varsa m²'sini girin. Su yalıtımı, seramik kaplama, şap ve alüminyum korkuluk maliyetlerine otomatik eklenecektir.
+                                </p>
+
+                                <div>
+                                    <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-1">Teras Alanı (m²)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={buildingStats.roofTerraceArea || ''}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, roofTerraceArea: parseFloat(e.target.value) || 0 })}
+                                            className="w-full sm:w-64 bg-slate-900 border border-slate-600 rounded p-3 text-white font-mono focus:border-purple-500 transition outline-none"
+                                            placeholder="Örn: 40"
+                                        />
+                                        <span className="absolute left-[220px] top-3.5 text-slate-500 font-bold hidden sm:block">m²</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl mt-4">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input

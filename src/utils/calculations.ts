@@ -842,6 +842,15 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return ((side + 8) * 2) + ((side + 6) * 2);
     },
 
+    'calc_terrace_waterproofing': ({ buildingStats, totalConstructionArea }) => {
+        // Eğer villada özel açık teras alanı girilmişse direkt onu al (parapet dönüşleri için %15 pay ekleyerek)
+        if (buildingStats.buildingType === 'villa' && buildingStats.roofTerraceArea && buildingStats.roofTerraceArea > 0) {
+            return buildingStats.roofTerraceArea * 1.15;
+        }
+        // Apartmanlarda veya teras girilmemiş durumlarda eski standart formül (toplam inşaat alanının %15'i)
+        return totalConstructionArea * 0.15;
+    },
+
     'calc_soil_investigation': ({ buildingStats, currentCosts }) => {
 
         const subPrices = {
@@ -1479,7 +1488,14 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         } else {
             // Apartman için
-            const facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+            let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+            
+            // DÜZELTME: Bodrum yoksa subasman (topraktan koparma) yüksekliğini cephe alanına ekle
+            if (buildingStats.basementFloorCount === 0) {
+                const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
+                facadeHeight += subasmanH;
+            }
+
             const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
 
             // Alt katların dış cephesi (Prizma) + Sadece çatı kalkan/parapet cephesi (Ayrıldı)

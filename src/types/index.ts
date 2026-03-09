@@ -155,6 +155,7 @@ export interface BuildingStats {
     parkingArea?: number;    // Açık otopark alanı (m2)
     verandaArea?: number;    // Veranda / Kış bahçesi alanı (m2)
     subasmanHeight?: number;
+    roofTerraceArea?: number;
 
     hasRoofFloor?: boolean;
     roofFloorArea?: number;

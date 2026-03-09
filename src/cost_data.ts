@@ -35,7 +35,7 @@ export interface CostItem {
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
   "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
   'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
-  "waterproofing_area"
+  "waterproofing_area" | "calc_terrace_waterproofing";
 
   ;
 
@@ -149,8 +149,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", auto_source: "calc_foundation_xps", multiplier: 1.05, scope: 'global' },
       { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", auto_source: "calc_roof", multiplier: 1, scope: 'global' },
-      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "total_area", multiplier: 0.15, scope: 'global' },
-      { name: "Yangın Merdiveni (Çelik)", unit: "Kat", auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }
+      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "calc_terrace_waterproofing", multiplier: 1, scope: 'global' }, { name: "Yangın Merdiveni (Çelik)", unit: "Kat", auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
   {
@@ -406,16 +405,16 @@ export const COST_DATA: CostCategory[] = RAW_COST_DATA.map(cat => ({
   id: cat.id,
   title: cat.title,
   items: cat.items.map(item => {
-    
+
     // 1. Fiyatı constants.ts (DEFAULT_PRICES) içinden bul
     const fallbackPrice = DEFAULT_PRICES[item.name];
-    
+
     // 2. Eğer varsa onu kullan, yoksa ve bu bir paket fiyatıysa 1 kullan (çökmeyi önlemek için), hiçbiri yoksa 0 kullan.
     let finalPrice = 0;
     if (fallbackPrice !== undefined) {
-        finalPrice = fallbackPrice;
+      finalPrice = fallbackPrice;
     } else if (item.inputType === 'manual_total') {
-        finalPrice = 1; 
+      finalPrice = 1;
     }
 
     return {

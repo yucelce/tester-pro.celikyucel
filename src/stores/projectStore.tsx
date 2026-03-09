@@ -973,6 +973,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Isıtma sistemleri dış/ana üniteleri villada 1 adettir
             if (aggregatedUnitStats['calc_heat_pump'] !== undefined) aggregatedUnitStats['calc_heat_pump'] = 1;
             if (aggregatedUnitStats['calc_combi_count'] !== undefined) aggregatedUnitStats['calc_combi_count'] = 1;
+
+            const terraceArea = buildingStats.roofTerraceArea || 0;
+            if (terraceArea > 0) {
+                // Seramik ve Islak Hacim zeminlerine ekle
+                aggregatedUnitStats['wet_area'] = (aggregatedUnitStats['wet_area'] || 0) + terraceArea;
+                // Seramik Yapıştırıcısı ve Derz dolgusu için ekle
+                aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + terraceArea;
+                // Şap Atılması için toplam alana (total_area) ekle
+                aggregatedUnitStats['total_area'] = (aggregatedUnitStats['total_area'] || 0) + terraceArea;
+                
+                // Terasın etrafına korkuluk hesabı (Kare kabulüyle yaklaşık 3 açık kenar baz alınır: Çevre = sqrt(Alan)*3)
+                aggregatedUnitStats['calc_balcony_railing'] = (aggregatedUnitStats['calc_balcony_railing'] || 0) + (Math.sqrt(terraceArea) * 3);
+            }
         }
 
         const details = costs.map(cat => {
@@ -1180,6 +1193,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             poolArea: 0,
             parkingArea: 0,
             verandaArea: 0,
+            roofTerraceArea: 0,
             hasSmartHome: false,
             smartHomeLighting: false,
             smartHomeHeating: false,
