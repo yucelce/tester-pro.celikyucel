@@ -93,7 +93,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         }
     };
 
-    // --- YENİ & GELİŞMİŞ LİNK OLUŞTURMA MANTIĞI ---
+    // --- LİNK OLUŞTURMA MANTIĞI ---
     const ensureShareLink = async (): Promise<string | null> => {
         if (shareLink) return shareLink; // Zaten varsa hemen döndür
 
@@ -153,20 +153,19 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         return clean;
     };
 
-    // E-Posta Gönderme Aksiyonu
+    // E-Posta Gönderme Aksiyonu (mailto: ile güncellendi)
     const handleSendEmail = async (supplier: Supplier, idx: number) => {
         setLoadingAction({ id: supplier.firmaAdi + idx, type: 'email' });
         const link = await ensureShareLink();
         setLoadingAction(null);
 
         if (link) {
-            const mailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${supplier.eposta}&su=${encodeURIComponent("CY Pro Malzeme Fiyat Teklifi Talebi")}&body=${generateMessageText(link)}`;
-            const newWindow = window.open(mailUrl, '_blank');
+            const subject = encodeURIComponent("CY Pro Malzeme Fiyat Teklifi Talebi");
+            const body = generateMessageText(link);
+            const mailUrl = `mailto:${supplier.eposta}?subject=${subject}&body=${body}`;
             
-            // Eğer tarayıcı Popup'ı engellerse kullanıcıyı uyar ve manuel tıklamasını sağla (Link artık hazır)
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                alert("Tarayıcınız yeni pencere açılmasını engelledi. Dosya linkiniz hazırlandı, lütfen 'Gmail ile Gönder' butonuna tekrar tıklayın.");
-            }
+            // mailto linkleri popup engelleyicilere takılmaz, doğrudan çalışır
+            window.location.href = mailUrl;
         }
     };
 
@@ -288,7 +287,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                                             )}
                                         </button>
 
-                                        {/* E-POSTA BUTONU (HER ZAMAN GÖRÜNÜR) */}
+                                        {/* E-POSTA BUTONU (mailto ile) */}
                                         <button
                                             onClick={() => handleSendEmail(supplier, idx)}
                                             disabled={loadingAction !== null}
@@ -299,7 +298,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                                             {loadingAction?.id === supplier.firmaAdi + idx && loadingAction.type === 'email' ? (
                                                 <><i className="fas fa-circle-notch fa-spin text-sm"></i> Üretiliyor...</>
                                             ) : (
-                                                <><i className="fas fa-envelope text-sm"></i> Gmail Gönder</>
+                                                <><i className="fas fa-envelope text-sm"></i> Mail Gönder</>
                                             )}
                                         </button>
                                     </div>
