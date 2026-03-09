@@ -18,6 +18,15 @@ import { ProjectManagementModal } from './components/Modals/ProjectManagementMod
 import { BrandSelectionModal } from './components/Modals/BrandSelectionModal';
 
 const AppLayout = () => {
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const downloadId = urlParams.get('downloadId');
+
+    if (downloadId) {
+        // Eğer linkte downloadId varsa, auth (giriş) sormadan direkt indirme sayfasını göster
+        return <DownloadView downloadId={downloadId} />;
+    }
+
     const {
         activeView, activeModal, activeModalUnitId, closeModal,
         authStatus, authMessage, setAuthStatus, setAuthMessage, setAccountId

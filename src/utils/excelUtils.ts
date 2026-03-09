@@ -77,3 +77,40 @@ export const importPricesFromExcel = (file: File, callback: (prices: { itemName:
     // Daha güvenilir okuma için BinaryString yerine ArrayBuffer kullanıyoruz
     reader.readAsArrayBuffer(file);
 };
+
+// src/utils/excelUtils.ts dosyasının en altına eklenecek
+
+export const exportProcurementToExcel = (projectName: string, procurementGroups: any[]) => {
+    const rows: any[] = [];
+    
+    procurementGroups.forEach(group => {
+        group.items.forEach((item: any) => {
+            rows.push({
+                "Aşama": group.taskName,
+                "Malzeme Adı": item.name,
+                "Miktar": item.unit === 'Paket' ? 1 : Number(item.quantity.toFixed(2)),
+                "Birim": item.unit,
+                "Birim Fiyat (TL)": "", // Tedarikçi burayı dolduracak
+                "Toplam Tutar (TL)": "" // Tedarikçi burayı dolduracak
+            });
+        });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    
+    // Sütun genişlikleri (Tedarikçi rahat yazsın diye geniş tutuldu)
+    worksheet['!cols'] = [
+        { wch: 20 }, // Aşama
+        { wch: 45 }, // Malzeme Adı
+        { wch: 12 }, // Miktar
+        { wch: 10 }, // Birim
+        { wch: 20 }, // Birim Fiyat
+        { wch: 20 }  // Toplam Tutar
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Teklif_Formu");
+    
+    // Dosya adını projenin adıyla indir
+    XLSX.writeFile(workbook, `Teklif_Formu_${projectName.replace(/\s+/g, '_')}.xlsx`);
+};

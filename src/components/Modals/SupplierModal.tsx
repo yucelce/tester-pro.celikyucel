@@ -41,6 +41,9 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const [isLoading, setIsLoading] = useState(false);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
+    const [shareLink, setShareLink] = useState<string | null>(null);
+    const [isCreatingLink, setIsCreatingLink] = useState(false);
+
     useEffect(() => {
         if (isOpen) {
             fetchSuppliers();
@@ -52,16 +55,16 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         try {
             // SİZİN LİNKİNİZİN DÜZELTİLMİŞ TSV FORMATI:
             const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7I9ioyi6FWmgpt3BimD2IDCBu0C0FzjGrC3MWMGDraun2cjS4RCC7XPtuGXnux-Rcy6UwhhSJLlVR/pub?output=tsv";
-            
+
             const response = await fetch(sheetUrl);
-            
+
             if (!response.ok) {
                 throw new Error("Veri çekilemedi: " + response.statusText);
             }
 
             const text = await response.text();
             const rows = text.split('\n').slice(1); // İlk satırı (Başlıkları) atla
-            
+
             const parsedSuppliers: Supplier[] = rows.map(row => {
                 const cols = row.split('\t');
                 return {
@@ -91,10 +94,60 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         }
     };
 
+    // ŞU FONKSİYONU EKLEYİN:
+    const handleCreateShareLink = async () => {
+        setIsCreatingLink(true);
+        try {
+            const response = await fetch('/api/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectName: `${buildingStats.province} / ${buildingStats.district} Projesi`,
+                    procurementData: procurementGroups
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                // Linki state'e kaydet (Örn: https://uygulamaniz.com/?downloadId=a1b2c3d4)
+                setShareLink(`${window.location.origin}/?downloadId=${result.uuid}`);
+            } else {
+                alert("Teklif linki oluşturulamadı.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Bir hata oluştu.");
+        } finally {
+            setIsCreatingLink(false);
+        }
+    };
+
+    // MEVCUT generateMessageText FONKSİYONUNU BUNUNLA DEĞİŞTİRİN:
+    const generateMessageText = () => {
+        let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
+        msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
+
+        if (shareLink) {
+            msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
+            msg += `İyi çalışmalar dilerim.`;
+        } else {
+            // Eğer link oluşturulmadıysa eski usul düz metin at
+            procurementGroups.forEach(group => {
+                msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
+                group.items.forEach(item => {
+                    const qty = item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} ${item.unit}`;
+                    msg += `• ${item.name}: ${qty}\n`;
+                });
+                msg += `\n`;
+            });
+        }
+
+        return encodeURIComponent(msg);
+    };
+
     const generateMessageText = () => {
         let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum. İhtiyaç listem aşağıdadır:\n\n`;
         msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
-        
+
         procurementGroups.forEach(group => {
             msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
             group.items.forEach(item => {
@@ -103,14 +156,14 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             });
             msg += `\n`;
         });
-        
+
         return encodeURIComponent(msg);
     };
 
     const formatPhoneForWA = (phone: string) => {
-        let clean = phone.replace(/\D/g, ''); 
-        if (clean.startsWith('0')) clean = clean.substring(1); 
-        if (!clean.startsWith('90')) clean = '90' + clean; 
+        let clean = phone.replace(/\D/g, '');
+        if (clean.startsWith('0')) clean = clean.substring(1);
+        if (!clean.startsWith('90')) clean = '90' + clean;
         return clean;
     };
 
@@ -119,7 +172,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     return (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex justify-center items-center backdrop-blur-sm p-4 animate-fadeIn">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col h-[85vh]">
-                
+
                 <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center shrink-0 rounded-t-xl">
                     <div>
                         <h3 className="font-bold text-lg md:text-xl text-slate-900 dark:text-white flex items-center gap-2">
@@ -135,6 +188,25 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                 </div>
 
                 <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-slate-100 dark:bg-slate-950 custom-scrollbar">
+                    {!isLoading && suppliers.length > 0 && (
+                        <div className="mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Akıllı Teklif Linki</h4>
+                                <p className="text-xs text-slate-500 mt-1">Tedarikçilere malzemeleri alt alta yazmak yerine, tıklayıp Excel indirebilecekleri kurumsal bir bağlantı oluşturun.</p>
+                            </div>
+                            <button
+                                onClick={handleCreateShareLink}
+                                disabled={isCreatingLink || shareLink !== null}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all shrink-0 flex items-center gap-2
+                    ${shareLink ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
+                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'}`}
+                            >
+                                {isCreatingLink ? <i className="fas fa-spinner fa-spin"></i> :
+                                    shareLink ? <i className="fas fa-check-circle"></i> : <i className="fas fa-link"></i>}
+                                {isCreatingLink ? 'Oluşturuluyor...' : shareLink ? 'Link Hazır!' : 'Excel İndirme Linki Üret'}
+                            </button>
+                        </div>
+                    )}
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-500">
                             <i className="fas fa-circle-notch fa-spin text-4xl mb-4 text-amber-500"></i>
@@ -161,7 +233,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                                             <i className="fas fa-hard-hat"></i>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex-1 space-y-2.5 mb-5 text-xs text-slate-600 dark:text-slate-400">
                                         {supplier.telefon && (
                                             <div className="flex items-center gap-2">
@@ -184,15 +256,15 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 mt-auto">
-                                        <a 
-                                            href={`https://wa.me/${formatPhoneForWA(supplier.telefon)}?text=${generateMessageText()}`} 
-                                            target="_blank" 
+                                        <a
+                                            href={`https://wa.me/${formatPhoneForWA(supplier.telefon)}?text=${generateMessageText()}`}
+                                            target="_blank"
                                             rel="noopener noreferrer"
                                             className="bg-[#25D366] hover:bg-[#1DA851] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
                                         >
                                             <i className="fab fa-whatsapp text-lg"></i> WhatsApp
                                         </a>
-                                        <a 
+                                        <a
                                             href={`mailto:${supplier.eposta}?subject=CY Pro Malzeme Fiyat Teklifi Talebi&body=${generateMessageText()}`}
                                             className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
                                         >
