@@ -989,26 +989,58 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
-        const nonResidentialArea = (buildingStats.indoorParkingArea || 0) + (buildingStats.shelterArea || 0);
+        const parkingArea = buildingStats.indoorParkingArea || 0;
+        const shelterArea = buildingStats.shelterArea || 0;
+        const nonResidentialArea = parkingArea + shelterArea;
 
         if (nonResidentialArea > 0 && buildingStats.buildingType !== 'villa') {
-            // Bodrum kat ortalama tavan yüksekliğine göre tahmini duvar çarpanı
-            const hRatio = buildingStats.basementFloorHeight > 0 ? buildingStats.basementFloorHeight : 3.0;
-            const wallMultiplier = (hRatio * 4) / 3.0;
+            const hRatio = buildingStats.basementFloorHeight > 0 ? (buildingStats.basementFloorHeight / 3.0) : 1.0;
 
-            // Duvar ve Tavan İnce İşlerinden Düşüm
-            aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - (nonResidentialArea * wallMultiplier));
-            aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - (nonResidentialArea * wallMultiplier));
-            aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - (nonResidentialArea * wallMultiplier));
-            aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - nonResidentialArea);
+            // 1. DUVAR VE SIVA DÜŞÜMLERİ (Hassaslaştırıldı)
+            // Standart dairelerde m2 başına ort. 2.8 m2 iç duvar/sıva yüzeyi vardır.
+            // Otoparklarda (geniş açıklıklar) bu oran ort. 0.8 m2'dir.
+            // Sığınaklarda ise ort. 1.5 m2'dir.
+            const residentialWallDensity = 2.8;
+            const parkingWallDensity = 0.8;
+            const shelterWallDensity = 1.5;
 
-            // Zemin ve Islak Hacimlerden Düşüm (Otoparka zaten helikopter şapı eklendiği için normal şap ve parke düşülür)
-            aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - nonResidentialArea);
-            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (nonResidentialArea * 0.85)); // Varsayılan %85 kuru alan kabulü
-            aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (nonResidentialArea * 0.15)); // Varsayılan %15 ıslak alan kabulü
-            aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (nonResidentialArea * 0.15));
+            // Aradaki fark kadar düşüm (minha) yapıyoruz ki devasa açık alanlar yüzünden sıva/boya metrajı gereksiz şişmesin
+            const parkingWallDeduction = parkingArea * (residentialWallDensity - parkingWallDensity) * hRatio;
+            const shelterWallDeduction = shelterArea * (residentialWallDensity - shelterWallDensity) * hRatio;
+            const totalWallDeduction = parkingWallDeduction + shelterWallDeduction;
+
+            aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - totalWallDeduction);
+            aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - totalWallDeduction);
+            aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - totalWallDeduction);
+
+            // Tavan Düşümleri: Otoparkta tavan boyası yerine 'Taşyünü İzolasyon' yapılır. (Tamamı düşülür)
+            // Sığınakta ise tavan boyası kalır (Sadece otopark alanı düşülür).
+            aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
+
+            // 2. ZEMİN KAPLAMALARI DÜŞÜMLERİ
+            // OTOPARK: Parke, seramik veya standart şap olmaz (Yerine Helikopter Şap + Yüzey Sertleştirici atılır).
+            aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea); // Klasik Şap malzemesi
+            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85)); // Parke
+            aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15)); // Seramik
+            aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15)); // Yapıştırıcı/Derz
+
+            // SIĞINAK: Sığınaklarda parke kullanılmaz, yönetmelik gereği kolay temizlenebilir sert zemin (Seramik/Şap/Epoksi) olmalıdır.
+            // O yüzden hesaplanan parke (dry) miktarından sığınağı düşüp, seramik (wet) alanına ekliyoruz.
+            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
+            aggregatedUnitStats['wet_area'] = (aggregatedUnitStats['wet_area'] || 0) + (shelterArea * 0.85);
+            aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + (shelterArea * 0.85);
+
+            // 3. MEKANİK VE VİTRİFİYE (Zorunlu İlaveler)
+            // Sığınak yönetmeliği gereği sığınaklarda en az 1 adet WC ve Lavabo bulunması zorunludur.
+            if (shelterArea > 0) {
+                aggregatedUnitStats['calc_toilet'] = (aggregatedUnitStats['calc_toilet'] || 0) + 1;
+                aggregatedUnitStats['calc_basin_mixer'] = (aggregatedUnitStats['calc_basin_mixer'] || 0) + 1;
+                // Sığınağa asma tavan yapılması da yasaktır, bu yüzden banyo gibi düşünülüp asma tavan metrajına eklenmez.
+                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + 0.25; // Ekstra pis/temiz su hattı
+            }
         }
 
+        const details = costs.map(cat => {
 
         const details = costs.map(cat => {
             let catTotal = 0;
