@@ -566,22 +566,25 @@ export class PricingService {
             cat.items.forEach(item => {
                 if (item.auto_source !== 'manual') {
                     let qty = 0;
-                    if (item.auto_source === 'calc_window_area') qty = stats.calc_window_area;
-                    else if (item.auto_source === 'calc_sill_length') qty = stats.calc_sill_length;
-                    else if (item.auto_source === 'calc_window_perimeter') qty = stats.calc_window_perimeter;
-                    else if (item.auto_source === 'calc_balcony_railing') qty = stats.calc_balcony_railing;
-                    else if (item.auto_source === 'calc_radiator') qty = stats.radiator_length;
-                    else if (item.auto_source === 'calc_kitchen_cabinet') qty = stats.kitchen_cabinet_length;
-                    else {
-                        const isConcrete = item.name === 'Betonarme Betonu';
-                        const isIron = item.name === 'İnşaat Demiri';
-                        const isFormwork = item.name === 'Kalıp İşçiliği & Malzeme';
+                    let dynamicPrice = calculateDynamicUnitPrice(
+                        item, stats.total_area > 0 ? stats.total_area : defaultFloorArea, projectTotalArea, 
+                        buildingStats.province, buildingStats.isUrbanTransformation, buildingStats, currentCosts, globalWallMaterial
+                    );
 
-                        if (isConcrete || isIron || isFormwork) {
-                            if (isConcrete) qty = stats.calc_concrete_unit;
-                            else if (isFormwork) qty = stats.calc_formwork_unit;
-                            else if (isIron) qty = stats.calc_iron_unit;
-                        } else {
+                    // --- YENİ EKLENEN GÜVENLİK KONTROLÜ ---
+                    if (item.inputType === 'manual_total') {
+                        // Eğer paket/TL dönen bir kalemse, miktar 1'dir.
+                        qty = 1; 
+                        if (item.auto_source.startsWith('calc_')) {
+                             // Context eksikse 0 dönmemesi için boş mock data geçiyoruz veya doğrudan fiyatı pas geçiyoruz
+                             // (Store zaten global hesabı yapıyor, burası sadece UI birim paneli için)
+                             qty = 0; // Global kalemlerin birim maliyet özetinde şişme yapmaması için
+                        }
+                    } else {
+                        // Orijinal Miktar Hesaplama mantığınız...
+                        if (item.auto_source === 'calc_window_area') qty = stats.calc_window_area;
+                        // ... diğer if-else mantıkları ...
+                        else {
                             let sourceKey = item.auto_source;
                             if (sourceKey.startsWith('calc_') && stats[sourceKey] === undefined) {
                                 sourceKey = sourceKey.replace('calc_', '') as any;
@@ -590,12 +593,6 @@ export class PricingService {
                             qty = parseFloat((rawVal * item.multiplier).toFixed(2));
                         }
                     }
-
-                    const unitArea = stats.total_area > 0 ? stats.total_area : defaultFloorArea;
-                    const dynamicPrice = calculateDynamicUnitPrice(
-                        item, unitArea, projectTotalArea, buildingStats.province,
-                        buildingStats.isUrbanTransformation, buildingStats, currentCosts, globalWallMaterial
-                    );
 
                     quantities[item.name] = qty;
                     totalCost += qty * dynamicPrice;
@@ -836,9 +833,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // Hem Villa hem de Apartman için öncelikli olarak Arsa Alanı (landArea) baz alınır.
         // Arsayı kare kabul ederek çevresini (Karekök x 4) buluyoruz.
         if (buildingStats.landArea > 0) {
-            return Math.sqrt(buildingStats.landArea) * 4;
+            return estimatePerimeter(buildingStats.landArea);
         }
-        
+
         // Eğer kullanıcı arsa alanını 0 girmişse (yedek senaryo), 
         // bina oturum alanının etrafına biraz pay bırakarak hesapla.
         const side = Math.sqrt(buildingStats.groundFloorArea || 0);
@@ -886,7 +883,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const p_joint_filler = getGlobalPrice(currentCosts, "Seramik Derz Dolgusu");
 
         const depth = 1.5;
-        const perimeter = 4 * Math.sqrt(poolArea);
+       const perimeter = estimatePerimeter(poolArea);
         const wallArea = perimeter * depth;
         const innerSurfaceArea = poolArea + wallArea;
 
@@ -1283,9 +1280,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             ? buildingStats.basementFloorArea
             : buildingStats.groundFloorArea;
 
-const basePerim = buildingStats.basementFloorCount > 0
-    ? (buildingStats.basementFloorPerimeter || estimatePerimeter(excavationBaseArea))
-    : (buildingStats.groundFloorPerimeter || estimatePerimeter(excavationBaseArea));
+        const basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || estimatePerimeter(excavationBaseArea))
+            : (buildingStats.groundFloorPerimeter || estimatePerimeter(excavationBaseArea));
         const totalFloorsForExc = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
         let raftHeightExc = 0.30;
         if (totalFloorsForExc >= 20) raftHeightExc = 2.00;
@@ -1355,7 +1352,7 @@ const basePerim = buildingStats.basementFloorCount > 0
         const landArea = buildingStats.landArea || 0;
         if (landArea <= 0) return 0;
         const multiplier = buildingStats.buildingType === 'villa' ? 4 : 3;
-        const landPerimeter = Math.sqrt(landArea) * multiplier;
+        const landPerimeter = estimatePerimeter(landArea);
         return landPerimeter * (item.multiplier || 1);
     },
 
@@ -1402,7 +1399,7 @@ const basePerim = buildingStats.basementFloorCount > 0
             // Apartmanlarda çatı genellikle en üstteki normal katın (veya sadece zemin varsa zeminin) üzerine oturur
             baseArea = buildingStats.normalFloorCount > 0 ? buildingStats.normalFloorArea : buildingStats.groundFloorArea;
             basePerim = buildingStats.normalFloorCount > 0
-                ? (buildingStats.normalFloorPerimeter || estimatePerimeter(baseArea)
+                ? (buildingStats.normalFloorPerimeter || estimatePerimeter(baseArea))
                 : (buildingStats.groundFloorPerimeter || estimatePerimeter(baseArea));
         }
 
@@ -1447,8 +1444,7 @@ const basePerim = buildingStats.basementFloorCount > 0
         // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI (DÜZELTİLMİŞ) ---
         let roofFacade = 0;
         if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
-            const roofPerim = buildingStats.roofFloorPerimeter || (Math.sqrt(buildingStats.roofFloorArea) * 4);
-            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
+            const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea); const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
             const parapetHeight = 0.60; // Standart çatı parapet (diz duvarı) yüksekliği
 
             // Kalkan Duvar (Üçgen) Alanı Tahmini:
@@ -1466,14 +1462,13 @@ const basePerim = buildingStats.basementFloorCount > 0
         }
 
         if (buildingStats.buildingType === 'villa') {
-           const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
+            const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
             const subH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             const groundFacade = groundPerim * (buildingStats.groundFloorHeight + subH);
 
             let normalFacade = 0;
             if (buildingStats.normalFloorCount > 0) {
-                const normalPerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
-                normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+                const perim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea);
             }
 
             // Çatı kalkan/parapet alanını toplama ekliyoruz
@@ -1641,8 +1636,7 @@ const basePerim = buildingStats.basementFloorCount > 0
     'calc_safety_net': ({ buildingStats }) => {
         if (buildingStats.normalFloorCount === 0) return 0;
         const facadeHeight = buildingStats.normalFloorCount * buildingStats.normalFloorHeight;
-        const basePerim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
-        const netPerimeter = basePerim + 8;
+const basePerim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea);        const netPerimeter = basePerim + 8;
         return facadeHeight * netPerimeter;
     },
 
@@ -1765,9 +1759,7 @@ const basePerim = buildingStats.basementFloorCount > 0
         // Radye temel kalınlığı ve ampatman (yanak) hesabı (Opsiyonel: Daha hassas metraj için)
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = raftHeight * 1.5;
-        let basePerim = buildingStats.basementFloorCount > 0
-            ? (buildingStats.basementFloorPerimeter || Math.sqrt(foundationArea) * 4)
-            : (buildingStats.groundFloorPerimeter || Math.sqrt(foundationArea) * 4);
+        const { perimeter: basePerim } = getFoundationMetrics(buildingStats);
 
         const foundationPerimeter = basePerim + (8 * ampatman);
 
@@ -1804,8 +1796,7 @@ const basePerim = buildingStats.basementFloorCount > 0
             facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0); // İskele mahyaya kadar kurulur
         }
 
-        const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
-        // İskele binadan 1'er metre açık kurulur, çevre genişler (4 kenar x 2'şer taraf = 16)
+        const basePerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea);
         const scaffoldingPerimeter = basePerim + 8;
 
         return facadeHeight * scaffoldingPerimeter;
@@ -1864,25 +1855,28 @@ export const calculateComplexGlobalQuantity = (
  * Toplam inşaat alanına göre yapım süresini (ay) hesaplar.
  */
 export const calculateConstructionDuration = (totalArea: number, buildingType: string = 'apartment'): number => {
-    let duration = 0;
+    let duration = 0;
 
-    // Villalar hızlı biter (Genellikle 6-9 ay)
-    if (buildingType === 'villa') {
-        if (totalArea <= 250) duration = 6;
-        else if (totalArea <= 500) duration = 8;
-        else duration = 10;
-    } else {
-        // Apartman/Ticari mantığı
-        if (totalArea <= 1000) {
-            duration = 10; // 12'den 10'a çekmek rekabetçi piyasa için daha gerçekçi
-        } else if (totalArea <= 3000) {
-            duration = (0.005 * totalArea) + 5;
-        } else {
-            duration = Math.sqrt(totalArea) / 2.28;
-        }
-    }
-    const finalDuration = Math.min(duration, 36);
-    return Math.round(finalDuration * 100) / 100;
+    // Villalar hızlı biter (Genellikle 6-9 ay)
+    if (buildingType === 'villa') {
+        if (totalArea <= 250) duration = 6;
+        else if (totalArea <= 500) duration = 8;
+        else duration = 10;
+    } else {
+        // Apartman/Ticari mantığı
+        if (totalArea <= 1000) {
+            duration = 10; 
+        } else if (totalArea <= 3000) {
+            duration = (0.005 * totalArea) + 5; // 3000'de tam 20 aya ulaşır
+        } else {
+            // Kırılmayı (discontinuity) önlemek için bölen 2.7386 olarak güncellendi.
+            // Böylece 3001 m2 girildiğinde sonuç yine ~20 ay çıkacak ve pürüzsüz artacaktır.
+            duration = Math.sqrt(totalArea) / 2.7386;
+        }
+    }
+    
+    const finalDuration = Math.min(duration, 36);
+    return Math.round(finalDuration * 100) / 100;
 };
 
 export const calculateStairWellArea = (floorHeight: number): number => {
@@ -1967,7 +1961,7 @@ export const calculateDynamicUnitPrice = (
             facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0);
         }
 
-        const basePerim = buildingStats.groundFloorPerimeter || (Math.sqrt(buildingStats.groundFloorArea) * 4);
+        const basePerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea);
         const scaffoldingPerimeter = basePerim + 8;
         const scaffoldingArea = facadeHeight * scaffoldingPerimeter;
         return item.unit_price * scaffoldingArea;
