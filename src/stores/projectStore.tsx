@@ -989,6 +989,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
+        // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
         const parkingArea = buildingStats.indoorParkingArea || 0;
         const shelterArea = buildingStats.shelterArea || 0;
         const nonResidentialArea = parkingArea + shelterArea;
@@ -996,51 +997,40 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (nonResidentialArea > 0 && buildingStats.buildingType !== 'villa') {
             const hRatio = buildingStats.basementFloorHeight > 0 ? (buildingStats.basementFloorHeight / 3.0) : 1.0;
 
-            // 1. DUVAR VE SIVA DÜŞÜMLERİ (Hassaslaştırıldı)
-            // Standart dairelerde m2 başına ort. 2.8 m2 iç duvar/sıva yüzeyi vardır.
-            // Otoparklarda (geniş açıklıklar) bu oran ort. 0.8 m2'dir.
-            // Sığınaklarda ise ort. 1.5 m2'dir.
-            const residentialWallDensity = 2.8;
-            const parkingWallDensity = 0.8;
-            const shelterWallDensity = 1.5;
+            // KONTROL: Kullanıcı detaylı oda/mahal girmiş mi? 
+            const totalRoomsEntered = units.reduce((acc, u) => acc + u.rooms.length, 0);
+            const isAutoMode = totalRoomsEntered === 0;
 
-            // Aradaki fark kadar düşüm (minha) yapıyoruz ki devasa açık alanlar yüzünden sıva/boya metrajı gereksiz şişmesin
-            const parkingWallDeduction = parkingArea * (residentialWallDensity - parkingWallDensity) * hRatio;
-            const shelterWallDeduction = shelterArea * (residentialWallDensity - shelterWallDensity) * hRatio;
-            const totalWallDeduction = parkingWallDeduction + shelterWallDeduction;
+            // SADECE OTO MODDAYKEN (Kullanıcı hiç oda çizmemiş/girmemişse) düşüm (minha) yap!
+            // Çünkü detaylı oda girilmişse, kullanıcı zaten otoparkı çizmemiştir, dolayısıyla düşecek bir sıva fazlalığı yoktur.
+            if (isAutoMode) {
+                const residentialWallDensity = 2.8;
+                const parkingWallDensity = 0.8;
+                const shelterWallDensity = 1.5;
 
-            aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - totalWallDeduction);
-            aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - totalWallDeduction);
-            aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - totalWallDeduction);
+                const parkingWallDeduction = parkingArea * (residentialWallDensity - parkingWallDensity) * hRatio;
+                const shelterWallDeduction = shelterArea * (residentialWallDensity - shelterWallDensity) * hRatio;
+                const totalWallDeduction = parkingWallDeduction + shelterWallDeduction;
 
-            // Tavan Düşümleri: Otoparkta tavan boyası yerine 'Taşyünü İzolasyon' yapılır. (Tamamı düşülür)
-            // Sığınakta ise tavan boyası kalır (Sadece otopark alanı düşülür).
-            aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
+                aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - totalWallDeduction);
+                aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - totalWallDeduction);
+                aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - totalWallDeduction);
+                aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
 
-            // 2. ZEMİN KAPLAMALARI DÜŞÜMLERİ
-            // OTOPARK: Parke, seramik veya standart şap olmaz (Yerine Helikopter Şap + Yüzey Sertleştirici atılır).
-            aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea); // Klasik Şap malzemesi
-            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85)); // Parke
-            aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15)); // Seramik
-            aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15)); // Yapıştırıcı/Derz
+                aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea);
+                aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85) - (shelterArea * 0.85));
+                aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15)) + (shelterArea * 0.85);
+                aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15)) + (shelterArea * 0.85);
+            }
 
-            // SIĞINAK: Sığınaklarda parke kullanılmaz, yönetmelik gereği kolay temizlenebilir sert zemin (Seramik/Şap/Epoksi) olmalıdır.
-            // O yüzden hesaplanan parke (dry) miktarından sığınağı düşüp, seramik (wet) alanına ekliyoruz.
-            aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
-            aggregatedUnitStats['wet_area'] = (aggregatedUnitStats['wet_area'] || 0) + (shelterArea * 0.85);
-            aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + (shelterArea * 0.85);
-
-            // 3. MEKANİK VE VİTRİFİYE (Zorunlu İlaveler)
-            // Sığınak yönetmeliği gereği sığınaklarda en az 1 adet WC ve Lavabo bulunması zorunludur.
+            // OTO YA DA DETAYLI FARK ETMEZ: Sığınak için zorunlu mekanik ilaveler her zaman yapılır
             if (shelterArea > 0) {
                 aggregatedUnitStats['calc_toilet'] = (aggregatedUnitStats['calc_toilet'] || 0) + 1;
                 aggregatedUnitStats['calc_basin_mixer'] = (aggregatedUnitStats['calc_basin_mixer'] || 0) + 1;
-                // Sığınağa asma tavan yapılması da yasaktır, bu yüzden banyo gibi düşünülüp asma tavan metrajına eklenmez.
-                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + 0.25; // Ekstra pis/temiz su hattı
+                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + 0.25; 
             }
         }
 
-        const details = costs.map(cat => {
 
         const details = costs.map(cat => {
             let catTotal = 0;

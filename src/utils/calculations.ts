@@ -451,14 +451,24 @@ export class QuantityTakeoffService {
     }
 
     private static applyFallbacks(stats: any, unit: UnitType, metrics: any, buildingStats: BuildingStats, settings: any) {
+        // Eğer statik plan (kaba yapı) hesaplanıyorsa, ince işler sıfırlanır ve FALLBACK (Varsayılan Atama) ÇALIŞTIRILMAZ.
         if (settings.isStructural) {
             stats.cornice_length = 0; stats.wet_area = 0; stats.dry_area = 0; stats.radiator_length = 0; stats.kitchen_cabinet_length = 0;
             stats.calc_rough_plaster_area = 0; stats.calc_paint_wall_area = 0; stats.calc_ceiling_paint_area = 0; stats.calc_plaster_area = 0;
+            
+            // HATA BURADAYDI: Statik turda ince işler varsayımı yapmaması için fonksiyondan ÇIKIYORUZ.
+            return; 
         }
 
-        stats.adhesive_weight = Math.min(0, stats.adhesive_weight || 0); stats.mortar_volume = Math.min(0, stats.mortar_volume || 0);
+        // --- Aşağıdaki kısımlar SADECE Mimari Planlar (İnce İşler) için çalışır ---
+        
         stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
+        
+        // Eskiden burada Math.min vardı ve değerleri bozuyordu, Math.max olarak düzeltildi
+        stats.adhesive_weight = Math.max(0, stats.adhesive_weight || 0); 
+        stats.mortar_volume = Math.max(0, stats.mortar_volume || 0);
 
+        // Eğer mimari planda HİÇ ODA GİRİLMEMİŞSE (metraj sıfırsa), varsayılan daire kabulüyle metraj doldurulur.
         if (stats.calc_rough_plaster_area === 0) {
             let fallbackArea = metrics.defaultFloorArea;
             if (unit.count > 0) {
@@ -469,7 +479,7 @@ export class QuantityTakeoffService {
 
             stats.calc_rough_plaster_area = fArea * 2.8;
             stats.calc_paint_wall_area = fArea * 2.5;
-            stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0) ÇÖZÜM: Alçı sıva tahmini de eklendi
+            stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0)
             stats.calc_ceiling_paint_area = fArea;
 
             stats.cornice_length = estimatePerimeter(fArea) * 1.5;
