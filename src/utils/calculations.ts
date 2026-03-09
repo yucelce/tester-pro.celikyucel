@@ -567,18 +567,18 @@ export class PricingService {
                 if (item.auto_source !== 'manual') {
                     let qty = 0;
                     let dynamicPrice = calculateDynamicUnitPrice(
-                        item, stats.total_area > 0 ? stats.total_area : defaultFloorArea, projectTotalArea, 
+                        item, stats.total_area > 0 ? stats.total_area : defaultFloorArea, projectTotalArea,
                         buildingStats.province, buildingStats.isUrbanTransformation, buildingStats, currentCosts, globalWallMaterial
                     );
 
                     // --- YENİ EKLENEN GÜVENLİK KONTROLÜ ---
                     if (item.inputType === 'manual_total') {
                         // Eğer paket/TL dönen bir kalemse, miktar 1'dir.
-                        qty = 1; 
+                        qty = 1;
                         if (item.auto_source.startsWith('calc_')) {
-                             // Context eksikse 0 dönmemesi için boş mock data geçiyoruz veya doğrudan fiyatı pas geçiyoruz
-                             // (Store zaten global hesabı yapıyor, burası sadece UI birim paneli için)
-                             qty = 0; // Global kalemlerin birim maliyet özetinde şişme yapmaması için
+                            // Context eksikse 0 dönmemesi için boş mock data geçiyoruz veya doğrudan fiyatı pas geçiyoruz
+                            // (Store zaten global hesabı yapıyor, burası sadece UI birim paneli için)
+                            qty = 0; // Global kalemlerin birim maliyet özetinde şişme yapmaması için
                         }
                     } else {
                         // Orijinal Miktar Hesaplama mantığınız...
@@ -760,7 +760,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // ÇÖZÜM: Döngüsel bağımlılığı aşmak için binanın resmi yapı sınıfını (Örn: 3B, 4A) buluyoruz.
         // Daha sonra sistemdeki güncel ÇŞB metrekare fiyatını çekip gerçekçi bir toplam maliyet tahmini oluşturuyoruz.
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
-        const currentM2Price = getGlobalPrice(currentCosts, buildingClass) || 25000; // Sistemde fiyat yoksa 25.000 yedeği kalır
+        const currentM2Price = getGlobalPrice(currentCosts, buildingClass);
 
         const estimatedTotalCost = totalConstructionArea * currentM2Price;
 
@@ -883,7 +883,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const p_joint_filler = getGlobalPrice(currentCosts, "Seramik Derz Dolgusu");
 
         const depth = 1.5;
-       const perimeter = estimatePerimeter(poolArea);
+        const perimeter = estimatePerimeter(poolArea);
         const wallArea = perimeter * depth;
         const innerSurfaceArea = poolArea + wallArea;
 
@@ -909,25 +909,26 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(totalPoolMaterialCost * 1.10);
     },
 
-    'calc_pool_system': ({ buildingStats, item }) => {
+    'calc_pool_system': ({ buildingStats, item, currentCosts }) => { // currentCosts eklendi
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
 
-        // Temel havuz (mesela 40 m2) için sistem fiyatı referans alınır.
-        // Daha küçük veya büyük havuzlar için fiyat esneklik gösterir (En az %60)
         const baseArea = 40;
         const areaFactor = Math.max(0.6, poolArea / baseArea);
 
-        // Paket toplam fiyatını hesaplayıp döndürüyoruz
-        return Math.round((item.unit_price || 150000) * areaFactor);
+        // ESKİ HALİ: return Math.round((item.unit_price || 150000) * areaFactor);
+        // YENİ HALİ:
+        const basePrice = getGlobalPrice(currentCosts, item.name);
+        return Math.round(basePrice * areaFactor);
     },
 
     'calc_villa_parking': ({ buildingStats }) => buildingStats.parkingArea || 0,
 
     'calc_villa_veranda': ({ buildingStats }) => buildingStats.verandaArea || 0,
 
-    'calc_haritaci': ({ item, buildingStats }) => {
-        const baseP = item.unit_price || 7471;
+    'calc_haritaci': ({ item, buildingStats, currentCosts }) => {
+        const baseP = getGlobalPrice(currentCosts, item.name);
+
         const landArea = buildingStats.landArea || 0;
 
         let areaCoeff = 1.0;
@@ -1007,9 +1008,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
-    'calc_ekb': ({ item, totalConstructionArea, aggregatedUnitStats }) => {
-        const wixPrice = item.unit_price || 1500;
-        const F = wixPrice / 1500;
+    'calc_ekb': ({ item, totalConstructionArea, aggregatedUnitStats, currentCosts }) => {
+        const wixPrice = getGlobalPrice(currentCosts, item.name);
+        const F = wixPrice / 1500; // Not: Buradaki 1500 formülün oran katsayısıdır, bu sabit kalmalıdır.
         const A = totalConstructionArea;
 
         let totalUnits = aggregatedUnitStats['calc_unit_count'] || 0;
@@ -1146,7 +1147,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         if (!buildingStats.hasAllRiskInsurance) return 0;
         const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
-        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass) || 20000;
+        let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
         return Math.round(totalConstructionArea * classUnitPrice * 0.002);
     },
 
@@ -1232,11 +1233,11 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
 
-    'calc_smart_home': ({ buildingStats, totalConstructionArea, aggregatedUnitStats, item }) => {
+    'calc_smart_home': ({ buildingStats, totalConstructionArea, aggregatedUnitStats, item, currentCosts }) => {
         if (buildingStats.buildingType !== 'villa' || !buildingStats.hasSmartHome) return 0;
 
         // Wix'ten gelen ana taban fiyat (Girilmisse onu al, yoksa varsayılan 65000)
-        let baseCost = item.unit_price > 1000 ? item.unit_price : 65000;
+        let baseCost = getGlobalPrice(currentCosts, item.name);
 
         let estimatedZones = Math.max(1, Math.ceil(totalConstructionArea / 25));
         if (aggregatedUnitStats && aggregatedUnitStats['calc_inner_door'] > 0) {
@@ -1636,7 +1637,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_safety_net': ({ buildingStats }) => {
         if (buildingStats.normalFloorCount === 0) return 0;
         const facadeHeight = buildingStats.normalFloorCount * buildingStats.normalFloorHeight;
-const basePerim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea);        const netPerimeter = basePerim + 8;
+        const basePerim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea); const netPerimeter = basePerim + 8;
         return facadeHeight * netPerimeter;
     },
 
@@ -1855,28 +1856,28 @@ export const calculateComplexGlobalQuantity = (
  * Toplam inşaat alanına göre yapım süresini (ay) hesaplar.
  */
 export const calculateConstructionDuration = (totalArea: number, buildingType: string = 'apartment'): number => {
-    let duration = 0;
+    let duration = 0;
 
-    // Villalar hızlı biter (Genellikle 6-9 ay)
-    if (buildingType === 'villa') {
-        if (totalArea <= 250) duration = 6;
-        else if (totalArea <= 500) duration = 8;
-        else duration = 10;
-    } else {
-        // Apartman/Ticari mantığı
-        if (totalArea <= 1000) {
-            duration = 10; 
-        } else if (totalArea <= 3000) {
-            duration = (0.005 * totalArea) + 5; // 3000'de tam 20 aya ulaşır
-        } else {
-            // Kırılmayı (discontinuity) önlemek için bölen 2.7386 olarak güncellendi.
+    // Villalar hızlı biter (Genellikle 6-9 ay)
+    if (buildingType === 'villa') {
+        if (totalArea <= 250) duration = 6;
+        else if (totalArea <= 500) duration = 8;
+        else duration = 10;
+    } else {
+        // Apartman/Ticari mantığı
+        if (totalArea <= 1000) {
+            duration = 10;
+        } else if (totalArea <= 3000) {
+            duration = (0.005 * totalArea) + 5; // 3000'de tam 20 aya ulaşır
+        } else {
+            // Kırılmayı (discontinuity) önlemek için bölen 2.7386 olarak güncellendi.
             // Böylece 3001 m2 girildiğinde sonuç yine ~20 ay çıkacak ve pürüzsüz artacaktır.
-            duration = Math.sqrt(totalArea) / 2.7386;
-        }
-    }
-    
-    const finalDuration = Math.min(duration, 36);
-    return Math.round(finalDuration * 100) / 100;
+            duration = Math.sqrt(totalArea) / 2.7386;
+        }
+    }
+
+    const finalDuration = Math.min(duration, 36);
+    return Math.round(finalDuration * 100) / 100;
 };
 
 export const calculateStairWellArea = (floorHeight: number): number => {
@@ -1922,12 +1923,11 @@ export const calculateDynamicUnitPrice = (
     }
 
     // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
+    // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
     if (item.name.startsWith("Duvar Malzemesi (") || item.name.startsWith("Duvar İşçiliği (")) {
         const match = item.name.match(/\(([\d\.]+) cm\)/);
         if (match && currentCosts && globalWallMaterial) {
             const thickness = parseFloat(match[1]);
-
-            // wallCat tanımı KULLANILMADIĞI için tamamen SİLİNDİ
 
             const matItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton Blok (m3)" :
                 globalWallMaterial === 'tugla' ? "Tuğla Blok (m3)" : "Bims Blok (m3)";
@@ -1942,8 +1942,15 @@ export const calculateDynamicUnitPrice = (
                 // Kalınlığı (cm) metreye çevirerek m3 fiyatı ile çarpıp m2 fiyatı buluyoruz.
                 return Math.round(baseMatPrice * (thickness / 100));
             } else {
-                // İşçilik 15cm için referans alınmıştır, kalınlık oranına göre hareketlendirilir.
-                return Math.round(baseLaborPrice);
+                // İşçilik kalınlık çarpanları buraya taşındı (Single Source of Truth)
+                let ratio = 1.0;
+                if (thickness <= 10) ratio = 0.90; // İnce duvar örmesi oyalayıcıdır, fiyattan çok düşülmez
+                else if (thickness <= 13.5) ratio = 1.0;
+                else if (thickness <= 15) ratio = 1.05;
+                else if (thickness <= 20) ratio = 1.10; // Sadece %10 hamaliye/ağırlık farkı
+                else if (thickness <= 25) ratio = 1.15; // Sadece %15 ağırlık farkı
+
+                return Math.round(baseLaborPrice * ratio);
             }
         }
     }
@@ -2256,8 +2263,10 @@ export const calculateDynamicUnitPrice = (
 
         // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
         if (structuralPremium.includes(item.name)) {
-            // Temel artış %20 (0.20), luxuryScale ile çarpılarak esnetiliyor
-            return Math.round(item.unit_price * (1 + (0.20 * luxuryScale)));
+            // YENİ: Kaba ve yarı-kaba işlerde lüks çarpanı değil, "butik iş/zorluk" çarpanı geçerlidir. 
+            // Maksimum %10-%15 arası bir işçilik/fire farkı yansıtmak piyasa gerçeğine uygundur.
+            const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
+            return Math.round(item.unit_price * (1 + butikZorlukCarpani));
         } else if (decorativePremium.includes(item.name)) {
             // Temel artış %45 (0.45)
             return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));

@@ -507,25 +507,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                                 return { ...item, unit_price: Math.round(wallMortarPriceM3) };
                                             }
 
-                                            if (item.name.startsWith('Duvar Malzemesi (') && item.name.includes('cm)')) {
-
-
-
-                                                const match = item.name.match(/\(([\d\.]+) cm\)/);
-                                                if (match && match[1]) {
-                                                    const thicknessCm = parseFloat(match[1]);
-                                                    const thicknessM = thicknessCm / 100;
-                                                    const calculatedPrice = rawMaterialPriceM3 * thicknessM;
-                                                    return { ...item, unit_price: Math.round(calculatedPrice) };
-                                                }
-                                            } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
-                                                const match = item.name.match(/\(([\d\.]+) cm\)/);
-                                                if (match && match[1]) {
-
-                                                    const calculatedPrice = laborPriceM2;
-                                                    return { ...item, unit_price: Math.round(calculatedPrice) };
-                                                }
-                                            }
                                             return item;
                                         })
                                     };
@@ -718,54 +699,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const updateWallPrices = useCallback((material: WallMaterial) => {
         setCosts(prevCosts => {
-            // Önce güncel ham madde fiyatlarını mevcut listeden bulalım
-            let rawMaterialPriceM3 = 0;
-            let laborPriceM2 = 0;
-
-            // Duvar ve Tavan kategorisini bul
-            const wallCat = prevCosts.find(c => c.id === 'duvar_tavan');
-            if (wallCat) {
-                // Ham madde item'larını bul
-                const matItemName = material === 'gazbeton' ? "Gazbeton Blok (m3)" :
-                    material === 'tugla' ? "Tuğla Blok (m3)" : "Bims Blok (m3)";
-
-                const laborItemName = material === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
-                    material === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
-
-                rawMaterialPriceM3 = getGlobalPrice(prevCosts, matItemName) || (material === 'gazbeton' ? 2653 : material === 'tugla' ? 2085 : 2843);
-                laborPriceM2 = getGlobalPrice(prevCosts, laborItemName) || 250;
-            }
-
             return prevCosts.map(cat => {
                 if (cat.id === 'duvar_tavan') {
                     return {
                         ...cat,
                         items: cat.items.map(item => {
-                            if (item.name.startsWith('Duvar Malzemesi (') && item.name.includes('cm)')) {
-                                const match = item.name.match(/\(([\d\.]+) cm\)/);
-                                if (match && match[1]) {
-                                    const thicknessCm = parseFloat(match[1]);
-                                    const thicknessM = thicknessCm / 100;
-                                    const calculatedPrice = rawMaterialPriceM3 * thicknessM;
-                                    // DÜZELTME 1: Malzeme değiştiğinde eski manuel fiyat sıfırlanmalı!
-                                    return { ...item, unit_price: Math.round(calculatedPrice), manualPrice: undefined };
-                                }
-                            } else if (item.name.startsWith('Duvar İşçiliği (') && item.name.includes('cm)')) {
-                                const match = item.name.match(/\(([\d\.]+) cm\)/);
-                                if (match && match[1]) {
-                                    // DÜZELTME 2: İşçilik fiyatına kalınlık çarpanı eklendi
-                                    let ratio = 1.0;
-                                    const thick = parseFloat(match[1]);
-                                    if (thick <= 10) ratio = 0.85;
-                                    else if (thick <= 13.5) ratio = 1.0;
-                                    else if (thick <= 15) ratio = 1.1;
-                                    else if (thick <= 20) ratio = 1.4;
-                                    else if (thick <= 25) ratio = 1.7;
-
-                                    const calculatedPrice = laborPriceM2 * ratio;
-                                    // DÜZELTME 1 (Devamı): Manuel fiyat sıfırlandı
-                                    return { ...item, unit_price: Math.round(calculatedPrice), manualPrice: undefined };
-                                }
+                            // Sadece manuel fiyatı sıfırlıyoruz. 
+                            // Birim fiyatı calculations.ts dinamik olarak halledecek.
+                            if (item.name.startsWith('Duvar Malzemesi (') || item.name.startsWith('Duvar İşçiliği (')) {
+                                return { ...item, manualPrice: undefined };
                             }
                             return item;
                         })
@@ -954,11 +896,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // --- HARÇ VE YAPIŞTIRICI HESABI (TÜM DÜŞÜMLER BİTTİKTEN SONRA TEMİZ METRAJ ÜZERİNDEN) ---
         aggregatedUnitStats['adhesive_weight'] = 0;
         aggregatedUnitStats['mortar_volume'] = 0;
-        
+
         ['10', '13_5', '15', '20', '25'].forEach(tStr => {
             const area = aggregatedUnitStats[`wall_${tStr}_area`] || 0;
             const thick = tStr === '13_5' ? 13.5 : parseFloat(tStr);
-            
+
             if (globalWallMaterial === 'gazbeton') {
                 aggregatedUnitStats['adhesive_weight'] += area * (0.25 * thick);
             } else {
@@ -1106,7 +1048,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 buildingStats,
                                 totalConstructionArea,
                                 constructionDuration,
-                                aggregatedUnitStats, costs
+                                aggregatedUnitStats,
+                                costs,
+                                globalWallMaterial
                             );
                             dynamicUnitPrice = calculatedValue;
                         }
@@ -1128,7 +1072,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 calculatedAutoQty = Math.max(0, aggregatedUnitStats[item.auto_source] || 0) * item.multiplier;
                             }
                             else if (item.auto_source.startsWith('calc_')) {
-                                calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(item, buildingStats, totalConstructionArea, constructionDuration, aggregatedUnitStats, costs));
+                                calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(
+                                    item,
+                                    buildingStats,
+                                    totalConstructionArea,
+                                    constructionDuration,
+                                    aggregatedUnitStats,
+                                    costs,
+                                    globalWallMaterial // <-- BURAYI EKLEYİN
+                                ));
                             }
                         }
                         // Standart kalemlerde manuel miktar varsa o geçerlidir

@@ -353,6 +353,13 @@ export const DEFAULT_PRICES: Record<string, number> = {
 
     // --- RESMİ İŞLEMLER, HARÇLAR & ABONELİKLER ---
     "Yapı Sınıfı 3A": 19800,                 // yapi3asinifipaket
+    "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)": 150000,
+    "Akıllı Ev Altyapı ve Donanım Paketi": 65000,
+    "Haritacı Ücreti (Lihkab)": 7471,
+    "Yapı Sınıfı 3B": 25000,
+    "Yapı Sınıfı 3C": 28000,
+    "Yapı Sınıfı 4A": 32000,
+    "Yapı Sınıfı 4B": 36000,
     "Enerji Kimlik Belgesi": 2025,     // enerjikimlikisc
     "Elektrik Güvence Birim Bedeli": 737,    // elektrikabonelikkwpaket
     "Su Abonelik Paket Bedeli": 1575,        // suabonelikisc
