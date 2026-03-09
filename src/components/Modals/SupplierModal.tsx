@@ -43,6 +43,9 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
 
     const [shareLink, setShareLink] = useState<string | null>(null);
     const [isCreatingLink, setIsCreatingLink] = useState(false);
+    
+    // Hangi butonun yüklendiğini takip etmek için (örn: "Denizler Yapı - Eposta")
+    const [loadingAction, setLoadingAction] = useState<{ id: string, type: 'wa' | 'email' } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -53,9 +56,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const fetchSuppliers = async () => {
         setIsLoading(true);
         try {
-            // SİZİN LİNKİNİZİN DÜZELTİLMİŞ TSV FORMATI:
             const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7I9ioyi6FWmgpt3BimD2IDCBu0C0FzjGrC3MWMGDraun2cjS4RCC7XPtuGXnux-Rcy6UwhhSJLlVR/pub?output=tsv";
-
             const response = await fetch(sheetUrl);
 
             if (!response.ok) {
@@ -63,7 +64,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             }
 
             const text = await response.text();
-            const rows = text.split('\n').slice(1); // İlk satırı (Başlıkları) atla
+            const rows = text.split('\n').slice(1); 
 
             const parsedSuppliers: Supplier[] = rows.map(row => {
                 const cols = row.split('\t');
@@ -75,12 +76,10 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                     eposta: cols[4]?.trim() || '',
                     adres: cols[5]?.trim() || ''
                 };
-            }).filter(s => s.il && s.firmaAdi); // Sadece ili ve firma adı dolu olanları al
+            }).filter(s => s.il && s.firmaAdi); 
 
-            // 1. Önce kullanıcının İli ve İlçesiyle tam eşleşenleri bul
             let filtered = parsedSuppliers.filter(s => s.il === buildingStats.province && s.ilce === buildingStats.district);
 
-            // 2. Eğer o ilçede nalbur yoksa, o İldeki diğer nalburları getir
             if (filtered.length === 0) {
                 filtered = parsedSuppliers.filter(s => s.il === buildingStats.province);
             }
@@ -94,8 +93,10 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         }
     };
 
-    // ŞU FONKSİYONU EKLEYİN:
-    const handleCreateShareLink = async () => {
+    // --- YENİ & GELİŞMİŞ LİNK OLUŞTURMA MANTIĞI ---
+    const ensureShareLink = async (): Promise<string | null> => {
+        if (shareLink) return shareLink; // Zaten varsa hemen döndür
+
         setIsCreatingLink(true);
         try {
             const response = await fetch('/api/share', {
@@ -108,30 +109,30 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             });
             const result = await response.json();
             if (result.success) {
-                // Linki state'e kaydet (Örn: https://uygulamaniz.com/?downloadId=a1b2c3d4)
-                setShareLink(`${window.location.origin}/?downloadId=${result.uuid}`);
+                const newLink = `${window.location.origin}/?downloadId=${result.uuid}`;
+                setShareLink(newLink);
+                return newLink;
             } else {
                 alert("Teklif linki oluşturulamadı.");
+                return null;
             }
         } catch (e) {
             console.error(e);
             alert("Bir hata oluştu.");
+            return null;
         } finally {
             setIsCreatingLink(false);
         }
     };
 
-    // MEVCUT generateMessageText FONKSİYONUNU BUNUNLA DEĞİŞTİRİN:
-    // SADECE BU TEK FONKSİYONU TUTUN:
-    const generateMessageText = () => {
+    // Dinamik Link Alan Mesaj Üretici
+    const generateMessageText = (linkToUse: string | null) => {
         let msg = `Merhaba, CY Pro İnşaat Manager üzerinden malzeme teklifi almak istiyorum.\n\n`;
         msg += `Proje Konumu: ${buildingStats.province} / ${buildingStats.district}\n\n`;
 
-        if (shareLink) {
-            // Akıllı Link varsa bunu ekle (Tedarikçi Excel indirebilecek)
-            msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${shareLink}\n\n`;
+        if (linkToUse) {
+            msg += `Malzeme listesini Excel formatında indirip fiyatlandırmak için aşağıdaki bağlantıya tıklayabilirsiniz:\n${linkToUse}\n\n`;
         } else {
-            // Link henüz oluşturulmadıysa düz metin listesi oluştur
             procurementGroups.forEach(group => {
                 msg += `--- ${group.taskName.toUpperCase()} AŞAMASI ---\n`;
                 group.items.forEach(item => {
@@ -150,6 +151,39 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         if (clean.startsWith('0')) clean = clean.substring(1);
         if (!clean.startsWith('90')) clean = '90' + clean;
         return clean;
+    };
+
+    // E-Posta Gönderme Aksiyonu
+    const handleSendEmail = async (supplier: Supplier, idx: number) => {
+        setLoadingAction({ id: supplier.firmaAdi + idx, type: 'email' });
+        const link = await ensureShareLink();
+        setLoadingAction(null);
+
+        if (link) {
+            const mailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${supplier.eposta}&su=${encodeURIComponent("CY Pro Malzeme Fiyat Teklifi Talebi")}&body=${generateMessageText(link)}`;
+            const newWindow = window.open(mailUrl, '_blank');
+            
+            // Eğer tarayıcı Popup'ı engellerse kullanıcıyı uyar ve manuel tıklamasını sağla (Link artık hazır)
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                alert("Tarayıcınız yeni pencere açılmasını engelledi. Dosya linkiniz hazırlandı, lütfen 'Gmail ile Gönder' butonuna tekrar tıklayın.");
+            }
+        }
+    };
+
+    // WhatsApp Gönderme Aksiyonu
+    const handleSendWA = async (supplier: Supplier, idx: number) => {
+        setLoadingAction({ id: supplier.firmaAdi + idx, type: 'wa' });
+        const link = await ensureShareLink();
+        setLoadingAction(null);
+
+        if (link) {
+            const waUrl = `https://wa.me/${formatPhoneForWA(supplier.telefon)}?text=${generateMessageText(link)}`;
+            const newWindow = window.open(waUrl, '_blank');
+
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                alert("Tarayıcınız yeni pencere açılmasını engelledi. Dosya linkiniz hazırlandı, lütfen 'WhatsApp' butonuna tekrar tıklayın.");
+            }
+        }
     };
 
     if (!isOpen) return null;
@@ -176,11 +210,11 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                     {!isLoading && suppliers.length > 0 && (
                         <div className="mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Akıllı Teklif Linki</h4>
-                                <p className="text-xs text-slate-500 mt-1">Tedarikçilere malzemeleri alt alta yazmak yerine, tıklayıp Excel indirebilecekleri kurumsal bir bağlantı oluşturun.</p>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Akıllı Teklif Linki Durumu</h4>
+                                <p className="text-xs text-slate-500 mt-1">Tedarikçilere mesaj veya e-posta gönderdiğinizde, excel indirme linkiniz otomatik olarak oluşturulup mesaja eklenir.</p>
                             </div>
                             <button
-                                onClick={handleCreateShareLink}
+                                onClick={ensureShareLink}
                                 disabled={isCreatingLink || shareLink !== null}
                                 className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all shrink-0 flex items-center gap-2
                     ${shareLink ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
@@ -188,7 +222,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                             >
                                 {isCreatingLink ? <i className="fas fa-spinner fa-spin"></i> :
                                     shareLink ? <i className="fas fa-check-circle"></i> : <i className="fas fa-link"></i>}
-                                {isCreatingLink ? 'Oluşturuluyor...' : shareLink ? 'Link Hazır!' : 'Excel İndirme Linki Üret'}
+                                {isCreatingLink ? 'Oluşturuluyor...' : shareLink ? 'Link Hazırlandı' : 'Sadece Link Üret'}
                             </button>
                         </div>
                     )}
@@ -241,33 +275,33 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 mt-auto">
-                                        <a
-                                            href={`https://wa.me/${formatPhoneForWA(supplier.telefon)}?text=${generateMessageText()}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="bg-[#25D366] hover:bg-[#1DA851] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
+                                        {/* WHATSAPP BUTONU */}
+                                        <button
+                                            onClick={() => handleSendWA(supplier, idx)}
+                                            disabled={loadingAction !== null}
+                                            className="bg-[#25D366] hover:bg-[#1DA851] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm disabled:opacity-60"
                                         >
-                                            <i className="fab fa-whatsapp text-lg"></i> WhatsApp
-                                        </a>
+                                            {loadingAction?.id === supplier.firmaAdi + idx && loadingAction.type === 'wa' ? (
+                                                <><i className="fas fa-circle-notch fa-spin text-lg"></i> Bekleyin...</>
+                                            ) : (
+                                                <><i className="fab fa-whatsapp text-lg"></i> WhatsApp</>
+                                            )}
+                                        </button>
 
-                                        {/* YENİ E-POSTA BUTONU KISMI BURAYA GELDİ */}
-                                        {shareLink ? (
-                                            <a
-                                                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${supplier.eposta}&su=${encodeURIComponent("CY Pro Malzeme Fiyat Teklifi Talebi")}&body=${generateMessageText()}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                                            >
-                                                <i className="fas fa-envelope text-sm"></i> Gmail ile Gönder
-                                            </a>
-                                        ) : (
-                                            <button
-                                                onClick={() => alert("E-posta göndermeden önce lütfen yukarıdan 'Excel İndirme Linki Üret' butonuna tıklayarak teklif bağlantınızı oluşturun. Bu sayede tedarikçi listeyi Excel olarak görebilecektir.")}
-                                                className="bg-slate-400 text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-not-allowed shadow-sm"
-                                            >
-                                                <i className="fas fa-envelope text-sm"></i> Önce Link Üretin
-                                            </button>
-                                        )}
+                                        {/* E-POSTA BUTONU (HER ZAMAN GÖRÜNÜR) */}
+                                        <button
+                                            onClick={() => handleSendEmail(supplier, idx)}
+                                            disabled={loadingAction !== null}
+                                            className={`py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm disabled:opacity-60
+                                                ${supplier.eposta ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                                            title={!supplier.eposta ? "E-posta adresi bulunmuyor" : ""}
+                                        >
+                                            {loadingAction?.id === supplier.firmaAdi + idx && loadingAction.type === 'email' ? (
+                                                <><i className="fas fa-circle-notch fa-spin text-sm"></i> Üretiliyor...</>
+                                            ) : (
+                                                <><i className="fas fa-envelope text-sm"></i> Gmail Gönder</>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             ))}
