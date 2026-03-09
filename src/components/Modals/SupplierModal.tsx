@@ -44,6 +44,9 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const [shareLink, setShareLink] = useState<string | null>(null);
     const [isCreatingLink, setIsCreatingLink] = useState(false);
     
+    // Kopyalama işlemi için durum tutucu
+    const [isCopied, setIsCopied] = useState(false);
+    
     // Hangi butonun yüklendiğini takip etmek için (örn: "Denizler Yapı - Eposta")
     const [loadingAction, setLoadingAction] = useState<{ id: string, type: 'wa' | 'email' } | null>(null);
 
@@ -153,7 +156,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         return clean;
     };
 
-    // E-Posta Gönderme Aksiyonu (mailto: ile güncellendi)
+    // E-Posta Gönderme Aksiyonu (mailto: ile)
     const handleSendEmail = async (supplier: Supplier, idx: number) => {
         setLoadingAction({ id: supplier.firmaAdi + idx, type: 'email' });
         const link = await ensureShareLink();
@@ -185,6 +188,15 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         }
     };
 
+    // Link Kopyalama Aksiyonu
+    const handleCopyLink = () => {
+        if (shareLink) {
+            navigator.clipboard.writeText(shareLink);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000); // 2 saniye sonra "Linki Kopyala" yazısına döner
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -210,18 +222,21 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                         <div className="mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div>
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Akıllı Teklif Linki Durumu</h4>
-                                <p className="text-xs text-slate-500 mt-1">Tedarikçilere mesaj veya e-posta gönderdiğinizde, excel indirme linkiniz otomatik olarak oluşturulup mesaja eklenir.</p>
+                                <p className="text-xs text-slate-500 mt-1">Tedarikçilere mesaj veya e-posta gönderdiğinizde link otomatik üretilir. İsterseniz <strong>manuel paylaşmak için kopyalayabilirsiniz.</strong></p>
                             </div>
                             <button
-                                onClick={ensureShareLink}
-                                disabled={isCreatingLink || shareLink !== null}
+                                onClick={shareLink ? handleCopyLink : ensureShareLink}
+                                disabled={isCreatingLink}
                                 className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all shrink-0 flex items-center gap-2
-                    ${shareLink ? 'bg-green-100 text-green-700 border border-green-300 cursor-default'
+                                    ${shareLink 
+                                        ? (isCopied ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 active:scale-95')
                                         : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'}`}
+                                title={shareLink ? "Manuel paylaşım için linki kopyalayın" : ""}
                             >
                                 {isCreatingLink ? <i className="fas fa-spinner fa-spin"></i> :
-                                    shareLink ? <i className="fas fa-check-circle"></i> : <i className="fas fa-link"></i>}
-                                {isCreatingLink ? 'Oluşturuluyor...' : shareLink ? 'Link Hazırlandı' : 'Sadece Link Üret'}
+                                    shareLink ? (isCopied ? <i className="fas fa-check-double"></i> : <i className="far fa-copy"></i>) : <i className="fas fa-link"></i>}
+                                {isCreatingLink ? 'Oluşturuluyor...' : 
+                                    shareLink ? (isCopied ? 'Kopyalandı!' : 'Linki Kopyala') : 'Sadece Link Üret'}
                             </button>
                         </div>
                     )}
