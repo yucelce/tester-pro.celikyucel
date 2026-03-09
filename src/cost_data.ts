@@ -190,7 +190,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "İskele Kurulum/Söküm", unit: "m2", auto_source: "calc_scaffolding_area", multiplier: 1, scope: 'global' },
       { name: "Cam Balkon Sistemleri", unit: "m2", auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },
-      { name: "Pencere Söveleri", unit: "mt", auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' }
+      { name: "Pencere Söveleri", unit: "mt", auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
+    { name: "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
     ]
   },
   {
@@ -224,7 +225,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "İç Merdiven Kaplama", unit: "Basamak", auto_source: "calc_internal_stair_steps", multiplier: 1, scope: 'global' },
-      { name: "İç Merdiven Korkuluk", unit: "mt", auto_source: "calc_internal_stair_railing_mt", multiplier: 1, scope: 'global' }
+      { name: "İç Merdiven Korkuluk", unit: "mt", auto_source: "calc_internal_stair_railing_mt", multiplier: 1, scope: 'global' },
+      { name: "Otomatik Garaj Kapısı ve Bariyer", unit: "Adet", auto_source: "calc_garage_door", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
   {
@@ -266,6 +268,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "m2", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global' },
+      { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
   {

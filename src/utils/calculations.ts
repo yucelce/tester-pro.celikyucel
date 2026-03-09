@@ -846,6 +846,37 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
+    'calc_garage_door': ({ buildingStats, currentCosts, item }) => {
+        if (buildingStats.indoorParkingArea && buildingStats.indoorParkingArea > 0) {
+            return getGlobalPrice(currentCosts, item.name); // Manuel total olduğu için fiyat döner
+        }
+        return 0;
+    },
+
+    'calc_garage_drainage': ({ buildingStats, currentCosts, item }) => {
+        if (buildingStats.indoorParkingArea && buildingStats.indoorParkingArea > 0) {
+            return getGlobalPrice(currentCosts, item.name);
+        }
+        return 0;
+    },
+
+    'calc_shelter_plumbing': ({ buildingStats, currentCosts, item }) => {
+        if (buildingStats.shelterArea && buildingStats.shelterArea > 0) {
+            return getGlobalPrice(currentCosts, item.name);
+        }
+        return 0;
+    },
+
+    'calc_co_sensors': ({ buildingStats, currentCosts, item }) => {
+        // Jet fan varsa CO sensörü de zorunludur.
+        if (buildingStats.indoorParkingArea && buildingStats.indoorParkingArea > 0) {
+            // Alanın büyüklüğüne göre sensör maliyetini artırabiliriz
+            const multiplier = Math.max(1, Math.ceil(buildingStats.indoorParkingArea / 500));
+            return getGlobalPrice(currentCosts, item.name) * multiplier;
+        }
+        return 0;
+    },
+
     'calc_fence': ({ buildingStats }) => {
         // Hem Villa hem de Apartman için öncelikli olarak Arsa Alanı (landArea) baz alınır.
         // Arsayı kare kabul ederek çevresini (Karekök x 4) buluyoruz.
