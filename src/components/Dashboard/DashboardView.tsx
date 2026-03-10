@@ -417,7 +417,7 @@ export const DashboardView: React.FC = () => {
                         </div>
                     </div>
 
-                    {units.some(u => u.rooms.length === 0) && (
+                    {units.every(u => u.rooms.length === 0) && units.length > 0 && (
                         <div className="mb-5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-xl p-3 md:p-4 flex items-start gap-3 shadow-sm animate-fadeIn">
                             <div className="bg-blue-100 dark:bg-blue-800/50 w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                                 <i className="fas fa-magic text-blue-600 dark:text-blue-400"></i>
