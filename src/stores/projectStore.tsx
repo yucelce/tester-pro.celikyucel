@@ -830,51 +830,91 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
         };
 
-        // GÜNCELLENEN: Her eklenen istatistiği kaynağıyla kaydet
-        const addToAggregated = (stats: Record<string, number>, count: number, sourceName: string) => {
+        // --- BİRİNCİ ADIM: MİMARİ PLANLARI (ODALARI) HESAPLAMA ---
+        units.forEach(u => {
+            // calculateUnitCost'tan dönen roomBreakdowns bilgisini de çekiyoruz
+            const { stats, roomBreakdowns } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, false);
+
             Object.keys(stats).forEach(k => {
-                const totalVal = stats[k] * count;
+                const totalVal = stats[k] * u.count;
                 if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
                 aggregatedUnitStats[k] += totalVal;
 
-                // Hangi daire tipinden ne kadar geldiğini listeye yazdır
-                addBreakdown(k, sourceName, totalVal);
-            });
-        };
+                // Eğer bu metraj kalemi için oda bazlı kırılım (breakdown) varsa
+                if (roomBreakdowns && roomBreakdowns[k] && roomBreakdowns[k].length > 0) {
+                    let rbSum = 0;
+                    
+                    roomBreakdowns[k].forEach((rb: any) => {
+                        const rbVal = rb.qty * u.count;
+                        rbSum += rbVal;
+                        
+                        // Örn: "Mimari: Tip A (2+1) - Salon (5 Adet)"
+                        addBreakdown(k, `Mimari: ${u.name} - ${rb.roomName} (${u.count} Adet)`, rbVal);
+                    });
 
-        units.forEach(u => {
-            const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, false);
-            addToAggregated(stats, u.count, `Mimari: ${u.name} (${u.count} Adet)`);
+                    // Eğer odalara dağıtılmayan (genel daire başı) bir küsurat/pay kaldıysa, onu da "Genel" olarak ekle
+                    const remainder = totalVal - rbSum;
+                    if (Math.abs(remainder) > 0.01) {
+                        addBreakdown(k, `Mimari: ${u.name} (Daire Başına Gelen)`, remainder);
+                    }
+                } 
+                // Eğer bu metraj odalardan DEĞİL, doğrudan dairenin kendisinden geliyorsa (Çelik kapı, kombi vb.)
+                else {
+                    addBreakdown(k, `Mimari: ${u.name} (${u.count} Adet)`, totalVal);
+                }
+            });
         });
 
         let effectiveStructuralUnits = structuralUnits;
 
+        // ... (Bu kısımdaki sanal kat oluşturma kodlarınız aynı kalıyor, dokunmayın) ...
+
+        // --- İKİNCİ ADIM: STATİK (KABA) PLANLARI HESAPLAMA ---
+        effectiveStructuralUnits.forEach(u => {
+            const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
+            
+            Object.keys(stats).forEach(k => {
+                const totalVal = stats[k] * u.count;
+                if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
+                aggregatedUnitStats[k] += totalVal;
+                
+                // Statik planlar oda bazlı olmadığı için doğrudan kat planı olarak yazıyoruz
+                addBreakdown(k, `Statik Plan: ${u.name}`, totalVal);
+            });
+        });
 
 
-        // Kullanıcı henüz hiç statik kat planı eklememişse ve sistem "Oto" modundaysa,
+
         // sistemin duvar ve beton metrajlarını hesaplayabilmesi için yapı istatistiklerine (buildingStats) dayalı sanal kat planları oluşturulur.
         if (structuralUnits.length === 0 && (globalWallMode === 'auto' || globalConcreteMode === 'auto')) {
             effectiveStructuralUnits = [];
 
             if (buildingStats.normalFloorCount > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_n', floorType: 'normal', count: buildingStats.normalFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+                effectiveStructuralUnits.push({ id: 'auto_n', name: 'Normal Kat (Sanal)', floorType: 'normal', count: buildingStats.normalFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
             }
             if (buildingStats.groundFloorArea > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_g', floorType: 'ground', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+                effectiveStructuralUnits.push({ id: 'auto_g', name: 'Zemin Kat (Sanal)', floorType: 'ground', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
             }
             if (buildingStats.basementFloorCount > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_b', floorType: 'basement', count: buildingStats.basementFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+                effectiveStructuralUnits.push({ id: 'auto_b', name: 'Bodrum Kat (Sanal)', floorType: 'basement', count: buildingStats.basementFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
             }
             if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea && buildingStats.roofFloorArea > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_r', floorType: 'roof', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
+                effectiveStructuralUnits.push({ id: 'auto_r', name: 'Çatı Katı (Sanal)', floorType: 'roof', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
             }
         }
 
 
-
         effectiveStructuralUnits.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
-            addToAggregated(stats, u.count, `Statik Plan: ${u.name}`);
+            
+            Object.keys(stats).forEach(k => {
+                const totalVal = stats[k] * u.count;
+                if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
+                aggregatedUnitStats[k] += totalVal;
+                
+                // Statik planlar oda bazlı olmadığı için doğrudan kat planı olarak yazıyoruz
+                addBreakdown(k, `Statik Plan: ${u.name}`, totalVal);
+            });
         });
 
         const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);

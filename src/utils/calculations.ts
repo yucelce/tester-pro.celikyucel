@@ -151,6 +151,8 @@ export class QuantityTakeoffService {
             dDed_10: 0, dDed_13_5: 0, dDed_15: 0, dDed_20: 0, dDed_25: 0,
         };
 
+        let roomBreakdowns: Record<string, { roomName: string, qty: number }[]> = {};
+
         if (!settings.isStructural) {
             stats.calc_unit_count = 1; stats.calc_steel_door = 1; stats.calc_sub_panel_count = 1;
             const heatingSystem = buildingStats.heatingSystem || 'radiator';
@@ -161,6 +163,8 @@ export class QuantityTakeoffService {
         // 1. ODA DÖNGÜSÜ
         rawMetrics.rooms.forEach((room: any) => {
             if (!settings.isStructural) {
+                const statsBefore = { ...stats };
+
                 this.applyHeating(stats, room, buildingStats, settings.globalWallMaterial);
 
                 // HATA VEREN KISIM BURASIYDI, ŞU AN TAM UYUMLU:
@@ -168,12 +172,28 @@ export class QuantityTakeoffService {
 
                 this.applySpecificRooms(stats, room);
                 this.applyElectricalPoints(stats, room);
+
+                Object.keys(stats).forEach(k => {
+                    const diff = (stats[k] || 0) - (statsBefore[k] || 0);
+                    if (Math.abs(diff) > 0.001) { // 0 olanları yoksay
+                        if (!roomBreakdowns[k]) roomBreakdowns[k] = [];
+                        roomBreakdowns[k].push({ roomName: room.name || 'İsimsiz Oda', qty: diff });
+                    }
+                });
             }
         });
 
         if (!settings.isStructural) {
+            // Süpürgelik düşümü için de snapshot alalım
+            const statsBefore = { ...stats };
             const totalDoorBaseboardDeduction = (stats.calc_inner_door * 1.80) + (stats.calc_steel_door * 0.90);
             stats.dry_perimeter = Math.max(0, stats.dry_perimeter - totalDoorBaseboardDeduction);
+
+            const diff = (stats.dry_perimeter || 0) - (statsBefore.dry_perimeter || 0);
+            if (Math.abs(diff) > 0.001) {
+                if (!roomBreakdowns['dry_perimeter']) roomBreakdowns['dry_perimeter'] = [];
+                roomBreakdowns['dry_perimeter'].push({ roomName: 'Kapı & Süpürgelik Düşümü', qty: diff });
+            }
         }
 
         // 2. KABA YAPI (Duvar, Beton, Demir)
@@ -635,6 +655,7 @@ export const calculateUnitCost = (
     globalWallThickness: number = 15,
     isStructural: boolean = false
 ) => {
+    
     const isGroundFloor = unit.floorType === 'ground';
     const currentFloorArea = isGroundFloor ? buildingStats.groundFloorArea : buildingStats.normalFloorArea;
     const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
@@ -645,10 +666,8 @@ export const calculateUnitCost = (
     // 1. Geometriyi Ayrıştır
     const rawMetrics = GeometryAnalyzer.extractRawMetrics(unit, buildingStats);
 
-    // 2. Metrajları (Quantities) Hesapla
-    const stats = QuantityTakeoffService.calculateStats(rawMetrics, unit, buildingStats, settings);
+    const { stats, roomBreakdowns } = QuantityTakeoffService.calculateStats(rawMetrics, unit, buildingStats, settings);
 
-    // 3. Fiyatlandır ve Sonuçlandır
     const pricingContext = {
         defaultFloorArea: rawMetrics.defaultFloorArea, projectTotalArea: rawMetrics.projectTotalArea,
         buildingStats, globalWallMaterial, useDetailedConcrete: globalConcreteMode === 'detailed'
@@ -656,7 +675,8 @@ export const calculateUnitCost = (
 
     const { quantities, totalCost } = PricingService.calculateCosts(stats, currentCosts, pricingContext);
 
-    return { quantities, totalCost, stats };
+    // BURA DEĞİŞTİ: roomBreakdowns'ı store'un kullanabilmesi için return ediyoruz
+    return { quantities, totalCost, stats, roomBreakdowns };
 };
 // ============================================================================
 const needsTowerCrane = (totalArea: number, groundArea: number, floors: number) => {
