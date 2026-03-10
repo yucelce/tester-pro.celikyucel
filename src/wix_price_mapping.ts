@@ -22,7 +22,6 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "İskan Harcı": "iskanm2buyuksehirpaket",
   "Şantiye Şefi (Aylık)": "santiyesefiisc",
   "Enerji Kimlik Belgesi": "enerjikimlikisc",
-  "Şantiye Su ve Elektrik Abonelikleri": "santiyeabonelik",
   "Tapu Döner Sermaye": "tapudonersermayeisc",
   "Elektrik Güvence Birim Bedeli": "elektrikabonelikkwpaket", // Wix ID'niz
   "Su Abonelik Paket Bedeli": "suabonelikisc",             // Wix ID'niz
@@ -91,7 +90,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Kalıp Yağı (Litre)": "kalipyagiltmal",
   "Kereste (m3)": "kerestem3mal",
 
-  "Yangın Kapısı (Adet)": "yanginkapisimal",
+  "Yangın Kapısı (Adet)": "yanginkapimal",
 
 
   // YENİ EKLENEN: cost_data.ts ile eşleşmeli
@@ -113,7 +112,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Alçı Sıva (Kaba+Saten)": "alcikabasatenpaket",
   "İç Cephe Boyası": "boyamalisc",
   "Tavan Boyası": "tavanboyamalisc",
-  "Asma Tavan (Alçıpan)": "asmatavan",
+  "Asma Tavan (Alçıpan)": "asmatavanm2malisc",
   "Kartonpiyer / Stropiyer": "alcikartonpiyermalisc",
   // HARÇ VE YAPIŞTIRICI EŞLEŞTİRMELERİ
   "Duvar Örme Harcı (Kara Harç)": "harcm3paket", // 
@@ -127,8 +126,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
 
   // --- 6. ZEMİN VE MERDİVEN ---
   // Eskisi: "Şap Atılması (Malz.+İşçilik)": "sappaket",
- "Şap Malzemesi": "sapmalzemesi",
-  "Şap İşçiliği": "sapisciligi",
+ "Şap Malzemesi": "sapm2malmal",
+  "Şap İşçiliği": "sapisc",
 
   "PVC Pencere (Doğrama)": "pvcpencerepaket",
   "Mermer Denizlik": "denizlikmalisc",

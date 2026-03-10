@@ -258,7 +258,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "VRF Dış Ünite (Merkezi Sistem)", unit: "Adet", auto_source: "calc_vrf_outdoor", multiplier: 1, scope: 'global' },
       { name: "VRF İç Ünite (Kaset/Duvar Tipi)", unit: "Adet", auto_source: "calc_vrf_indoor", multiplier: 1, scope: 'unit' },
       { name: "VRF Bakır Borulama ve Altyapı", unit: "m2", auto_source: "calc_vrf_infrastructure", multiplier: 1, scope: 'unit' },
-      { name: "Doğalgaz Bina Ana Altyapısı", unit: "Paket", auto_source: "calc_gas_infrastructure", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Doğalgaz Bina Ana Altyapısı", unit: "Paket", auto_source: "mesi", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Doğalgaz Proje ve Onay Bedeli", unit: "Paket", auto_source: "calc_gas_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yağmur Suyu Hasat Sistemi (Zorunlu)", unit: "Paket", auto_source: "calc_rainwater_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Modüler Su Deposu (2m3 Paket)", unit: "Paket", auto_source: "calc_water_tank", multiplier: 1, scope: 'global', inputType: 'manual_total' },

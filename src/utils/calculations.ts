@@ -904,6 +904,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             (totalHorizontalMetres * horizontalPipePrice) +
             (totalApartments * connectionSetPrice);
     },
+    
 
     'calc_gas_subscription': ({ item }) => item.unit_price,
 
