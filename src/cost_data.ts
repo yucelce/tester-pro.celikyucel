@@ -35,8 +35,8 @@ export interface CostItem {
   "calc_grass_and_irrigation" | "calc_foundation_grounding" | "calc_grobeton" | "calc_foundation_xps" |
   "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
   'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
-  "waterproofing_area" | "calc_terrace_waterproofing" |
-  'calc_indoor_parking_screed' | 'calc_shelter_package' | 'calc_parking_ventilation'
+  "waterproofing_area" | "calc_terrace_waterproofing" | "calc_garage_door" |
+  'calc_indoor_parking_screed' | 'calc_shelter_package' | 'calc_parking_ventilation' | "calc_garage_drainage" 
 
   ;
 
@@ -267,7 +267,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Asansör (Paket)", unit: "Adet", auto_source: "calc_elevator", multiplier: 1, scope: 'global' },
       { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "m2", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global' },
+      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global' },
       { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
@@ -321,7 +321,15 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Sıva Alçısı (kg)", unit: "kg", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Saten Alçı (kg)", unit: "kg", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Astar Boya (kg)", unit: "kg", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "İç Cephe Boyası (kg)", unit: "kg", auto_source: "manual", multiplier: 0, scope: 'hidden' }
+      { name: "İç Cephe Boyası (kg)", unit: "kg", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Sığınak Kapısı (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Sığınak Havalandırma Santrali (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Otopark Sprinkler Altyapısı (m²)", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Otopark Jet Fan Cihazı (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Egzost/Taze Hava Santrali ve Otomasyon (Paket)", unit: "Paket", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Otopark Drenaj Kanalı (mt)", unit: "mt", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Yağ Ayırıcı Ünite (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Atıksu Dalgıç Pompa Sistemi (Set)", unit: "Set", auto_source: "manual", multiplier: 0, scope: 'hidden' }
     ]
   }
 ];

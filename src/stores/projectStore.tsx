@@ -990,6 +990,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
         // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
+        // --- KAPALI OTOPARK VE SIĞINAK İNCE İŞLERDEN DÜŞÜMÜ (MİNHA) ---
         const parkingArea = buildingStats.indoorParkingArea || 0;
         const shelterArea = buildingStats.shelterArea || 0;
         const nonResidentialArea = parkingArea + shelterArea;
@@ -1002,7 +1003,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const isAutoMode = totalRoomsEntered === 0;
 
             // SADECE OTO MODDAYKEN (Kullanıcı hiç oda çizmemiş/girmemişse) düşüm (minha) yap!
-            // Çünkü detaylı oda girilmişse, kullanıcı zaten otoparkı çizmemiştir, dolayısıyla düşecek bir sıva fazlalığı yoktur.
             if (isAutoMode) {
                 const residentialWallDensity = 2.8;
                 const parkingWallDensity = 0.8;
@@ -1018,16 +1018,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
 
                 aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea);
-                aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85) - (shelterArea * 0.85));
-                aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15)) + (shelterArea * 0.85);
-                aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15)) + (shelterArea * 0.85);
+                
+                // Otopark düşümleri ve Sığınak PARKE İPTALİ (Kuru alandan sığınağı tamamen çıkarıyoruz)
+                aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85) - shelterArea);
+                aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
+                aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15));
             }
 
-            // OTO YA DA DETAYLI FARK ETMEZ: Sığınak için zorunlu mekanik ilaveler her zaman yapılır
+            // OTO YA DA DETAYLI FARK ETMEZ: Sığınak için zorunlu mekanik ve zemin ilaveleri
             if (shelterArea > 0) {
-                aggregatedUnitStats['calc_toilet'] = (aggregatedUnitStats['calc_toilet'] || 0) + 1;
-                aggregatedUnitStats['calc_basin_mixer'] = (aggregatedUnitStats['calc_basin_mixer'] || 0) + 1;
-                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + 0.25; 
+                // 1. Sığınak içindeki WC'lerin toplam alanını ve sayısını hesapla.
+                const requiredWCCount = Math.ceil(shelterArea / 50); // Her 50 m2'ye 1 tuvalet
+                const shelterWCArea = requiredWCCount * 4; // Her bir tuvalet kabini ve lavabo için ortalama 4 m²
+                
+                // 2. WC dışındaki geri kalan net sığınak alanını bul (Kuru alan).
+                const shelterDryArea = Math.max(0, shelterArea - shelterWCArea); 
+
+                // 3. Vitrifiye ve Tesisat Eklentileri
+                aggregatedUnitStats['calc_toilet'] = (aggregatedUnitStats['calc_toilet'] || 0) + requiredWCCount;
+                aggregatedUnitStats['calc_basin_mixer'] = (aggregatedUnitStats['calc_basin_mixer'] || 0) + requiredWCCount;
+                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + (0.25 * requiredWCCount); 
+
+                // 4. SERAMİK EKLENTİSİ (Sadece WC alanı kadar)
+                aggregatedUnitStats['wet_area'] = (aggregatedUnitStats['wet_area'] || 0) + shelterWCArea;
+                aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + shelterWCArea;
+
+                // 5. HELİKOPTER ŞAP (Endüstriyel Zemin) EKLENTİSİ (Sığınağın geri kalanı)
+                aggregatedUnitStats['calc_indoor_parking_screed'] = (aggregatedUnitStats['calc_indoor_parking_screed'] || 0) + shelterDryArea;
             }
         }
 

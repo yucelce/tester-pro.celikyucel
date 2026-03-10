@@ -455,17 +455,17 @@ export class QuantityTakeoffService {
         if (settings.isStructural) {
             stats.cornice_length = 0; stats.wet_area = 0; stats.dry_area = 0; stats.radiator_length = 0; stats.kitchen_cabinet_length = 0;
             stats.calc_rough_plaster_area = 0; stats.calc_paint_wall_area = 0; stats.calc_ceiling_paint_area = 0; stats.calc_plaster_area = 0;
-            
+
             // HATA BURADAYDI: Statik turda ince işler varsayımı yapmaması için fonksiyondan ÇIKIYORUZ.
-            return; 
+            return;
         }
 
         // --- Aşağıdaki kısımlar SADECE Mimari Planlar (İnce İşler) için çalışır ---
-        
+
         stats.calc_concrete_unit = 0; stats.calc_formwork_unit = 0; stats.calc_iron_unit = 0;
-        
+
         // Eskiden burada Math.min vardı ve değerleri bozuyordu, Math.max olarak düzeltildi
-        stats.adhesive_weight = Math.max(0, stats.adhesive_weight || 0); 
+        stats.adhesive_weight = Math.max(0, stats.adhesive_weight || 0);
         stats.mortar_volume = Math.max(0, stats.mortar_volume || 0);
 
         // Eğer mimari planda HİÇ ODA GİRİLMEMİŞSE (metraj sıfırsa), varsayılan daire kabulüyle metraj doldurulur.
@@ -753,12 +753,57 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_indoor_parking_screed': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
-    'calc_parking_ventilation': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
-    'calc_shelter_package': ({ buildingStats, item, currentCosts }) => {
-        if (buildingStats.shelterArea && buildingStats.shelterArea > 0) {
-            return getGlobalPrice(currentCosts, item.name);
+    'calc_parking_ventilation': ({ buildingStats, currentCosts }) => {
+        if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
+
+        const area = buildingStats.indoorParkingArea;
+
+        // 1. Gizli kalem birim fiyatlarını çek
+        const sprinklerPrice = getGlobalPrice(currentCosts, "Otopark Sprinkler Altyapısı (m²)");
+        const jetFanPrice = getGlobalPrice(currentCosts, "Otopark Jet Fan Cihazı (Adet)");
+        const centralVentPrice = getGlobalPrice(currentCosts, "Egzost/Taze Hava Santrali ve Otomasyon (Paket)");
+
+        // 2. Sulu Söndürme (Sprinkler) Maliyeti (Doğrudan m2 ile orantılı)
+        const sprinklerTotal = area * sprinklerPrice;
+
+        // 3. Jet Fan Maliyeti (Ortalama her 350 m²'ye 1 adet itici/yönlendirici fan hesaplanır)
+        const jetFanCount = Math.ceil(area / 350);
+        const jetFanTotal = jetFanCount * jetFanPrice;
+
+        // 4. Ana Şaft Fanları ve Otomasyon Santrali Maliyeti
+        // Temel santral 500 m²'ye kadar yeterli kabul edilir.
+        let ventScale = 1.0;
+        if (area > 500) {
+            // 500 m²'yi aşan her 500 m² dilim için santral motor ve şaft büyüklüğü %50 oranında artırılır.
+            ventScale = 1.0 + ((area - 500) / 500) * 0.50; 
         }
-        return 0;
+        const ventTotal = centralVentPrice * ventScale;
+
+        // 5. Tüm bu mühendislik hesabının toplamını ana ekrandaki "Paket" fiyata yansıt
+        return Math.round(sprinklerTotal + jetFanTotal + ventTotal);
+    },
+
+    'calc_shelter_package': ({ buildingStats, currentCosts }) => {
+        if (!buildingStats.shelterArea || buildingStats.shelterArea <= 0) return 0;
+        
+        const area = buildingStats.shelterArea;
+        
+        // 1. Arka plandaki birim fiyatları çek
+        const doorPrice = getGlobalPrice(currentCosts, "Sığınak Kapısı (Adet)");
+        const ventPrice = getGlobalPrice(currentCosts, "Sığınak Havalandırma Santrali (Adet)");
+        
+        // 2. KAPI HESABI (Yönetmelik Pratiği)
+        // Her 100 m² alan için 1 adet ana çelik kapı (veya kaçış holü kapağı takımı) gerekir.
+        // (Örn: 1-100m² arası = 1 Kapı, 101-200m² arası = 2 Kapı)
+        const doorCount = Math.ceil(area / 100);
+        
+        // 3. HAVALANDIRMA SANTRALİ HESABI
+        // Standart bir radyoaktif/karbon filtreli havalandırma santrali ortalama 50 m² (30-40 kişi) destekler.
+        // (Örn: 50m² = 1 Santral, 100m² = 2 Santral veya 2 katı kapasiteli motor)
+        const ventCount = Math.ceil(area / 50);
+        
+        // 4. Nihai paket fiyatını (Toplamları birleştirerek) döndür
+        return (doorCount * doorPrice) + (ventCount * ventPrice);
     },
 
     'calc_satellite_system': ({ aggregatedUnitStats, totalConstructionArea, item }) => {
@@ -863,11 +908,29 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
-    'calc_garage_drainage': ({ buildingStats, currentCosts, item }) => {
-        if (buildingStats.indoorParkingArea && buildingStats.indoorParkingArea > 0) {
-            return getGlobalPrice(currentCosts, item.name);
-        }
-        return 0;
+    'calc_garage_drainage': ({ buildingStats, currentCosts }) => {
+        if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
+
+        const area = buildingStats.indoorParkingArea;
+
+        // 1. Gizli kalem birim fiyatlarını çek
+        const channelPrice = getGlobalPrice(currentCosts, "Otopark Drenaj Kanalı (mt)");
+        const separatorPrice = getGlobalPrice(currentCosts, "Yağ Ayırıcı Ünite (Adet)");
+        const pumpPrice = getGlobalPrice(currentCosts, "Atıksu Dalgıç Pompa Sistemi (Set)");
+
+        // 2. Drenaj Kanalı Maliyeti (Ortalama her 20 m² alan için 1 metre ızgaralı kanal kabulü)
+        const channelLength = Math.ceil(area / 20);
+        const channelTotal = channelLength * channelPrice;
+
+        // 3. Yağ Ayırıcı Kapasite Maliyeti (Her 1000 m² için 1 adet veya 1 üst kapasite birimi)
+        const separatorCount = Math.ceil(area / 1000);
+        const separatorTotal = separatorCount * separatorPrice;
+
+        // 4. Dalgıç Pompa Seti (Suyu rögara basmak için kapalı otoparklarda standart 1 set gerekir)
+        const pumpTotal = pumpPrice;
+
+        // 5. Tüm altyapı hesabı toplanıp tek paket fiyatı olarak yansıtılır
+        return Math.round(channelTotal + separatorTotal + pumpTotal);
     },
 
     'calc_shelter_plumbing': ({ buildingStats, currentCosts, item }) => {

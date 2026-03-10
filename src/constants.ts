@@ -376,21 +376,29 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Şantiye Personel Giderleri (Bekçi vb.)": 70875, // santiyepersonelisc
     "Şantiye Şefi (Aylık)": 147656.3,         // santiyesefiisc
 
-    "Çimento (kg)": 4.6,                     
+    "Çimento (kg)": 4.6,
     "Kum (m3)": 1025,  // Sizin verinizdeki 1025 olarak güncellendi
     "Kireç (kg)": 6.37, // Sizin verinizdeki 6.37 olarak güncellendi
-    "Gazbeton Yapıştırıcısı": 5,             
-    "İnşaat Çivisi (kg)": 45,                
+    "Gazbeton Yapıştırıcısı": 5,
+    "İnşaat Çivisi (kg)": 45,
     "Kalıp Yağı (Litre)": 51.2, // Sizin verinizdeki 51.2 olarak güncellendi
     "Kereste (m3)": 9225, // Sizin verinizdeki 9225 olarak güncellendi                    
-    "Bağ Teli (kg)": 55,                     
-    "Sıva Alçısı (kg)": 6.1,              
-    "Saten Alçı (kg)": 7.7,  
-    "Astar Boya (kg)": 51.2,                
+    "Bağ Teli (kg)": 55,
+    "Sıva Alçısı (kg)": 6.1,
+    "Saten Alçı (kg)": 7.7,
+    "Astar Boya (kg)": 51.2,
     "İç Cephe Boyası (kg)": 97.4,
     "Otopark Yüzey Sertleştirici (Helikopter Şap)": 180,
-"Sığınak Kapısı ve Havalandırma Paketi": 65000,
-"Otopark Yangın ve Jet Fan Sistemi": 1200,
+    "Sığınak Kapısı ve Havalandırma Paketi": 65000,
+    "Otopark Yangın ve Jet Fan Sistemi": 1200,
+    "Sığınak Kapısı (Adet)": 25000,
+    "Sığınak Havalandırma Santrali (Adet)": 40000,
+    "Otopark Sprinkler Altyapısı (m²)": 400,
+    "Otopark Jet Fan Cihazı (Adet)": 30000,
+    "Egzost/Taze Hava Santrali ve Otomasyon (Paket)": 80000,
+    "Otopark Drenaj Kanalı (mt)": 600,
+    "Yağ Ayırıcı Ünite (Adet)": 15000,
+    "Atıksu Dalgıç Pompa Sistemi (Set)": 25000
 };
 
 // src/constants.ts dosyasının en altına ekleyin:

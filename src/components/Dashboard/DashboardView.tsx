@@ -424,7 +424,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                             <div className="flex-1">
                                 <h4 className="text-xs md:text-sm font-bold text-blue-800 dark:text-blue-300 mb-1">
-                                    İnce İşler Metrajı Aktif
+                                    Tahmini Metraj Hesaplaması Devrede
                                 </h4>
                                 <p className="text-[11px] md:text-xs text-blue-700/80 dark:text-blue-200/70 leading-relaxed">
                                     İçine hiç oda (mahal) eklenmemiş tipleriniz bulunuyor. Bu durumda sistem; daire içi sıva, boya, zemin, kapı ve pencere gibi ince imalatları <b>Yapı Genel Bilgileri'ndeki m² üzerinden tahmini olarak</b> hesaplar. Daha hassas ve nokta atışı bir sonuç için kartların üzerindeki <b>"Manuel Liste"</b> veya <b>"Planı Düzenle"</b> butonlarını kullanarak odalarınızı tanımlayabilirsiniz.
