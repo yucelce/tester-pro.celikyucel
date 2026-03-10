@@ -193,7 +193,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         includeCashflow: false,
         includeProcurement: false,
         includeSchedule: false,
-        includeRiskAnalysis: false
+        includeRiskAnalysis: false,
+        includeQuantityBreakdown: false
     });
 
     const [financialSettings, setFinancialSettings] = useState<FinancialSettings>({

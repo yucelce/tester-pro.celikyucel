@@ -120,8 +120,8 @@ export const ReportView: React.FC = () => {
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
-            
-            const baseTaskCost = taskActualCosts[task.id] || 0; 
+
+            const baseTaskCost = taskActualCosts[task.id] || 0;
 
             let currentD = new Date(startDate);
             let accumulatedDays = 0;
@@ -140,15 +140,15 @@ export const ReportView: React.FC = () => {
 
                 let monthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 monthsDiff = Math.max(0, monthsDiff);
-                
-                let inflatedCost = fixedTasks.includes(task.id) 
-                    ? baseTaskCost 
+
+                let inflatedCost = fixedTasks.includes(task.id)
+                    ? baseTaskCost
                     : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (inflatedCost * costRatio);
 
                 // YENİ: Anlamlı bir harcama varsa o ayki işlerin ismini kaydet
-                if (costRatio > 0.01) { 
+                if (costRatio > 0.01) {
                     if (!tasksByMonth[monthStr]) tasksByMonth[monthStr] = [];
                     if (!tasksByMonth[monthStr].includes(task.name)) tasksByMonth[monthStr].push(task.name);
                 }
@@ -196,7 +196,7 @@ export const ReportView: React.FC = () => {
                 description: descItems.join(' + ') || '-' // YENİ: Açıklama alanı
             });
         });
-        
+
         return table;
     }, [projectSchedule, finalTotalCost, finalCostDetails, financialSettings, buildingStats.projectStartDate]);
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'render') => {
@@ -309,6 +309,10 @@ export const ReportView: React.FC = () => {
                                 <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
                                     <input type="checkbox" checked={reportSettings.includeBuildingDetails} onChange={(e) => updateReportSettings({ includeBuildingDetails: e.target.checked })} className="accent-blue-600 w-4 h-4" />
                                     <span className="font-bold text-slate-700">Yapı ve Bağımsız Bölüm Bilgileri</span>
+                                </label>
+                                <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
+                                    <input type="checkbox" checked={reportSettings.includeQuantityBreakdown} onChange={(e) => updateReportSettings({ includeQuantityBreakdown: e.target.checked })} className="accent-blue-600 w-4 h-4" />
+                                    <span className="font-bold text-slate-700">Metraj İcmal Dökümleri (Alt Kırılımlar)</span>
                                 </label>
                                 <label className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer transition">
                                     <input type="checkbox" checked={reportSettings.showUnitDetails} onChange={(e) => updateReportSettings({ showUnitDetails: e.target.checked })} className="accent-blue-600 w-4 h-4" />
@@ -492,10 +496,10 @@ export const ReportView: React.FC = () => {
                                             if (c > 0) {
                                                 availableUnitCounts[lowerUnit.id] -= c;
                                                 availableUnitCounts[upperUnit.id] -= c;
-                                                
+
                                                 const lowerArea = lowerUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (lowerUnit.scale > 0 ? r.area_px / (lowerUnit.scale ** 2) : 0)), 0);
                                                 const upperArea = upperUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (upperUnit.scale > 0 ? r.area_px / (upperUnit.scale ** 2) : 0)), 0);
-                                                
+
                                                 displayRows.push({
                                                     id: `duplex-${pair.id}`,
                                                     name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
@@ -538,7 +542,7 @@ export const ReportView: React.FC = () => {
 
                                     const renderRows = displayRows.map(row => {
                                         totalUnits += row.count;
-                                        const formattedFloor = row.floorLabel.split(' + ').map((f:string) => floorTypeMap[f] || f).join(' + ');
+                                        const formattedFloor = row.floorLabel.split(' + ').map((f: string) => floorTypeMap[f] || f).join(' + ');
 
                                         return (
                                             <tr key={row.id}>
@@ -602,13 +606,41 @@ export const ReportView: React.FC = () => {
                                 <React.Fragment key={cat.id}>
                                     <tr className="bg-slate-100 border-b border-slate-200"><td colSpan={5} className="py-2 px-3 font-bold text-slate-900 text-xs uppercase">{cat.title}</td></tr>
                                     {cat.items.filter(i => i.totalPrice > 0).map((item, idx) => (
-                                        <tr key={idx} className="border-b border-slate-100 break-inside-avoid">
-                                            <td className="py-1.5 px-3 pl-6 text-xs">{item.name}</td>
-                                            <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
-                                            <td className="py-1.5 px-3 text-center font-mono text-xs">{item.unit}</td>
-                                            <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
-                                            <td className="py-1.5 px-3 text-right font-bold font-mono text-xs">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
-                                        </tr>
+                                        <React.Fragment key={idx}>
+                                            {/* ANA SATIR */}
+                                            <tr className="border-b border-slate-100 break-inside-avoid">
+                                                <td className="py-1.5 px-3 pl-6 text-xs">{item.name}</td>
+                                                <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
+                                                <td className="py-1.5 px-3 text-center font-mono text-xs">{item.unit}</td>
+                                                <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
+                                                <td className="py-1.5 px-3 text-right font-bold font-mono text-xs">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                            </tr>
+
+                                            {/* YENİ: İCMAL KIRILIM SATIRI (Eğer ayar açıksa ve veri varsa) */}
+                                            {reportSettings.includeQuantityBreakdown && item.breakdown && item.breakdown.length > 0 && (
+                                                <tr className="break-inside-avoid">
+                                                    <td colSpan={5} className="p-0 border-b border-slate-200">
+                                                        <div className="bg-slate-50/80 py-1.5 px-8">
+                                                            <table className="w-full text-[9px] text-slate-500">
+                                                                <tbody>
+                                                                    {item.breakdown.map((b: any, bIdx: number) => (
+                                                                        <tr key={bIdx}>
+                                                                            <td className="py-0.5 align-top">
+                                                                                <i className="fas fa-level-up-alt rotate-90 text-[8px] mr-2 text-slate-300"></i>
+                                                                                {b.source}
+                                                                            </td>
+                                                                            <td className="py-0.5 text-right w-32 font-mono font-medium align-top whitespace-nowrap">
+                                                                                {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} {item.unit}
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))}
                                 </React.Fragment>
                             ))}

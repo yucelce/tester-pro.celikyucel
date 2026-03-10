@@ -287,4 +287,5 @@ export interface ReportSettings {
     includeProcurement: boolean;
     includeSchedule: boolean;
     includeRiskAnalysis: boolean;
+    includeQuantityBreakdown: boolean;
 }
