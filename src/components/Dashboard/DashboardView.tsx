@@ -878,8 +878,41 @@ export const DashboardView: React.FC = () => {
                                                                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">{item.unit}</span>
                                                                         </div>
 
-                                                                        <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1">
-                                                                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
+                                                                        <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1 relative group/breakdown">
+
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
+
+                                                                                {/* YENİ: METRAJ İCMAL (KIRILIM) İKONU VE LİSTESİ */}
+                                                                                {item.breakdown && item.breakdown.length > 0 && (
+                                                                                    <div className="relative flex items-center cursor-help">
+                                                                                        <i className="fas fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 p-1 rounded transition"></i>
+
+                                                                                        {/* TOOLTIP BALONU */}
+                                                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 group-hover/breakdown:opacity-100 pointer-events-none transition-opacity duration-200 z-[100] border border-slate-600">
+                                                                                            <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
+                                                                                                <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
+                                                                                            </div>
+                                                                                            <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                                                                {item.breakdown.map((b: any, idx: number) => (
+                                                                                                    <div key={idx} className="flex justify-between items-center gap-2">
+                                                                                                        <span className="truncate opacity-90" title={b.source}>{b.source}</span>
+                                                                                                        <span className={`font-mono font-bold shrink-0 ${b.qty > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                                                            {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                            <div className="border-t border-slate-600 mt-2 pt-1.5 flex justify-between items-center text-yellow-400 font-bold">
+                                                                                                <span>Sistem Toplamı:</span>
+                                                                                                <span>{item.calculatedAutoQty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {item.unit}</span>
+                                                                                            </div>
+                                                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
                                                                             {!isLocked && item.manualQuantity !== undefined ? (
                                                                                 <button
                                                                                     onClick={() => updateCostItem(category.id, item.name, 'manualQuantity', undefined)}

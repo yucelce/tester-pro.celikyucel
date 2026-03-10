@@ -207,6 +207,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         progressPayments: []     // YENİ
     });
 
+
+    const [isDataDirty, setIsDataDirty] = useState(false);
+
     const updateFinancialSettings = (settings: Partial<FinancialSettings>) => {
         setFinancialSettings(prev => ({ ...prev, ...settings }));
         setIsDataDirty(true);
@@ -341,7 +344,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [globalWallThickness, setGlobalWallThickness] = useState<number>(15);
 
     const [isFetchingHeat, setIsFetchingHeat] = useState(false);
-    const [isDataDirty, setIsDataDirty] = useState(false);
+  
     const [isPriceFetchError, setIsPriceFetchError] = useState(false);
     const { accountId } = useUIStore();
 
@@ -418,6 +421,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     if (result.status === 'success' && Array.isArray(result.data)) {
                         setIsPriceFetchError(false);
                         const wixPriceLookup = new Map<string, number>();
+                        
                         result.data.forEach((item: any) => {
                             if (item._id && item.fiyat) wixPriceLookup.set(item._id, Number(item.fiyat));
                             const aylikFaiz = wixPriceLookup.get('mevduat_faiz_aylikpaket');
@@ -807,21 +811,45 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         let interior = 0;
         let total = 0;
 
-        const aggregatedUnitStats: Record<string, number> = {};
 
-        const addToAggregated = (stats: Record<string, number>, count: number) => {
+
+        const aggregatedUnitStats: Record<string, number> = {};
+        // YENİ: Kırılımları tutacağımız ana liste
+        const quantityBreakdowns: Record<string, { source: string, qty: number }[]> = {};
+
+        // YENİ: Kırılıma veri ekleyen yardımcı fonksiyon
+        const addBreakdown = (key: string, source: string, qty: number) => {
+            if (qty === 0 || Math.abs(qty) < 0.01) return;
+            if (!quantityBreakdowns[key]) quantityBreakdowns[key] = [];
+
+            const existing = quantityBreakdowns[key].find(b => b.source === source);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                quantityBreakdowns[key].push({ source, qty });
+            }
+        };
+
+        // GÜNCELLENEN: Her eklenen istatistiği kaynağıyla kaydet
+        const addToAggregated = (stats: Record<string, number>, count: number, sourceName: string) => {
             Object.keys(stats).forEach(k => {
+                const totalVal = stats[k] * count;
                 if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
-                aggregatedUnitStats[k] += (stats[k] * count);
+                aggregatedUnitStats[k] += totalVal;
+
+                // Hangi daire tipinden ne kadar geldiğini listeye yazdır
+                addBreakdown(k, sourceName, totalVal);
             });
         };
 
         units.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, false);
-            addToAggregated(stats, u.count);
+            addToAggregated(stats, u.count, `Mimari: ${u.name} (${u.count} Adet)`);
         });
 
         let effectiveStructuralUnits = structuralUnits;
+
+
 
         // Kullanıcı henüz hiç statik kat planı eklememişse ve sistem "Oto" modundaysa,
         // sistemin duvar ve beton metrajlarını hesaplayabilmesi için yapı istatistiklerine (buildingStats) dayalı sanal kat planları oluşturulur.
@@ -846,7 +874,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         effectiveStructuralUnits.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
-            addToAggregated(stats, u.count);
+            addToAggregated(stats, u.count, `Statik Plan: ${u.name}`);
         });
 
         const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
@@ -863,11 +891,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Kapı Düşümleri (Öncelikli olarak İç Duvara aktarılır - Rollover)
             if (dDed > 0) {
                 aggregatedUnitStats[currentKey] = (aggregatedUnitStats[currentKey] || 0) - dDed;
+                addBreakdown(currentKey, `Kapı Boşluk Minhası (${tStr} cm)`, -dDed); // <--- EKLENDİ
+
                 if (aggregatedUnitStats[currentKey] < 0) {
                     const remainder = Math.abs(aggregatedUnitStats[currentKey]);
-                    aggregatedUnitStats[currentKey] = 0; // Negatifi engelle
+                    aggregatedUnitStats[currentKey] = 0;
                     if (currentKey !== innerKey) {
                         aggregatedUnitStats[innerKey] = (aggregatedUnitStats[innerKey] || 0) - remainder;
+                        addBreakdown(innerKey, `Kapı Minhası Devri (${tStr} cm)`, -remainder); // <--- EKLENDİ
                     }
                 }
             }
@@ -875,11 +906,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             // Pencere Düşümleri (Öncelikli olarak Dış Duvara aktarılır - Rollover)
             if (wDed > 0) {
                 aggregatedUnitStats[currentKey] = (aggregatedUnitStats[currentKey] || 0) - wDed;
+                addBreakdown(currentKey, `Pencere Boşluk Minhası (${tStr} cm)`, -wDed); // <--- EKLENDİ
+
                 if (aggregatedUnitStats[currentKey] < 0) {
                     const remainder = Math.abs(aggregatedUnitStats[currentKey]);
-                    aggregatedUnitStats[currentKey] = 0; // Negatifi engelle
+                    aggregatedUnitStats[currentKey] = 0;
                     if (currentKey !== outerKey) {
                         aggregatedUnitStats[outerKey] = (aggregatedUnitStats[outerKey] || 0) - remainder;
+                        addBreakdown(outerKey, `Pencere Minhası Devri (${tStr} cm)`, -remainder); // <--- EKLENDİ
                     }
                 }
             }
@@ -924,8 +958,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             // Hesaplanan ortak alan sıva/boya değerlerini ana metraj havuzuna (aggregatedUnitStats) ekle
             aggregatedUnitStats['calc_ceiling_paint_area'] = (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) + totalHallCeilingArea;
+            addBreakdown('calc_ceiling_paint_area', 'Ortak Alan (Kat Holü) Tavanları', totalHallCeilingArea); // <--- EKLENDİ
+
             aggregatedUnitStats['calc_rough_plaster_area'] = (aggregatedUnitStats['calc_rough_plaster_area'] || 0) + totalHallWallArea;
+            addBreakdown('calc_rough_plaster_area', 'Ortak Alan (Kat Holü) Duvarları', totalHallWallArea); // <--- EKLENDİ
+
             aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
+            addBreakdown('calc_paint_wall_area', 'Ortak Alan (Kat Holü) Boyası', totalHallWallArea); // <--- EKLENDİ
 
             // Eğer "Alçı Sıva (Kaba+Saten)" kullanılıyorsa ona da ilave et
         }
@@ -1018,7 +1057,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
 
                 aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea);
-                
+
                 // Otopark düşümleri ve Sığınak PARKE İPTALİ (Kuru alandan sığınağı tamamen çıkarıyoruz)
                 aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85) - shelterArea);
                 aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
@@ -1030,211 +1069,220 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 // 1. Sığınak içindeki WC'lerin toplam alanını ve sayısını hesapla.
                 const requiredWCCount = Math.ceil(shelterArea / 50); // Her 50 m2'ye 1 tuvalet
                 const shelterWCArea = requiredWCCount * 4; // Her bir tuvalet kabini ve lavabo için ortalama 4 m²
-                
+
                 // 2. WC dışındaki geri kalan net sığınak alanını bul (Kuru alan).
-                const shelterDryArea = Math.max(0, shelterArea - shelterWCArea); 
+                const shelterDryArea = Math.max(0, shelterArea - shelterWCArea);
 
                 // 3. Vitrifiye ve Tesisat Eklentileri
                 aggregatedUnitStats['calc_toilet'] = (aggregatedUnitStats['calc_toilet'] || 0) + requiredWCCount;
+                addBreakdown('calc_toilet', 'Sığınak (Zorunlu WC)', requiredWCCount); // <--- EKLENDİ
+
                 aggregatedUnitStats['calc_basin_mixer'] = (aggregatedUnitStats['calc_basin_mixer'] || 0) + requiredWCCount;
-                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + (0.25 * requiredWCCount); 
+                addBreakdown('calc_basin_mixer', 'Sığınak (Zorunlu Lavabo)', requiredWCCount); // <--- EKLENDİ
+
+                aggregatedUnitStats['calc_plumbing_unit'] = (aggregatedUnitStats['calc_plumbing_unit'] || 0) + (0.25 * requiredWCCount);
+                addBreakdown('calc_plumbing_unit', 'Sığınak Tesisat Altyapısı', (0.25 * requiredWCCount)); // <--- EKLENDİ
 
                 // 4. SERAMİK EKLENTİSİ (Sadece WC alanı kadar)
                 aggregatedUnitStats['wet_area'] = (aggregatedUnitStats['wet_area'] || 0) + shelterWCArea;
+                addBreakdown('wet_area', 'Sığınak WC Zemin/Duvar', shelterWCArea); // <--- EKLENDİ
+
                 aggregatedUnitStats['net_wet_area'] = (aggregatedUnitStats['net_wet_area'] || 0) + shelterWCArea;
+                addBreakdown('net_wet_area', 'Sığınak WC Yapıştırıcı/Derz', shelterWCArea); // <--- EKLENDİ
 
                 // 5. HELİKOPTER ŞAP (Endüstriyel Zemin) EKLENTİSİ (Sığınağın geri kalanı)
                 aggregatedUnitStats['calc_indoor_parking_screed'] = (aggregatedUnitStats['calc_indoor_parking_screed'] || 0) + shelterDryArea;
+                addBreakdown('calc_indoor_parking_screed', 'Sığınak Zemin Sertleştirici', shelterDryArea); // <--- EKLENDİ           
+                 }
             }
-        }
 
 
-        const details = costs.map(cat => {
-            let catTotal = 0;
+            const details = costs.map(cat => {
+                let catTotal = 0;
 
-            // --- YENİ EKLENEN FİLTRELEME MANTIĞI ---
-            const filteredItems = cat.items.filter(item => {
-                // Mekanik Tesisat Filtresi (Seçilmeyen sistemi listeden çıkart)
-                if (cat.id === 'mekanik_tesisat') {
-                    const system = buildingStats.heatingSystem || 'radiator';
+                // --- YENİ EKLENEN FİLTRELEME MANTIĞI ---
+                const filteredItems = cat.items.filter(item => {
+                    // Mekanik Tesisat Filtresi (Seçilmeyen sistemi listeden çıkart)
+                    if (cat.id === 'mekanik_tesisat') {
+                        const system = buildingStats.heatingSystem || 'radiator';
 
-                    const radiatorItems = [
-                        "Kalorifer Altyapısı (Mobil Sistem)",
-                        "Panel Radyatör (DemirDöküm vb.)",
-                        "Radyatör Montaj ve Vanalar"
-                    ];
+                        const radiatorItems = [
+                            "Kalorifer Altyapısı (Mobil Sistem)",
+                            "Panel Radyatör (DemirDöküm vb.)",
+                            "Radyatör Montaj ve Vanalar"
+                        ];
 
-                    const underfloorItems = [
-                        "Yerden Isıtma (Strafor+Boru+İşçilik)",
-                        "Yerden Isıtma Kollektörü ve Kutusu"
-                    ];
+                        const underfloorItems = [
+                            "Yerden Isıtma (Strafor+Boru+İşçilik)",
+                            "Yerden Isıtma Kollektörü ve Kutusu"
+                        ];
 
-                    // Radyatör seçiliyse, Yerden ısıtmayı gizle
-                    if (system === 'radiator' && underfloorItems.includes(item.name)) return false;
+                        // Radyatör seçiliyse, Yerden ısıtmayı gizle
+                        if (system === 'radiator' && underfloorItems.includes(item.name)) return false;
 
-                    // Yerden ısıtma seçiliyse, Radyatörü gizle
-                    if (system === 'underfloor' && radiatorItems.includes(item.name)) return false;
-                }
-
-                if (cat.id === 'duvar_tavan') {
-                    if (globalWallMaterial === 'gazbeton') {
-                        // Gazbeton seçiliyse klasik harcı gizle
-                        if (item.name === "Duvar Örme Harcı (Kara Harç)") return false;
-                    } else {
-                        // Tuğla veya Bims seçiliyse Gazbeton yapıştırıcısını gizle
-                        if (item.name === "Gazbeton Yapıştırıcısı") return false;
+                        // Yerden ısıtma seçiliyse, Radyatörü gizle
+                        if (system === 'underfloor' && radiatorItems.includes(item.name)) return false;
                     }
-                }
-                return true;
-            });
 
-            const processedItems = filteredItems
-                .filter(item => item.scope !== 'hidden') // Gizli kalemleri filtrele
-                .map(item => {
-
-                    let finalQty = 0;
-                    let calculatedAutoQty = 0;
-
-                    // Varsayılan dinamik fiyat (Bölgeye/Şehre göre değişenler için)
-                    let dynamicUnitPrice = calculateDynamicUnitPrice(
-                        item,
-                        0,
-                        totalConstructionArea,
-                        buildingStats.province,
-                        buildingStats.isUrbanTransformation,
-                        buildingStats, // <-- EKLENEN PARAMETRE
-                        costs,         // <-- EKLENMESİ GEREKEN PARAMETRE
-                        globalWallMaterial // <-- EKLENMESİ GEREKEN PARAMETRE
-                    );
-
-                    // --- DÜZELTME BAŞLANGICI: PAKET FİYAT MANTIĞI ---
-                    if (item.inputType === 'manual_total') {
-                        // Paket sistemlerde miktar her zaman 1'dir. Çarpma işlemi yapılmaz.
-                        calculatedAutoQty = 1;
-                        finalQty = 1;
-
-                        // Eğer bu kalemin arkada çalışan bir formülü varsa (Örn: Tapu Harcı, Ruhsat vb.)
-                        if (item.auto_source.startsWith('calc_')) {
-                            // Formülden gelen sonucu MİKTAR değil, FİYAT olarak alıyoruz
-                            // Çünkü calc_tapu_noter gibi fonksiyonlar doğrudan TL tutarı döner.
-                            const calculatedValue = calculateComplexGlobalQuantity(
-                                item,
-                                buildingStats,
-                                totalConstructionArea,
-                                constructionDuration,
-                                aggregatedUnitStats,
-                                costs,
-                                globalWallMaterial
-                            );
-                            dynamicUnitPrice = calculatedValue;
-                        }
-                        // Eğer formül yoksa (manual ise), cost_data.ts'deki unit_price baz alınır.
-                    }
-                    // --- STANDART MANTIĞI (Duvar, Beton vb.) ---
-                    else {
-                        if (item.auto_source === 'manual') {
-                            calculatedAutoQty = 0;
-                        } else if (item.scope === 'unit') {
-                            const statKey = item.auto_source;
-                            // ... (Mevcut birim bazlı hesaplamalar aynen kalır)
-                            calculatedAutoQty = (aggregatedUnitStats[statKey] || 0) * item.multiplier;
+                    if (cat.id === 'duvar_tavan') {
+                        if (globalWallMaterial === 'gazbeton') {
+                            // Gazbeton seçiliyse klasik harcı gizle
+                            if (item.name === "Duvar Örme Harcı (Kara Harç)") return false;
                         } else {
-                            // Global alan bazlı hesaplamalar
-                            if (item.auto_source === 'total_area') calculatedAutoQty = totalConstructionArea * item.multiplier;
-                            else if (item.auto_source === 'land_area') calculatedAutoQty = buildingStats.landArea * item.multiplier;
-                            else if (item.auto_source.startsWith('wall_')) {
-                                calculatedAutoQty = Math.max(0, aggregatedUnitStats[item.auto_source] || 0) * item.multiplier;
-                            }
-                            else if (item.auto_source.startsWith('calc_')) {
-                                calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(
+                            // Tuğla veya Bims seçiliyse Gazbeton yapıştırıcısını gizle
+                            if (item.name === "Gazbeton Yapıştırıcısı") return false;
+                        }
+                    }
+                    return true;
+                });
+
+                const processedItems = filteredItems
+                    .filter(item => item.scope !== 'hidden') // Gizli kalemleri filtrele
+                    .map(item => {
+
+                        let finalQty = 0;
+                        let calculatedAutoQty = 0;
+
+                        // Varsayılan dinamik fiyat (Bölgeye/Şehre göre değişenler için)
+                        let dynamicUnitPrice = calculateDynamicUnitPrice(
+                            item,
+                            0,
+                            totalConstructionArea,
+                            buildingStats.province,
+                            buildingStats.isUrbanTransformation,
+                            buildingStats, // <-- EKLENEN PARAMETRE
+                            costs,         // <-- EKLENMESİ GEREKEN PARAMETRE
+                            globalWallMaterial // <-- EKLENMESİ GEREKEN PARAMETRE
+                        );
+
+                        // --- DÜZELTME BAŞLANGICI: PAKET FİYAT MANTIĞI ---
+                        if (item.inputType === 'manual_total') {
+                            // Paket sistemlerde miktar her zaman 1'dir. Çarpma işlemi yapılmaz.
+                            calculatedAutoQty = 1;
+                            finalQty = 1;
+
+                            // Eğer bu kalemin arkada çalışan bir formülü varsa (Örn: Tapu Harcı, Ruhsat vb.)
+                            if (item.auto_source.startsWith('calc_')) {
+                                // Formülden gelen sonucu MİKTAR değil, FİYAT olarak alıyoruz
+                                // Çünkü calc_tapu_noter gibi fonksiyonlar doğrudan TL tutarı döner.
+                                const calculatedValue = calculateComplexGlobalQuantity(
                                     item,
                                     buildingStats,
                                     totalConstructionArea,
                                     constructionDuration,
                                     aggregatedUnitStats,
                                     costs,
-                                    globalWallMaterial // <-- BURAYI EKLEYİN
-                                ));
+                                    globalWallMaterial
+                                );
+                                dynamicUnitPrice = calculatedValue;
                             }
+                            // Eğer formül yoksa (manual ise), cost_data.ts'deki unit_price baz alınır.
                         }
-                        // Standart kalemlerde manuel miktar varsa o geçerlidir
-                        finalQty = item.manualQuantity !== undefined ? item.manualQuantity : calculatedAutoQty;
-                    }
-                    // --- DÜZELTME BİTİŞİ ---
+                        // --- STANDART MANTIĞI (Duvar, Beton vb.) ---
+                        else {
+                            if (item.auto_source === 'manual') {
+                                calculatedAutoQty = 0;
+                            } else if (item.scope === 'unit') {
+                                const statKey = item.auto_source;
+                                // ... (Mevcut birim bazlı hesaplamalar aynen kalır)
+                                calculatedAutoQty = (aggregatedUnitStats[statKey] || 0) * item.multiplier;
+                            } else {
+                                // Global alan bazlı hesaplamalar
+                                if (item.auto_source === 'total_area') calculatedAutoQty = totalConstructionArea * item.multiplier;
+                                else if (item.auto_source === 'land_area') calculatedAutoQty = buildingStats.landArea * item.multiplier;
+                                else if (item.auto_source.startsWith('wall_')) {
+                                    calculatedAutoQty = Math.max(0, aggregatedUnitStats[item.auto_source] || 0) * item.multiplier;
+                                }
+                                else if (item.auto_source.startsWith('calc_')) {
+                                    calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(
+                                        item,
+                                        buildingStats,
+                                        totalConstructionArea,
+                                        constructionDuration,
+                                        aggregatedUnitStats,
+                                        costs,
+                                        globalWallMaterial // <-- BURAYI EKLEYİN
+                                    ));
+                                }
+                            }
+                            // Standart kalemlerde manuel miktar varsa o geçerlidir
+                            finalQty = item.manualQuantity !== undefined ? item.manualQuantity : calculatedAutoQty;
+                        }
+                        // --- DÜZELTME BİTİŞİ ---
 
-                    // Nihai Fiyat Belirleme (Kullanıcı elle fiyat girdiyse onu kullan, yoksa hesaplananı kullan)
-                    const finalPrice = item.manualPrice !== undefined ? item.manualPrice : dynamicUnitPrice;
+                        // Nihai Fiyat Belirleme (Kullanıcı elle fiyat girdiyse onu kullan, yoksa hesaplananı kullan)
+                        const finalPrice = item.manualPrice !== undefined ? item.manualPrice : dynamicUnitPrice;
 
-                    // Toplam Tutar Hesabı
-                    const totalPrice = finalQty * finalPrice;
+                        // Toplam Tutar Hesabı
+                        const totalPrice = finalQty * finalPrice;
 
-                    catTotal += totalPrice;
+                        catTotal += totalPrice;
 
-                    return {
-                        ...item,
-                        calculatedAutoQty,
-                        finalQty,
-                        totalPrice,
-                        unit_price: dynamicUnitPrice // Arayüzde görünmesi için güncel fiyat
-                    };
+                        return {
+                            ...item,
+                            calculatedAutoQty,
+                            finalQty,
+                            totalPrice,
+                            unit_price: dynamicUnitPrice,
+                            breakdown: quantityBreakdowns[item.auto_source] || [] // <--- YENİ EKLENDİ: Kırılımları UI'a aktarıyor
+                        };
+                    });
+
+                // Kaba Yapı İçin Dahil Edilenler
+                if (['kaba_insaat', 'duvar_tavan'].includes(cat.id)) {
+                    structural += catTotal;
+                }
+                // İnce İşlere dahil OLMAMASI gerekenleri (Arsa/Şantiye vb) çıkarıyoruz
+                else if (!['arsa_finansman', 'resmi_idari', 'santiye_hafriyat', 'peyzaj_cevre'].includes(cat.id)) {
+                    interior += catTotal;
+                }
+
+                total += catTotal;
+
+                return {
+                    id: cat.id,
+                    title: cat.title,
+                    totalCategoryCost: catTotal,
+                    items: processedItems
+                };
+
+
+            });
+
+            // --- ÖZEL KALEMLERİ LİSTEYE EKLEME ---
+            const customCostsTotal = customCosts.reduce((sum, c) => sum + c.price, 0);
+            if (customCosts.length > 0) {
+                details.push({
+                    id: 'ozel_kalemler',
+                    title: '11. Özel İlaveler / Ek İşler',
+                    totalCategoryCost: customCostsTotal,
+                    items: customCosts.map(c => ({
+                        name: c.name || 'İsimsiz Ek Kalem',
+                        unit: 'Paket',
+                        unit_price: c.price,
+                        auto_source: 'manual', // Typescript hatası alırsanız burayı 'manual' olarak bırakın, CostItem tipinde 'manual' string olarak tanımlı olmalı
+                        multiplier: 1,
+                        calculatedAutoQty: 1,
+                        finalQty: 1,
+                        totalPrice: c.price,
+                        manualPrice: c.price, // Fiyatın görünmesi için
+                        inputType: 'manual_total',
+                        scope: 'global',
+                        id: c.id // Benzersiz ID
+                    } as any)) // as any: Hızlı geçiş için, CostItem tipini tam karşılamasa bile çalışır
                 });
-
-            // Kaba Yapı İçin Dahil Edilenler
-            if (['kaba_insaat', 'duvar_tavan'].includes(cat.id)) {
-                structural += catTotal;
+                total += customCostsTotal;
             }
-            // İnce İşlere dahil OLMAMASI gerekenleri (Arsa/Şantiye vb) çıkarıyoruz
-            else if (!['arsa_finansman', 'resmi_idari', 'santiye_hafriyat', 'peyzaj_cevre'].includes(cat.id)) {
-                interior += catTotal;
-            }
-
-            total += catTotal;
+            // -------------------------------------
 
             return {
-                id: cat.id,
-                title: cat.title,
-                totalCategoryCost: catTotal,
-                items: processedItems
+                projectCostDetails: details,
+                projectTotalCost: total,
+                globalStructuralCost: structural,
+                interiorFitoutCost: interior,
+                globalStats: aggregatedUnitStats
             };
-
-
-        });
-
-        // --- ÖZEL KALEMLERİ LİSTEYE EKLEME ---
-        const customCostsTotal = customCosts.reduce((sum, c) => sum + c.price, 0);
-        if (customCosts.length > 0) {
-            details.push({
-                id: 'ozel_kalemler',
-                title: '11. Özel İlaveler / Ek İşler',
-                totalCategoryCost: customCostsTotal,
-                items: customCosts.map(c => ({
-                    name: c.name || 'İsimsiz Ek Kalem',
-                    unit: 'Paket',
-                    unit_price: c.price,
-                    auto_source: 'manual', // Typescript hatası alırsanız burayı 'manual' olarak bırakın, CostItem tipinde 'manual' string olarak tanımlı olmalı
-                    multiplier: 1,
-                    calculatedAutoQty: 1,
-                    finalQty: 1,
-                    totalPrice: c.price,
-                    manualPrice: c.price, // Fiyatın görünmesi için
-                    inputType: 'manual_total',
-                    scope: 'global',
-                    id: c.id // Benzersiz ID
-                } as any)) // as any: Hızlı geçiş için, CostItem tipini tam karşılamasa bile çalışır
-            });
-            total += customCostsTotal;
-        }
-        // -------------------------------------
-
-        return {
-            projectCostDetails: details,
-            projectTotalCost: total,
-            globalStructuralCost: structural,
-            interiorFitoutCost: interior,
-            globalStats: aggregatedUnitStats
-        };
-    }, [units, structuralUnits, costs, buildingStats, totalConstructionArea, constructionDuration, globalWallMode, globalConcreteMode, globalWallMaterial, globalWallThickness]);
-
+}, [units, structuralUnits, costs, buildingStats, totalConstructionArea, constructionDuration, globalWallMode, globalConcreteMode, globalWallMaterial, globalWallThickness, customCosts, duplexPairs]);
 
     // --- ACTIONS ---
     const startNewProject = (type: 'apartment' | 'villa') => {
