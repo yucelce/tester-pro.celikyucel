@@ -203,7 +203,7 @@ export class QuantityTakeoffService {
         // 3. STATİK & MİMARİ ÇAKIŞMA ÖNLEME (Fallbacks)
         this.applyFallbacks(stats, unit, rawMetrics, buildingStats, settings);
 
-        return stats;
+        return { stats, roomBreakdowns }; // <--- DÜZELTİLDİ
     }
 
     private static applyHeating(stats: any, room: any, buildingStats: BuildingStats, material: WallMaterial) {
