@@ -417,6 +417,22 @@ export const DashboardView: React.FC = () => {
                         </div>
                     </div>
 
+                    {units.some(u => u.rooms.length === 0) && (
+                        <div className="mb-5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-xl p-3 md:p-4 flex items-start gap-3 shadow-sm animate-fadeIn">
+                            <div className="bg-blue-100 dark:bg-blue-800/50 w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                                <i className="fas fa-magic text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-xs md:text-sm font-bold text-blue-800 dark:text-blue-300 mb-1">
+                                    İnce İşler Metrajı Aktif
+                                </h4>
+                                <p className="text-[11px] md:text-xs text-blue-700/80 dark:text-blue-200/70 leading-relaxed">
+                                    İçine hiç oda (mahal) eklenmemiş tipleriniz bulunuyor. Bu durumda sistem; daire içi sıva, boya, zemin, kapı ve pencere gibi ince imalatları <b>Yapı Genel Bilgileri'ndeki m² üzerinden tahmini olarak</b> hesaplar. Daha hassas ve nokta atışı bir sonuç için kartların üzerindeki <b>"Manuel Liste"</b> veya <b>"Planı Düzenle"</b> butonlarını kullanarak odalarınızı tanımlayabilirsiniz.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {units.length === 0 && (
                             <div className="col-span-full text-center text-slate-500 py-8 bg-white dark:bg-slate-800/30 rounded-lg border border-slate-200 dark:border-slate-700 border-dashed">
