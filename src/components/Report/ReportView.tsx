@@ -618,27 +618,28 @@ export const ReportView: React.FC = () => {
 
                                             {/* YENİ: İCMAL KIRILIM SATIRI (Eğer ayar açıksa ve veri varsa) */}
                                             {reportSettings.includeQuantityBreakdown && item.breakdown && item.breakdown.length > 0 && (
-                                                <tr className="break-inside-avoid">
-                                                    <td colSpan={5} className="p-0 border-b border-slate-200">
-                                                        <div className="bg-slate-50/80 py-1.5 px-8">
-                                                            <table className="w-full text-[9px] text-slate-500">
-                                                                <tbody>
-                                                                    {item.breakdown.map((b: any, bIdx: number) => (
-                                                                        <tr key={bIdx}>
-                                                                            <td className="py-0.5 align-top">
-                                                                                <i className="fas fa-level-up-alt rotate-90 text-[8px] mr-2 text-slate-300"></i>
-                                                                                {b.source}
-                                                                            </td>
-                                                                            <td className="py-0.5 text-right w-32 font-mono font-medium align-top whitespace-nowrap">
-                                                                                {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} {item.unit}
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                                                item.breakdown.map((b: any, bIdx: number) => (
+                                                    <tr key={`bd-${idx}-${bIdx}`} className="bg-slate-50 border-b border-slate-100 break-inside-avoid text-[10px] text-slate-500">
+                                                        {/* 1. Sütun: Kalem Adı */}
+                                                        <td className="py-1 px-3 pl-12 align-top">
+                                                            <i className="fas fa-level-up-alt rotate-90 text-[8px] mr-2 text-slate-300"></i>
+                                                            {b.source}
+                                                        </td>
+
+                                                        {/* 2. Sütun: Miktar (Üstteki miktarla tam hizalanır) */}
+                                                        <td className="py-1 px-3 text-right font-mono font-medium align-top whitespace-nowrap">
+                                                            {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                                                        </td>
+
+                                                        {/* 3. Sütun: Birim (Üstteki birimle tam hizalanır) */}
+                                                        <td className="py-1 px-3 text-center font-mono align-top text-[9px]">
+                                                            {item.unit}
+                                                        </td>
+
+                                                        {/* 4. ve 5. Sütun: Birim Fiyat ve Toplam (Buraları boş bırakıyoruz) */}
+                                                        <td colSpan={2} className="py-1 px-3"></td>
+                                                    </tr>
+                                                ))
                                             )}
                                         </React.Fragment>
                                     ))}
