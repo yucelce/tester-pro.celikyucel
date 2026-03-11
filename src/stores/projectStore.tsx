@@ -994,6 +994,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
             addBreakdown('calc_paint_wall_area', 'Ortak Alan (Kat Holü) Boyası', totalHallWallArea); // <--- EKLENDİ
 
+            aggregatedUnitStats['calc_plaster_area'] = (aggregatedUnitStats['calc_plaster_area'] || 0) + totalHallWallArea;
+            addBreakdown('calc_plaster_area', 'Ortak Alan (Kat Holü) Alçı Sıvası', totalHallWallArea);
             // Eğer "Alçı Sıva (Kaba+Saten)" kullanılıyorsa ona da ilave et
         }
 
