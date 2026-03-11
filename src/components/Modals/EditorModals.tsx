@@ -302,9 +302,9 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
             case 'kitchen':
                 defaultName = 'Mutfak'; defaultFloor = 'seramik'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2; break;
             case 'bath':
-                defaultName = 'Banyo'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5;defaultSuspendedCeiling = true; break;
+                defaultName = 'Banyo'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5; defaultSuspendedCeiling = true; break;
             case 'wc':
-                defaultName = 'WC'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25;defaultSuspendedCeiling = true; break;
+                defaultName = 'WC'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25; defaultSuspendedCeiling = true; break;
             case 'hallway':
                 defaultName = 'Antre / Koridor'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 0; break;
             case 'dressing':
@@ -411,17 +411,16 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                                 { id: 'hallway', label: 'Antre / Koridor', icon: 'fa-route', activeClass: 'bg-indigo-900/40 border-indigo-500 text-white' },
                                 { id: 'dressing', label: 'Giyinme Odası', icon: 'fa-tshirt', activeClass: 'bg-pink-900/40 border-pink-500 text-white' },
                                 { id: 'balcony', label: 'Balkon', icon: 'fa-sun', activeClass: 'bg-green-900/40 border-green-500 text-white' },
-                                { id: 'storage', label: 'Depo / Otopark', icon: 'fa-warehouse', activeClass: 'bg-slate-900/40 border-slate-500 text-white' },
-                            ].map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => handleTypeSelect(t.id as RoomType)} // GÜNCELLENEN KISIM BURASI
-                                    className={`p-2 rounded border text-left flex items-center gap-2 transition ${room.type === t.id ? t.activeClass : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
-                                >
-                                    <i className={`fas ${t.icon} w-5 text-center`}></i>
-                                    <span className="text-[10px] sm:text-xs font-bold leading-tight">{t.label}</span>
-                                </button>
-                            ))}
+                                { id: 'storage', label: 'Depo / Kiler', icon: 'fa-warehouse', activeClass: 'bg-slate-900/40 border-slate-500 text-white' },].map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => handleTypeSelect(t.id as RoomType)} // GÜNCELLENEN KISIM BURASI
+                                        className={`p-2 rounded border text-left flex items-center gap-2 transition ${room.type === t.id ? t.activeClass : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
+                                    >
+                                        <i className={`fas ${t.icon} w-5 text-center`}></i>
+                                        <span className="text-[10px] sm:text-xs font-bold leading-tight">{t.label}</span>
+                                    </button>
+                                ))}
                         </div>
                     </div>
 
@@ -466,19 +465,19 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                             <input type="number" value={room.properties.doorCount} onChange={(e) => onUpdate({ doorCount: parseInt(e.target.value) })} className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white" />
                         </div>
                         <div className="col-span-2 grid grid-cols-3 gap-2 mt-2">
-                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
-                            <input type="checkbox" checked={room.properties.hasCornice} onChange={(e) => onUpdate({ hasCornice: e.target.checked })} className="w-4 h-4 accent-blue-500" />
-                            <span className="text-xs font-medium text-white">Kartonpiyer</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
-                            <input type="checkbox" checked={room.properties.hasWaterproofing ?? false} onChange={(e) => onUpdate({ hasWaterproofing: e.target.checked })} className="w-4 h-4 accent-blue-500" />
-                            <span className="text-xs font-medium text-white">Su Yalıtımı</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
-                            <input type="checkbox" checked={room.properties.hasSuspendedCeiling ?? (room.type === 'bath' || room.type === 'wc')} onChange={(e) => onUpdate({ hasSuspendedCeiling: e.target.checked })} className="w-4 h-4 accent-blue-500" />
-                            <span className="text-xs font-medium text-white">Asma Tavan</span>
-                        </label>
-                    </div>
+                            <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                                <input type="checkbox" checked={room.properties.hasCornice} onChange={(e) => onUpdate({ hasCornice: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                                <span className="text-xs font-medium text-white">Kartonpiyer</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                                <input type="checkbox" checked={room.properties.hasWaterproofing ?? false} onChange={(e) => onUpdate({ hasWaterproofing: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                                <span className="text-xs font-medium text-white">Su Yalıtımı</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                                <input type="checkbox" checked={room.properties.hasSuspendedCeiling ?? (room.type === 'bath' || room.type === 'wc')} onChange={(e) => onUpdate({ hasSuspendedCeiling: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                                <span className="text-xs font-medium text-white">Asma Tavan</span>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Section 4: Materials Selection */}
