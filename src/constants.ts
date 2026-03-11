@@ -328,6 +328,16 @@ export const TURKEY_HEAT_MAP: Record<string, { zone: number, districts: Record<s
 };
 
 export const DEFAULT_PRICES: Record<string, number> = {
+
+    "Mimari Proje": 283.5,
+    "Statik Proje": 70.9,
+    "Mekanik Proje": 64.4,
+    "Elektrik Projesi": 59.1,
+    "Akustik Rapor": 8.9,
+    "Ruhsat Harcı": 992.25,
+    "İskan Harcı": 318.94,
+    "Mevcut Bina Yıkım Ruhsat Bedeli": 25.52,
+    "Yeşil Etiket (Asansör Ruhsat)": 7087.5,
     // 04.03.2026 Güncellendi
     // --- TEMEL KABA VE İNCE İNŞAAT ---
     "Hafriyat (Kazı ve Döküm)": 765,           // hafriyatpaket
@@ -389,12 +399,11 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Astar Boya (kg)": 51.2,
     "İç Cephe Boyası (kg)": 97.4,
     "Otopark Yüzey Sertleştirici (Helikopter Şap)": 180,
-    "Sığınak Kapısı ve Havalandırma Paketi": 65000,
     "Otopark Yangın ve Jet Fan Sistemi": 1200,
-    "Sığınak Kapısı (Adet)": 25000,
+    "Sığınak Kapısı (Adet)": 26000,
     "Sığınak Havalandırma Santrali (Adet)": 40000,
     "Otopark Sprinkler Altyapısı (m²)": 400,
-    "Otopark Jet Fan Cihazı (Adet)": 30000,
+    "Otopark Jet Fan Cihazı (Adet)": 44000,
     "Egzost/Taze Hava Santrali ve Otomasyon (Paket)": 80000,
     "Otopark Drenaj Kanalı (mt)": 600,
     "Yağ Ayırıcı Ünite (Adet)": 15000,

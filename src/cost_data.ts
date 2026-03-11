@@ -74,7 +74,6 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Tapu Döner Sermaye", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Noter Yazı Ücreti", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Standart Sözleşme Harcı", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Noter İşlem Ücreti (Daire Başı)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
     ]
   },
   {

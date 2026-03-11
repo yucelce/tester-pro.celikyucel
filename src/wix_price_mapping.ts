@@ -41,7 +41,6 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Yapı Sınıfı 4A": "yapi4asinifipaket",
   "Yapı Sınıfı 4B": "yapi4bsinifipaket",
   "Standart Sözleşme Harcı": "standartsozlesmeharciisc",
-  "Noter İşlem Ücreti (Daire Başı)": "noterislemdairebasi",
   "Mevcut Bina Yıkım Ruhsat Bedeli": "yikimruhsatim2fiyatpaket",
 
   "OSGB Hizmet Bedeli (Aylık)": "osgbhizmetaylikisc",
@@ -185,6 +184,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Panel Radyatör (DemirDöküm vb.)": "radyatormal",
   "Radyatör Montaj ve Vanalar": "radyatorbaglantilariadetmalisc",
   "Yağmur Suyu Hasat Sistemi (Zorunlu)": "yagmursuyuhasatsistemi2000ltpaket",
+  "Otopark Jet Fan Cihazı (Adet)": "jetfanotoparkmal", // YENİ EKLENDİ,
+  "Atıksu Dalgıç Pompa Sistemi (Set)": "dalgicpompamal", // YENİ EKLENDİ
 
   // YENİ: Yerden Isıtma Kalemleri (Wix'te bu ID'leri açmanız gerekebilir)
   "Yerden Isıtma (Strafor+Boru+İşçilik)": "yerdenisitmam2paket",
