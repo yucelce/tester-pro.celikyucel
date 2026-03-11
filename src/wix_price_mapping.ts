@@ -74,7 +74,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Akıllı Ev Altyapı ve Donanım Paketi": "akilli_ev_sistemi_standartpaket",
 
   "Otopark Sprinkler Altyapısı (m²)": "sprinklersistemim2paket",
-  "Otopark Drenaj Kanalı (mt)": "drenajmtpaket",
+  "Otopark Drenaj Kanalı (mt)": "otopark_drenaj_kanalimal",
 
 
   // --- 3. KABA YAPI ---

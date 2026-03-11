@@ -36,7 +36,8 @@ export interface CostItem {
   "calc_subasman_filling" | "calc_internal_stair_steps" | 'calc_internal_stair_railing_mt' |
   'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
   "waterproofing_area" | "calc_terrace_waterproofing" | "calc_garage_door" |
-  'calc_indoor_parking_screed' | 'calc_shelter_package' | 'calc_parking_ventilation' | "calc_garage_drainage" 
+  'calc_indoor_parking_screed' | 'calc_shelter_package' | 'calc_parking_ventilation' | "calc_garage_drainage" |
+  "calc_generator"
 
   ;
 
@@ -190,7 +191,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Cam Balkon Sistemleri", unit: "m2", auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },
       { name: "Pencere Söveleri", unit: "mt", auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
-    { name: "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
+      { name: "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
     ]
   },
   {
@@ -220,8 +221,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Çelik Kapı (Daire Giriş)", unit: "Adet", auto_source: "calc_steel_door", multiplier: 1, scope: 'unit' },
       { name: "İç Kapı (Panel/Lake)", unit: "Adet", auto_source: "calc_inner_door", multiplier: 1, scope: 'unit' },
       { name: "Yangın Kapısı (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Mutfak Dolabı (Standart)", unit: "m2", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' },
-      { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
+{ name: "Mutfak Dolabı (Standart)", unit: "mt", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' },      { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "İç Merdiven Kaplama", unit: "Basamak", auto_source: "calc_internal_stair_steps", multiplier: 1, scope: 'global' },
       { name: "İç Merdiven Korkuluk", unit: "mt", auto_source: "calc_internal_stair_railing_mt", multiplier: 1, scope: 'global' },
@@ -266,8 +266,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Asansör (Paket)", unit: "Adet", auto_source: "calc_elevator", multiplier: 1, scope: 'global' },
       { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global' },
-      { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global', inputType: 'manual_total' }, { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
   {
@@ -283,8 +282,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Jeneratör (Ortak Alan)", unit: "Toplam", auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Akıllı Ev Altyapı ve Donanım Paketi", unit: "Paket", auto_source: 'calc_smart_home', multiplier: 1, scope: 'global', inputType: 'manual_total' }
+      { name: "Jeneratör (Ortak Alan)", unit: "Paket", auto_source: "calc_generator", multiplier: 1, scope: 'global', inputType: 'manual_total' }, { name: "Akıllı Ev Altyapı ve Donanım Paketi", unit: "Paket", auto_source: 'calc_smart_home', multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
   {
