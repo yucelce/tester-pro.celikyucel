@@ -209,7 +209,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Merdiven Korkuluğu", unit: "mt", auto_source: "calc_stairs_railing", multiplier: 1, scope: 'global' },
       { name: "Süpürgelik", unit: "mt", auto_source: "dry_perimeter", multiplier: 1, scope: 'unit' },
       { name: "Mermer Harcı ve Kumu", unit: "m3", auto_source: "calc_marble_mortar", multiplier: 1, scope: 'global' },
-      { name: "Otopark Yüzey Sertleştirici (Helikopter Şap)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
+      { name: "Otopark Yüzey Sertleştirici (Helikopterli Beton)", unit: "m2", auto_source: "calc_indoor_parking_screed", multiplier: 1, scope: 'global' },
     ]
   },
   {
@@ -257,7 +257,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "VRF Dış Ünite (Merkezi Sistem)", unit: "Adet", auto_source: "calc_vrf_outdoor", multiplier: 1, scope: 'global' },
       { name: "VRF İç Ünite (Kaset/Duvar Tipi)", unit: "Adet", auto_source: "calc_vrf_indoor", multiplier: 1, scope: 'unit' },
       { name: "VRF Bakır Borulama ve Altyapı", unit: "m2", auto_source: "calc_vrf_infrastructure", multiplier: 1, scope: 'unit' },
-      { name: "Doğalgaz Bina Ana Altyapısı", unit: "Paket", auto_source: "mesi", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Doğalgaz Bina Ana Altyapısı", unit: "Paket", auto_source: "calc_gas_infrastructure", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Doğalgaz Proje ve Onay Bedeli", unit: "Paket", auto_source: "calc_gas_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yağmur Suyu Hasat Sistemi (Zorunlu)", unit: "Paket", auto_source: "calc_rainwater_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Modüler Su Deposu (2m3 Paket)", unit: "Paket", auto_source: "calc_water_tank", multiplier: 1, scope: 'global', inputType: 'manual_total' },
@@ -413,7 +413,7 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
   "Yağmur Suyu Hasat Sistemi (Zorunlu)": "Çevre ve Şehircilik Bakanlığı kararınca, belirli bir büyüklüğün (örn: 2000 m²) üzerindeki parsellerde, çatılardan gelen yağmur suyunu toplayıp filtreleyerek bahçe sulamada veya rezervuarlarda kullanmak üzere yeraltı tankında depolayan ekolojik ve zorunlu bir sistemdir.",
   "Bahçe / Çevre Duvarı": "Arsa sınırlarını netleştirmek, sokaktan izinsiz girişleri engellemek ve bahçe kotunun yol kotundan yüksek olması durumunda toprak kaymasını (istinat) durdurmak amacıyla yapılan betonarme veya yığma taş çevre duvarıdır.",
   "Ağaç Dikimi": "Belediyelerin peyzaj onayı ve iskan (yapı kullanma izni) şartları gereğince, inşaat bitiminde arsanın yeşil alan büyüklüğüne göre hesaplanan asgari sayıda yetişkin ağaç ve fidanın temin edilip dikilmesi maliyetidir.",
-  "Otopark Yüzey Sertleştirici (Helikopter Şap)": "Kapalı otopark zeminlerinde tozumayı önlemek ve dayanımı artırmak için uygulanan kuvars/korund katkılı helikopter perdahlı beton/şap yüzey işlemidir.",
+  "Otopark Yüzey Sertleştirici (Helikopterli Beton)": "Kapalı otopark zeminlerinde tozumayı önlemek ve dayanımı artırmak için uygulanan kuvars/korund katkılı helikopter perdahlı beton/şap yüzey işlemidir.",
   "Sığınak Kapısı ve Havalandırma Paketi": "Sığınak yönetmeliğine uygun çelik sığınak kapıları ve radyoaktif/biyolojik partikül tutucu karbon filtreli havalandırma (santral) sistemidir.",
   "Otopark Yangın ve Jet Fan Sistemi": "Kapalı otoparklarda egzoz dumanını tahliye etmek (jet fan) ve olası araç yangınlarına müdahale etmek için kurulan sulu söndürme (sprinkler) altyapısıdır.",
 

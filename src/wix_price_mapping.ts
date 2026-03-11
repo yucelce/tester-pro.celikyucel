@@ -123,12 +123,14 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Mantolama Malzemesi": "mantolamamal",
   "Mantolama İşçiliği": "mantolamaisc",
   "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)": "mantolamamalisc",
-  "Otomatik Garaj Kapısı:":"otopark_kepenkpaket",
+  "Otomatik Garaj Kapısı":"otopark_kepenkpaket",
 
   // --- 6. ZEMİN VE MERDİVEN ---
   // Eskisi: "Şap Atılması (Malz.+İşçilik)": "sappaket",
  "Şap Malzemesi": "sapm2malmal",
   "Şap İşçiliği": "sapisc",
+
+  "Sığınak Kapısı (Adet)":"siginak_kapimal",
 
   "PVC Pencere (Doğrama)": "pvcpencerepaket",
   "Mermer Denizlik": "denizlikmalisc",
@@ -157,6 +159,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Çimento (kg)": "cimentomal",
   "Kum (m3)": "kummal",
   "Kireç (kg)": "kirecmal", // YENİ EKLENDİ
+  "Otopark Yüzey Sertleştirici (Helikopterli Beton)":'otopark_helikopter_sert_yuzeypaket',
 
   // --- 7. İNCE İŞLER ---
   // --- 7. İNCE İŞLER (LİSTEDEN EŞLEŞTİRİLDİ) ---
@@ -188,6 +191,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Yağmur Suyu Hasat Sistemi (Zorunlu)": "yagmursuyuhasatsistemi2000ltpaket",
   "Otopark Jet Fan Cihazı (Adet)": "jetfanotoparkmal", // YENİ EKLENDİ,
   "Atıksu Dalgıç Pompa Sistemi (Set)": "dalgicpompamal", // YENİ EKLENDİ
+  "Yağ Ayırıcı Ünite (Adet)":"otopark_yag_tutucumal",
 
   // YENİ: Yerden Isıtma Kalemleri (Wix'te bu ID'leri açmanız gerekebilir)
   "Yerden Isıtma (Strafor+Boru+İşçilik)": "yerdenisitmam2paket",

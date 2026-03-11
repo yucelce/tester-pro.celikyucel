@@ -406,7 +406,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Saten Alçı (kg)": 7.7,
     "Astar Boya (kg)": 51.2,
     "İç Cephe Boyası (kg)": 97.4,
-    "Otopark Yüzey Sertleştirici (Helikopter Şap)": 180,
+    "Otopark Yüzey Sertleştirici (Helikopterli Beton)": 980,
     "Otopark Yangın ve Jet Fan Sistemi": 1200,
     "Sığınak Kapısı (Adet)": 30000,
     "Sığınak Havalandırma Santrali (Adet)": 40000,
@@ -414,7 +414,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Otopark Jet Fan Cihazı (Adet)": 44000,
     "Egzost/Taze Hava Santrali ve Otomasyon (Paket)": 80000,
     "Otopark Drenaj Kanalı (mt)": 600,
-    "Yağ Ayırıcı Ünite (Adet)": 15000,
+    "Yağ Ayırıcı Ünite (Adet)": 30000,
     "Atıksu Dalgıç Pompa Sistemi (Set)": 25000,
     "Otomatik Garaj Kapısı": 33730,
 };
