@@ -12,6 +12,7 @@ export interface RoomProperties {
     doorWallThickness?: number;
     hasCornice: boolean;
     hasWaterproofing?: boolean; // YENİ EKLENEN ÖZELLİK
+   hasSuspendedCeiling?: boolean;
     floorType: 'parke' | 'seramik' | 'beton' | 'unknown';
     wallFinish: 'boya' | 'seramik' | 'unknown';
 }

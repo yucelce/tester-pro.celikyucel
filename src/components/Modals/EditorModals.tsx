@@ -290,7 +290,9 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
         let defaultWall: 'boya' | 'seramik' = 'boya';
         let defaultCornice = true;
         let defaultWaterproofing = false;
+        let defaultSuspendedCeiling = false;
         let defaultWindowArea = 2;
+
 
         switch (type) {
             case 'living':
@@ -300,9 +302,9 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
             case 'kitchen':
                 defaultName = 'Mutfak'; defaultFloor = 'seramik'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2; break;
             case 'bath':
-                defaultName = 'Banyo'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5; break;
+                defaultName = 'Banyo'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5;defaultSuspendedCeiling = true; break;
             case 'wc':
-                defaultName = 'WC'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25; break;
+                defaultName = 'WC'; defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25;defaultSuspendedCeiling = true; break;
             case 'hallway':
                 defaultName = 'Antre / Koridor'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 0; break;
             case 'dressing':
@@ -319,6 +321,7 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
             wallFinish: defaultWall,
             hasCornice: defaultCornice,
             hasWaterproofing: defaultWaterproofing,
+            hasSuspendedCeiling: defaultSuspendedCeiling,
             windowArea: defaultWindowArea
         }, type, defaultName);
     };
@@ -462,12 +465,20 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                             <label className="block text-slate-400 text-xs font-bold uppercase mb-1">Kapı Sayısı (Adet)</label>
                             <input type="number" value={room.properties.doorCount} onChange={(e) => onUpdate({ doorCount: parseInt(e.target.value) })} className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white" />
                         </div>
-                        <div className="flex items-center">
-                            <label className="flex items-center gap-3 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
-                                <input type="checkbox" checked={room.properties.hasCornice} onChange={(e) => onUpdate({ hasCornice: e.target.checked })} className="w-5 h-5 accent-blue-500" />
-                                <span className="text-sm font-medium text-white">Kartonpiyer Ekle</span>
-                            </label>
-                        </div>
+                        <div className="col-span-2 grid grid-cols-3 gap-2 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                            <input type="checkbox" checked={room.properties.hasCornice} onChange={(e) => onUpdate({ hasCornice: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                            <span className="text-xs font-medium text-white">Kartonpiyer</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                            <input type="checkbox" checked={room.properties.hasWaterproofing ?? false} onChange={(e) => onUpdate({ hasWaterproofing: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                            <span className="text-xs font-medium text-white">Su Yalıtımı</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-800 border border-slate-600 rounded w-full hover:bg-slate-700 transition">
+                            <input type="checkbox" checked={room.properties.hasSuspendedCeiling ?? (room.type === 'bath' || room.type === 'wc')} onChange={(e) => onUpdate({ hasSuspendedCeiling: e.target.checked })} className="w-4 h-4 accent-blue-500" />
+                            <span className="text-xs font-medium text-white">Asma Tavan</span>
+                        </label>
+                    </div>
                     </div>
 
                     {/* Section 4: Materials Selection */}

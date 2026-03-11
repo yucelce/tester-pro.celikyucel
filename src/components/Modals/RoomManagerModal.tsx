@@ -38,6 +38,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
         wall: 'boya' | 'seramik';
         cornice: boolean;
         waterproofing: boolean;
+        suspendedCeiling: boolean;
     }>({
         name: 'Salon',
         type: 'living',
@@ -51,7 +52,8 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
         floor: 'parke',
         wall: 'boya',
         cornice: true,
-        waterproofing: false
+        waterproofing: false,
+        suspendedCeiling: false
     });
 
     const { quantities } = useMemo(() => {
@@ -65,6 +67,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
         let defaultWall: any = 'boya';
         let defaultCornice = true;
         let defaultWaterproofing = false;
+        let defaultSuspendedCeiling = false;
         let defaultWindowArea = 2;
 
         switch (type) {
@@ -83,11 +86,13 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
             case 'bath':
                 defaultName = 'Banyo';
                 defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.5;
+                defaultSuspendedCeiling = true;
                 break;
 
             case 'wc':
                 defaultName = 'WC';
                 defaultFloor = 'seramik'; defaultWall = 'seramik'; defaultCornice = false; defaultWaterproofing = true; defaultWindowArea = 0.25;
+                defaultSuspendedCeiling = true;
                 break;
             case 'hallway':
                 defaultName = 'Antre / Koridor';
@@ -115,6 +120,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
             wall: defaultWall,
             cornice: defaultCornice,
             waterproofing: defaultWaterproofing,
+            suspendedCeiling: defaultSuspendedCeiling,
             windowArea: defaultWindowArea,
             windowWallThickness: 20,
             doorWallThickness: 13.5
@@ -182,6 +188,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                     doorWallThickness: form.doorWallThickness,
                     hasCornice: form.cornice,
                     hasWaterproofing: form.waterproofing,
+                    hasSuspendedCeiling: form.suspendedCeiling,
                     floorType: form.floor,
                     wallFinish: form.wall
                 }
@@ -211,7 +218,8 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
             floor: room.properties.floorType === 'unknown' ? 'parke' : room.properties.floorType,
             wall: room.properties.wallFinish === 'unknown' ? 'boya' : room.properties.wallFinish,
             cornice: room.properties.hasCornice,
-            waterproofing: room.properties.hasWaterproofing || false
+            waterproofing: room.properties.hasWaterproofing || false,
+            suspendedCeiling: room.properties.hasSuspendedCeiling ?? (room.type === 'bath' || room.type === 'wc')
         });
         setEditingRoomId(room.id);
     };
@@ -247,7 +255,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                             </h4>
 
                             {/* ODA TİPİ BUTONLARI */}
-                           <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                 {[
                                     { id: 'living', label: 'Salon', icon: 'fa-couch', activeColor: 'bg-blue-600 border-blue-500' },
                                     { id: 'bedroom', label: 'Yatak Od.', icon: 'fa-bed', activeColor: 'bg-purple-600 border-purple-500' },
@@ -363,6 +371,12 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input type="checkbox" checked={form.waterproofing} onChange={e => setForm({ ...form, waterproofing: e.target.checked })} className="accent-blue-500 w-4 h-4" />
                                         <span className="text-xs text-slate-600 dark:text-slate-300">Su Yalıtımı</span>
+                                    </label>
+
+                                    {/* YENİ EKLENEN KISIM */}
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={form.suspendedCeiling} onChange={e => setForm({ ...form, suspendedCeiling: e.target.checked })} className="accent-blue-500 w-4 h-4" />
+                                        <span className="text-xs text-slate-600 dark:text-slate-300">Asma Tavan</span>
                                     </label>
                                 </div>
                             </div>
