@@ -73,6 +73,9 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)": "veranda_m2paket",
   "Akıllı Ev Altyapı ve Donanım Paketi": "akilli_ev_sistemi_standartpaket",
 
+  "Otopark Sprinkler Altyapısı (m²)": "sprinklersistemim2paket",
+  "Otopark Drenaj Kanalı (mt)": "drenajmtpaket",
+
 
   // --- 3. KABA YAPI ---
   "Betonarme Betonu": "betonmal",
