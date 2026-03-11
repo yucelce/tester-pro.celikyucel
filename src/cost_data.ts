@@ -225,7 +225,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Portmanto / Vestiyer", unit: "Adet", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "İç Merdiven Kaplama", unit: "Basamak", auto_source: "calc_internal_stair_steps", multiplier: 1, scope: 'global' },
       { name: "İç Merdiven Korkuluk", unit: "mt", auto_source: "calc_internal_stair_railing_mt", multiplier: 1, scope: 'global' },
-      { name: "Otomatik Garaj Kapısı ve Bariyer", unit: "Adet", auto_source: "calc_garage_door", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Otomatik Garaj Kapısı", unit: "Adet", auto_source: "calc_garage_door", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
   {

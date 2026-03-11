@@ -773,6 +773,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_indoor_parking_screed': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
+    
     'calc_parking_ventilation': ({ buildingStats, currentCosts }) => {
         if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
 

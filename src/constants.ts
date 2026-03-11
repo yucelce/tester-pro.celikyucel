@@ -377,6 +377,14 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Noter Yazı Ücreti": 4725,               // noteryaziisc
     "Standart Sözleşme Harcı": 7087.5,       // standartsozlesmeharciisc
 
+    "Kuvvetli Akım Sorti (Priz/Aydınlatma)": 850,
+    "Zayıf Akım Sorti (TV/Data/Tel)": 920,
+
+    "Çim Ekimi ve Otomatik Sulama Sistemi": 350,
+    "Sert Zemin / Yürüyüş Yolu": 675,
+
+    "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)": 9370,
+
     // --- TESİSAT, DOĞALGAZ & YANGIN ---
     "Doğalgaz Kolon Hattı (mt) Birim": 1984.2,     // dogalgazkolonhattimtmalisc
     "Doğalgaz Daire Başı Set Birim": 3664.4,       // dogalgazdairebasisetadetmalisc
@@ -400,14 +408,15 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "İç Cephe Boyası (kg)": 97.4,
     "Otopark Yüzey Sertleştirici (Helikopter Şap)": 180,
     "Otopark Yangın ve Jet Fan Sistemi": 1200,
-    "Sığınak Kapısı (Adet)": 26000,
+    "Sığınak Kapısı (Adet)": 30000,
     "Sığınak Havalandırma Santrali (Adet)": 40000,
     "Otopark Sprinkler Altyapısı (m²)": 400,
     "Otopark Jet Fan Cihazı (Adet)": 44000,
     "Egzost/Taze Hava Santrali ve Otomasyon (Paket)": 80000,
     "Otopark Drenaj Kanalı (mt)": 600,
     "Yağ Ayırıcı Ünite (Adet)": 15000,
-    "Atıksu Dalgıç Pompa Sistemi (Set)": 25000
+    "Atıksu Dalgıç Pompa Sistemi (Set)": 25000,
+    "Otomatik Garaj Kapısı": 33730,
 };
 
 // src/constants.ts dosyasının en altına ekleyin:

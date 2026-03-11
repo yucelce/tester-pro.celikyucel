@@ -122,6 +122,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   // Eskisi: "Mantolama (Malz.+İşçilik)": "mantolamamalisc",
   "Mantolama Malzemesi": "mantolamamal",
   "Mantolama İşçiliği": "mantolamaisc",
+  "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)": "mantolamamalisc",
+  "Otomatik Garaj Kapısı:":"otopark_kepenkpaket",
 
   // --- 6. ZEMİN VE MERDİVEN ---
   // Eskisi: "Şap Atılması (Malz.+İşçilik)": "sappaket",
