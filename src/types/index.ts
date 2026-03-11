@@ -31,6 +31,7 @@ export interface SalePlan {
     amount: number;
     month: number;
     saleDate?: string; // YENİ EKLENEN SATIR (Örn: "2025-03")
+    vatRate?: number;
 }
 
 export interface ProgressPayment {

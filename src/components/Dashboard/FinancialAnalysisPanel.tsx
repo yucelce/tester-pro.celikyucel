@@ -86,14 +86,13 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
     const financialEndDateStr = formatMonth(financialEndDate);
     const defaultSaleDate = formatMonth(addMonths(constructionEndDate, 3));
-    const [newSale, setNewSale] = useState({ name: '', amount: 0, saleDate: defaultSaleDate });
+    const [newSale, setNewSale] = useState({ name: '', amount: 0, saleDate: defaultSaleDate, vatRate: 0.20 });
 
     const handleAddSale = () => {
         if (!newSale.name || newSale.amount <= 0 || !newSale.saleDate) return;
-        addSale({ id: Date.now().toString(), name: newSale.name, amount: newSale.amount, month: 0, saleDate: newSale.saleDate });
-        setNewSale({ name: '', amount: 0, saleDate: defaultSaleDate });
+        addSale({ id: Date.now().toString(), name: newSale.name, amount: newSale.amount, month: 0, saleDate: newSale.saleDate, vatRate: newSale.vatRate });
+        setNewSale({ name: '', amount: 0, saleDate: defaultSaleDate, vatRate: 0.20 });
     };
-
     const revenueModel = financialSettings.revenueModel || 'yap_sat';
     const progressPayments = financialSettings.progressPayments || [];
 
@@ -415,7 +414,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
         };
 
         let totalEffectiveArea = 0;
-        const salableUnitsData: { name: string, effectiveArea: number }[] = [];
+        const salableUnitsData: { name: string, effectiveArea: number, netArea: number }[] = [];
 
         // Müsait birim adetlerini bulalım (Dubleksler ayrılacak):
         const availableUnitCounts: Record<string, number> = {};
@@ -425,17 +424,17 @@ export const FinancialAnalysisPanel: React.FC = () => {
         duplexPairs.forEach(pair => {
             const lowerUnit = units.find(u => u.id === pair.lowerUnitId);
             const upperUnit = units.find(u => u.id === pair.upperUnitId);
-            
+
             if (lowerUnit && upperUnit) {
                 const c = Math.min(pair.count, availableUnitCounts[pair.lowerUnitId] || 0, availableUnitCounts[pair.upperUnitId] || 0);
                 if (c > 0) {
                     availableUnitCounts[pair.lowerUnitId] -= c;
                     availableUnitCounts[pair.upperUnitId] -= c;
-                    
+
                     // Alanları hesapla (Tanımlı değilse varsayılan 50m2 kabul et)
-                    const lowerArea = lowerUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (lowerUnit.scale > 0 ? r.area_px / (lowerUnit.scale ** 2) : 0)), 0) || 50; 
+                    const lowerArea = lowerUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (lowerUnit.scale > 0 ? r.area_px / (lowerUnit.scale ** 2) : 0)), 0) || 50;
                     const upperArea = upperUnit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (upperUnit.scale > 0 ? r.area_px / (upperUnit.scale ** 2) : 0)), 0) || 50;
-                    
+
                     const lowerEffective = lowerArea * (FLOOR_MULTIPLIERS[lowerUnit.floorType] || 1.0);
                     const upperEffective = upperArea * (FLOOR_MULTIPLIERS[upperUnit.floorType] || 1.0);
                     const totalDuplexEffective = lowerEffective + upperEffective;
@@ -444,7 +443,8 @@ export const FinancialAnalysisPanel: React.FC = () => {
                     for (let i = 0; i < salableDuplexCount; i++) {
                         salableUnitsData.push({
                             name: `Dubleks (${lowerUnit.name} + ${upperUnit.name})`,
-                            effectiveArea: totalDuplexEffective
+                            effectiveArea: totalDuplexEffective,
+                            netArea: lowerArea + upperArea // YENİ EKLENDİ
                         });
                         totalEffectiveArea += totalDuplexEffective;
                     }
@@ -467,7 +467,8 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 for (let i = 0; i < salableCount; i++) {
                     salableUnitsData.push({
                         name: `${u.name} [${floorLabel}]`,
-                        effectiveArea: effectiveArea
+                        effectiveArea: effectiveArea,
+                        netArea: safeArea // YENİ EKLENDİ
                     });
                     totalEffectiveArea += effectiveArea;
                 }
@@ -479,14 +480,22 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         // 3. Satışları fiyatlandırıp tabloya ekle
         salableUnitsData.forEach((item, index) => {
-            // Fiyatı 1.000 TL'lik küsuratlara yuvarlayarak estetik göster
             const calculatedPrice = Math.round((item.effectiveArea * basePricePerEffectiveM2) / 1000) * 1000;
+
+            // --- YENİ KDV MANTIĞI ---
+            let calculatedVatRate = 0.20; // Varsayılan KDV %20
+            // Kentsel dönüşümse ve net alan 150m2 altındaysa KDV %1'dir
+            if (buildingStats.isUrbanTransformation && item.netArea < 150) {
+                calculatedVatRate = 0.01;
+            }
+
             defaultSales.push({
                 id: Date.now().toString() + index + Math.random().toString().slice(2, 5),
                 name: item.name,
                 amount: calculatedPrice,
                 month: 0,
-                saleDate: targetDate
+                saleDate: targetDate,
+                vatRate: calculatedVatRate // KDV oranını eklendi
             });
         });
 
@@ -512,7 +521,26 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const netTotalCost = currentTotalBrut / (1 + kdvRate);
     const includedVatAmount = currentTotalBrut - netTotalCost;
 
-    const estimatedSalesVat = totals.totalSales * 0.01;
+    let estimatedSalesVat = 0;
+
+    if (financialSettings.revenueModel === 'taahhut') {
+        // Taahhüt/Hakediş kesintilerinde fatura genelde %20 kesilir
+        estimatedSalesVat = totals.totalSales * 0.20;
+    } else {
+        // Satış modelinde, oluşturulan satışların (enflasyonlu) KDV oranları toplanır
+        financialSettings.sales.forEach(sale => {
+            const rate = sale.vatRate !== undefined ? sale.vatRate : 0.20;
+
+            // Enflasyonlu satış değerini bul (Cashflow ile birebir tutması için)
+            let saleDateObj = new Date((sale.saleDate || formatMonth(startDate)) + '-01');
+            let projectStartObj = new Date(formatMonth(startDate) + '-01');
+            let saleMonthsDiff = Math.max(0, (saleDateObj.getFullYear() - projectStartObj.getFullYear()) * 12 + (saleDateObj.getMonth() - projectStartObj.getMonth()));
+            let inflatedSaleAmount = sale.amount * Math.pow(1 + (financialSettings.monthlyInflationRate || 0) / 100, saleMonthsDiff);
+
+            estimatedSalesVat += inflatedSaleAmount * rate;
+        });
+    }
+
     const potentialVatRefund = includedVatAmount - estimatedSalesVat;
 
     const drawChart = () => {
@@ -924,8 +952,13 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                                         <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
                                                             <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
                                                             <div className="flex gap-2">
-                                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/2 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
-                                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/2 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none text-right focus:border-emerald-500" placeholder="Tutar ₺" />
+                                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
+                                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none text-right focus:border-emerald-500" placeholder="Tutar ₺" />
+                                                                <select value={newSale.vatRate} onChange={e => setNewSale({ ...newSale, vatRate: parseFloat(e.target.value) })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs text-slate-500 outline-none focus:border-emerald-500">
+                                                                    <option value={0.01}>%1 KDV</option>
+                                                                    <option value={0.10}>%10 KDV</option>
+                                                                    <option value={0.20}>%20 KDV</option>
+                                                                </select>
                                                             </div>
                                                             <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Manuel Ekle</button>
                                                         </div>
@@ -943,8 +976,15 @@ export const FinancialAnalysisPanel: React.FC = () => {
                                                                                 {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
                                                                             </span>
                                                                         )}
-                                                                        <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
-                                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600"><i className="fas fa-times"></i></button>
+
+                                                                        {/* --- DEĞİŞEN KISIM BURASI --- */}
+                                                                        <div className="flex flex-col text-right">
+                                                                            <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
+                                                                            <span className="text-[9px] text-slate-400 font-bold">%{(s.vatRate !== undefined ? s.vatRate : 0.20) * 100} KDV</span>
+                                                                        </div>
+                                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600 ml-1"><i className="fas fa-times"></i></button>
+                                                                        {/* --------------------------- */}
+
                                                                     </div>
                                                                 </div>
                                                             ))}

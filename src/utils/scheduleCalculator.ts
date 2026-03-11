@@ -47,7 +47,7 @@ export const calculateConstructionSchedule = (
     const totalFloors = buildingStats.basementFloorCount + buildingStats.normalFloorCount + 1;
     const basementFactor = Math.max(1, buildingStats.basementFloorCount * 1.5);
     const averageFloorArea = totalArea / Math.max(1, totalFloors);
-    const areaFactor = Math.max(0.8, averageFloorArea / 200);
+    const areaFactor = Math.max(0.8, Math.sqrt(averageFloorArea / 200));
 
     // BÜTÜN SÜRELER GÜN BAZINA ÇEVRİLDİ (Hafta değerleri * 7)
     const durOfficialDays = Math.min(168, Math.max(84, Math.ceil(84 + (totalArea / 500) * 7)));

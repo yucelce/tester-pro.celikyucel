@@ -1032,7 +1032,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); return (vTemel + vBodrumPerde + vKatlar) * (item.multiplier || 1);
+        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); return (vTemel + vBodrumPerde + vKatlar)*1.03 * (item.multiplier || 1);
     },
 
     'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
@@ -1709,30 +1709,28 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_generator': ({ buildingStats, totalFloors, totalConstructionArea, aggregatedUnitStats }) => {
-        // 1. VİLLA: Jeneratör zorunlu değildir, tamamen lüks ve opsiyonel bir donanımdır.
-        // (İsteyen kullanıcı özel kalemlerden veya akıllı ev paketinden ekleyebilir)
-        if (buildingStats.buildingType === 'villa') {
-            return 0;
-        }
+    if (buildingStats.buildingType === 'villa') {
+        return 0; // Villalarda genelde standart değildir, istenirse özel kalemden eklenir.
+    }
 
-        // 2. APARTMAN / SİTE: Planlı Alanlar İmar Yönetmeliğine göre asansörlü (4 kat ve üzeri), 
-        // çok katlı veya belirli bir bağımsız bölüm sayısını geçen binalarda ortak alan jeneratörü zorunludur.
-        const totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
+    const totalUnits = aggregatedUnitStats['calc_unit_count'] || Math.ceil(totalConstructionArea / 100);
 
-        let count = 0;
+    // Jeneratör zorunluluğu kontrolü (Örn: Asansörlü binalar veya >10 daire)
+    if (totalFloors > 3 || totalUnits >= 10 || totalConstructionArea >= 800) {
+        
+        // 10 daireye kadar olan kısmı "1 Birim (Standart)" kabul edelim
+        const baseMultiplier = 1.0; 
+        
+        // 10 daireden sonraki her daire için kapasiteyi oransal olarak artıralım
+        // Örn: Her ilave 10 daire maliyeti %50 (0.5) artırsın
+        const extraUnits = Math.max(0, totalUnits - 10);
+        const capacityMultiplier = baseMultiplier + (extraUnits / 10) * 0.5;
 
-        // Asansör zorunluluğu olan binalar (Genelde > 3 kat) veya 10'dan fazla daireli binalarda 1 Ortak Alan Jeneratörü
-        if (totalFloors > 3 || totalUnits >= 10 || totalConstructionArea >= 800) {
-            count = 1;
-        }
+        return capacityMultiplier; 
+    }
 
-        // Site tarzı çok büyük projelerde (örn: 40+ daire veya 10+ kat) jeneratör kapasite/adet ihtiyacı artar
-        if (totalUnits >= 40 || totalFloors >= 10) {
-            count = 2;
-        }
-
-        return count;
-    },
+    return 0;
+},
 
     'calc_fire_system': ({ regulationHeight, buildingStats, item }) => {
         if (regulationHeight > 21.50) {
