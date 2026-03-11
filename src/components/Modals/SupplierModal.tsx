@@ -54,7 +54,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
         if (isOpen) {
             fetchSuppliers();
         }
-    }, [isOpen, buildingStats.province, buildingStats.district]);
+    }, [isOpen, buildingStats.province]);
 
     const fetchSuppliers = async () => {
         setIsLoading(true);
@@ -81,11 +81,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
                 };
             }).filter(s => s.il && s.firmaAdi); 
 
-            let filtered = parsedSuppliers.filter(s => s.il === buildingStats.province && s.ilce === buildingStats.district);
-
-            if (filtered.length === 0) {
-                filtered = parsedSuppliers.filter(s => s.il === buildingStats.province);
-            }
+            const filtered = parsedSuppliers.filter(s => s.il === buildingStats.province);
 
             setSuppliers(filtered);
         } catch (error) {
