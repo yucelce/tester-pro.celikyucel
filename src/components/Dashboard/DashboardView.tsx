@@ -818,10 +818,17 @@ export const DashboardView: React.FC = () => {
                                                                         <div className="relative group inline-flex items-center justify-center">
                                                                             <i className="fas fa-info-circle text-[11px] text-blue-400 hover:text-blue-600 cursor-help transition-colors"></i>
 
-                                                                            <div className="absolute bottom-full -left-2 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[260px] max-w-[85vw] p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-[9999]">
-                                                                                {ITEM_DESCRIPTIONS[item.name]}
-                                                                                {/* Tooltip oku - Mobilde sola yakın, masaüstünde ortada */}
-                                                                                <div className="absolute top-full left-3 sm:left-1/2 sm:-translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                            {/* 1. KAPSAYICI: Görünmez köprü görevi görür. mb-2 yerine pb-2 kullanıldı. pointer-events-none kaldırılıp invisible/visible eklendi. */}
+                                                                            <div className="absolute bottom-full -left-2 sm:left-1/2 sm:-translate-x-1/2 pb-2 w-[260px] max-w-[85vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+
+                                                                                {/* 2. GÖRSEL BALON: Arka plan ve padding özellikleri içteki div'e taşındı. */}
+                                                                                <div className="relative p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-2xl">
+                                                                                    {ITEM_DESCRIPTIONS[item.name]}
+
+                                                                                    {/* Tooltip oku - Mobilde sola yakın, masaüstünde ortada */}
+                                                                                    <div className="absolute top-full left-3 sm:left-1/2 sm:-translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                </div>
+
                                                                             </div>
                                                                         </div>
                                                                     )}
