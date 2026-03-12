@@ -1082,9 +1082,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); return (vTemel + vBodrumPerde + vKatlar) * 1.03 * (item.multiplier || 1);
-    },
+        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); 
+        
+        let totalConcrete = vTemel + vBodrumPerde + vKatlar;
 
+        // MÜHENDİSLİK DÜZELTMESİ: Bodrumsuz binalarda subasman üstü hasırlı zemin betonu (10 cm)
+        // Grobeton'dan çıkarılıp, ait olduğu Betonarme Betonu (C30 vb.) kalemine taşındı.
+        if (buildingStats.basementFloorCount === 0) {
+            totalConcrete += (buildingStats.groundFloorArea || 0) * 0.10;
+        }
+
+        return totalConcrete * 1.03 * (item.multiplier || 1);
+    },
+    
     'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
@@ -1166,13 +1176,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = Math.min(raftHeight * 1.5, 1.00);
 
-        // 1. Temel Altı Grobetonu (10 cm)
+        // Sadece Temel Altı Grobetonu (10 cm) hesaplanır
         let totalGrobeton = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10;
-
-        // 2. YENİ: Bodrumsuz binalarda Subasman Dolgusu Üzeri Zemin Betonu (10 cm)
-        if (buildingStats.basementFloorCount === 0) {
-            totalGrobeton += (buildingStats.groundFloorArea || 0) * 0.10;
-        }
 
         return totalGrobeton;
     },
@@ -1429,7 +1434,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         }
 
         // DÜZELTME: Temel için %30 (1.30), Bodrum Perdeleri için %15 (1.15) daha fazla demir yoğunluğu hesaplanır.
-        let totalIron = ironKatlar + (vTemel * (ironCoeff * 1.30)) + (vBodrumPerde * (ironCoeff * 1.15));
+        let totalIron = ironKatlar + (vTemel * (ironCoeff * 0.85)) + (vBodrumPerde * (ironCoeff * 1.05));
 
         // YENİ: Bodrumsuz binalarda zemin taban betonu içine Çelik Hasır ilavesi (Ort. 4 kg/m² = 0.004 ton)
         if (buildingStats.basementFloorCount === 0) {
@@ -2051,21 +2056,26 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
             buildingStats.groundFloorHeight;
 
-        // 1. DÜZELTME: Subasman (Topraktan koparma) yüksekliğini iskeleye ekle
+        // 1. Subasman (Topraktan koparma) yüksekliğini iskeleye ekle
         if (buildingStats.basementFloorCount === 0) {
             const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             facadeHeight += subasmanH;
         }
 
-        // 2. DÜZELTME: Çatı katı varsa iskele yüksekliğini çatının tepe noktasına kadar uzat
-        if (buildingStats.hasRoofFloor) {
-            facadeHeight += (buildingStats.roofFloorMaxHeight || 3.0); // İskele mahyaya kadar kurulur
-        }
-
         const basePerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea);
         const scaffoldingPerimeter = basePerim + 8;
 
-        return facadeHeight * scaffoldingPerimeter;
+        // Temel iskele alanı (Çatı hariç)
+        let totalScaffoldingArea = facadeHeight * scaffoldingPerimeter;
+
+        // MÜHENDİSLİK DÜZELTMESİ: Çatı katı (kalkan duvar) iskelesi
+        if (buildingStats.hasRoofFloor) {
+            const roofHeight = buildingStats.roofFloorMaxHeight || 3.0;
+            // Tüm çevre yerine, kalkan duvarların bulunduğu varsayılan çevrenin yarısına iskele ilave edilir
+            totalScaffoldingArea += (scaffoldingPerimeter / 2) * roofHeight;
+        }
+
+        return totalScaffoldingArea;
     },
 
     'calc_scaffolding_duration': ({ constructionDuration }) => constructionDuration * 0.3
