@@ -597,9 +597,15 @@ export const ReportView: React.FC = () => {
                     <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                         <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">İmalat Detayı</h2><p className="text-slate-500 text-sm mt-1">İş kalemleri bazında genel döküm</p></div>
                     </div>
-                    <table className="w-full text-sm border-collapse">
+                    <table className="w-full text-sm border-collapse table-fixed">
                         <thead className="bg-slate-900 text-white">
-                            <tr><th className="py-2 px-3 text-left text-xs">İmalat Kalemi</th><th className="py-2 px-3 text-right text-xs">Miktar</th><th className="py-2 px-3 text-center text-xs">Birim</th><th className="py-2 px-3 text-right text-xs">Birim Fiyat</th><th className="py-2 px-3 text-right text-xs">Toplam</th></tr>
+                            <tr>
+                                <th className="py-2 px-3 text-left text-xs w-[45%]">İmalat Kalemi</th>
+                                <th className="py-2 px-3 text-right text-xs w-[15%]">Miktar</th>
+                                <th className="py-2 px-3 text-center text-xs w-[10%]">Birim</th>
+                                <th className="py-2 px-3 text-right text-xs w-[15%]">Birim Fiyat</th>
+                                <th className="py-2 px-3 text-right text-xs w-[15%]">Toplam</th>
+                            </tr>
                         </thead>
                         <tbody className="text-slate-700">
                             {finalCostDetails.map(cat => (
@@ -610,10 +616,10 @@ export const ReportView: React.FC = () => {
                                             {/* ANA SATIR */}
                                             <tr className="border-b border-slate-100 break-inside-avoid">
                                                 <td className="py-1.5 px-3 pl-6 text-xs">{item.name}</td>
-                                                <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
+                                                <td className="py-1.5 px-3 text-right font-mono text-xs whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
                                                 <td className="py-1.5 px-3 text-center font-mono text-xs">{item.unit}</td>
-                                                <td className="py-1.5 px-3 text-right font-mono text-xs">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
-                                                <td className="py-1.5 px-3 text-right font-bold font-mono text-xs">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                                <td className="py-1.5 px-3 text-right font-mono text-xs whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
+                                                <td className="py-1.5 px-3 text-right font-bold font-mono text-xs whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
 
                                             {/* YENİ: İCMAL KIRILIM SATIRI (Eğer ayar açıksa ve veri varsa) */}
@@ -779,13 +785,13 @@ export const ReportView: React.FC = () => {
                                     <span>{group.date.toLocaleDateString('tr-TR')} - {group.taskName}</span>
                                     <span className="text-emerald-700">{group.totalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                                 </div>
-                                <table className="w-full text-[11px]">
+                                <table className="w-full text-[11px] table-fixed">
                                     <tbody>
                                         {group.items.map((item, i) => (
-                                            <tr key={i} className="border-b border-slate-100">
-                                                <td className="p-1.5 text-slate-600">{item.name}</td>
-                                                <td className="p-1.5 text-right font-mono">{item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR')} ${item.unit}`}</td>
-                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                            <tr key={i} className="border-b border-slate-100 break-inside-avoid">
+                                                <td className="p-1.5 text-slate-600 w-[60%]">{item.name}</td>
+                                                <td className="p-1.5 text-right font-mono w-[20%] whitespace-nowrap">{item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR')} ${item.unit}`}</td>
+                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900 w-[20%] whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -800,24 +806,24 @@ export const ReportView: React.FC = () => {
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Aylık Nakit Akışı</h2><p className="text-slate-500 text-sm mt-1">Proje süresince oluşacak tahmini gelir, gider ve bakiye tablosu</p></div>
                         </div>
-                        <table className="w-full text-xs text-left border-collapse">
+                        <table className="w-full text-xs text-left border-collapse table-fixed">
                             <thead className="bg-slate-800 text-white">
                                 <tr>
-                                    <th className="p-3 w-32">Dönem</th>
-                                    <th className="p-3">Açıklama</th> {/* YENİ EKLENEN SÜTUN */}
-                                    <th className="p-3 text-right">Gelir (Satış)</th>
-                                    <th className="p-3 text-right">Gider (İnşaat)</th>
-                                    <th className="p-3 text-right">Kasa (Bakiye)</th>
+                                    <th className="p-3 w-[15%]">Dönem</th>
+                                    <th className="p-3 w-[40%]">Açıklama</th>
+                                    <th className="p-3 text-right w-[15%]">Gelir (Satış)</th>
+                                    <th className="p-3 text-right w-[15%]">Gider (İnşaat)</th>
+                                    <th className="p-3 text-right w-[15%]">Kasa (Bakiye)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
                                 {cashflowTable.map((row, idx) => (
-                                    <tr key={idx} className="hover:bg-slate-50">
+                                    <tr key={idx} className="hover:bg-slate-50 break-inside-avoid">
                                         <td className="p-3 font-bold whitespace-nowrap">{row.month}</td>
-                                        <td className="p-3 text-slate-500 max-w-[200px] truncate" title={row.description}>{row.description}</td> {/* YENİ EKLENEN VERİ */}
-                                        <td className="p-3 text-right font-mono text-green-600">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
-                                        <td className="p-3 text-right font-mono text-red-600">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
-                                        <td className={`p-3 text-right font-mono font-bold ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                        <td className="p-3 text-slate-500 text-[10px] leading-snug pr-2">{row.description}</td>
+                                        <td className="p-3 text-right font-mono text-green-600 whitespace-nowrap">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className="p-3 text-right font-mono text-red-600 whitespace-nowrap">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className={`p-3 text-right font-mono font-bold whitespace-nowrap ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -861,17 +867,18 @@ export const ReportView: React.FC = () => {
                 .font-serif { font-family: 'Playfair Display', serif; }
                 
                 @media print {
-                    @page { margin: 0; size: A4; }
-                    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    @page { margin: 10mm; size: A4; } /* Kenar boşlukları ayarlandı */
+                    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Inter', system-ui, sans-serif; }
                     .print\\:hidden { display: none !important; }
                     .print\\:shadow-none { box-shadow: none !important; }
                     .print\\:w-full { width: 100% !important; max-width: none !important; margin: 0 !important; }
                     .print\\:m-0 { margin: 0 !important; }
                     .print\\:break-after-page { break-after: page; page-break-after: always; }
                     .print\\:break-after-auto { break-after: auto; }
-                    tr { break-inside: avoid; page-break-inside: avoid; }
+                    tr { break-inside: avoid !important; page-break-inside: avoid !important; }
                     thead { display: table-header-group; }
-                    tfoot { display: table-footer-group; }
+                    /* TFOOT'un HER SAYFADA TEKRAR ETMESINI ENGELLER */
+                    tfoot { display: table-row-group; } 
                 }
             `}</style>
         </div>
