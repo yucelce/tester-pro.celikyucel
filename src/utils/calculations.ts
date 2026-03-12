@@ -1603,7 +1603,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let formBodrumPerde = 0;
         if (buildingStats.basementFloorCount > 0) {
             // Sabit +1 yerine %2 köşe/bindirme payı eklendi
-            formBodrumPerde = (perimeter * 1.02) * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) * 2;
+            formBodrumPerde = (perimeter * 1.02) * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) * 1;
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             formBodrumPerde = perimeter * buildingStats.subasmanHeight * 2;
         }

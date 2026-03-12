@@ -873,20 +873,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             });
         });
 
-
-        effectiveStructuralUnits.forEach(u => {
-            const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
-
-            Object.keys(stats).forEach(k => {
-                const totalVal = stats[k] * u.count;
-                if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
-                aggregatedUnitStats[k] += totalVal;
-
-                // Statik planlar oda bazlı olmadığı için doğrudan kat planı olarak yazıyoruz
-                addBreakdown(k, `Statik Plan: ${u.name}`, totalVal);
-            });
-        });
-
         const outerThickStr = buildingStats.outerWallThickness === 13.5 ? '13_5' : String(buildingStats.outerWallThickness || 20);
         const innerThickStr = buildingStats.innerWallThickness === 13.5 ? '13_5' : String(buildingStats.innerWallThickness || 13.5);
 
