@@ -5,7 +5,7 @@ import {
 } from '../types';
 
 import { calculateConstructionSchedule } from '../utils/scheduleCalculator'; // YENİ IMPORT
-import { estimatePerimeter } from '../../utils/calculations';
+import { estimatePerimeter } from '../utils/calculations';
 import { CostCategory, COST_DATA as INITIAL_COSTS } from '../cost_data';
 import {
     calculateUnitCost,
