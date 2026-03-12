@@ -3,7 +3,7 @@ import React, { useRef, useMemo, useState } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUIStore } from '../../stores/uiStore';
 import { BRAND_CATEGORIES } from "../../brand_data";
-import { generateProcurementPlan } from '../../utils/materialCalculator'; // EKLENDİ
+import { generateProcurementPlan } from '../../utils/materialCalculator'; 
 
 // --- TARİH YARDIMCI FONKSİYONLARI ---
 const addMonths = (date: Date, months: number) => {
@@ -77,12 +77,11 @@ export const ReportView: React.FC = () => {
     const cashflowTable = useMemo(() => {
         if (!finalTotalCost || projectSchedule.length === 0) return [];
         const inflationRate = (financialSettings.monthlyInflationRate || 0) / 100;
-        const fixedTasks = financialSettings.fixedPriceTaskIds || []; // Fiyatı sabitlenen işler
+        const fixedTasks = financialSettings.fixedPriceTaskIds || []; 
         const expensesByMonth: Record<string, number> = {};
-        const tasksByMonth: Record<string, string[]> = {}; // YENİ: Aylara göre görevleri tutacağımız liste
+        const tasksByMonth: Record<string, string[]> = {}; 
         const projectStartMonthDate = new Date((buildingStats.projectStartDate || formatMonth(new Date())) + '-01');
 
-        // 1. ADIM: Kalemleri doğru iş programına (task) atayan fonksiyon
         const getTaskForCategory = (catId: string, itemName: string): string => {
             const nameLower = itemName.toLowerCase();
             if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
@@ -104,7 +103,6 @@ export const ReportView: React.FC = () => {
             }
         };
 
-        // 2. ADIM: Kar marjlı güncel maliyetleri (finalCostDetails) iş adımlarına göre topla
         const taskActualCosts: Record<string, number> = {};
         finalCostDetails.forEach(cat => {
             cat.items.forEach(item => {
@@ -115,7 +113,6 @@ export const ReportView: React.FC = () => {
             });
         });
 
-        // 3. ADIM: Zaman çizelgesine göre aylara dağıt
         projectSchedule.forEach(task => {
             const startDate = new Date(task.startDate);
             const endDate = new Date(task.endDate);
@@ -147,7 +144,6 @@ export const ReportView: React.FC = () => {
 
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (inflatedCost * costRatio);
 
-                // YENİ: Anlamlı bir harcama varsa o ayki işlerin ismini kaydet
                 if (costRatio > 0.01) {
                     if (!tasksByMonth[monthStr]) tasksByMonth[monthStr] = [];
                     if (!tasksByMonth[monthStr].includes(task.name)) tasksByMonth[monthStr].push(task.name);
@@ -157,13 +153,11 @@ export const ReportView: React.FC = () => {
             }
         });
 
-        // Satışları (Gelirleri) hesapla
         const salesByMonth: Record<string, number> = {};
         financialSettings.sales.forEach(sale => {
             if (sale.saleDate) salesByMonth[sale.saleDate] = (salesByMonth[sale.saleDate] || 0) + sale.amount;
         });
 
-        // Ayları sırala ve tabloyu oluştur
         const allMonthsSet = new Set([...Object.keys(expensesByMonth), ...Object.keys(salesByMonth)]);
         const sortedMonths = Array.from(allMonthsSet).sort();
 
@@ -175,7 +169,6 @@ export const ReportView: React.FC = () => {
             const sal = salesByMonth[mStr] || 0;
             cumulativeBalance += (sal - exp);
 
-            // YENİ: Açıklamaları oluşturma
             let descItems = [];
             if (sal > 0) descItems.push(financialSettings.revenueModel === 'taahhut' ? 'Hakediş/Gelir' : 'Satış/Gelir');
             if (exp > 0) {
@@ -193,12 +186,13 @@ export const ReportView: React.FC = () => {
                 expense: exp,
                 income: sal,
                 balance: cumulativeBalance,
-                description: descItems.join(' + ') || '-' // YENİ: Açıklama alanı
+                description: descItems.join(' + ') || '-'
             });
         });
 
         return table;
     }, [projectSchedule, finalTotalCost, finalCostDetails, financialSettings, buildingStats.projectStartDate]);
+
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'render') => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -345,7 +339,8 @@ export const ReportView: React.FC = () => {
 
             <div className="w-[210mm] mx-auto bg-white shadow-2xl print:shadow-none print:w-full print:m-0 pb-10">
 
-                <div className="relative w-full h-[297mm] flex flex-col overflow-hidden bg-slate-900 text-white print:break-after-page page-break">
+                {/* KAPAK SAYFASI */}
+                <div className="relative w-full h-[297mm] print:h-auto flex flex-col overflow-hidden bg-slate-900 text-white print:break-after-page page-break">
                     <div className="absolute inset-0 z-0">
                         {reportSettings.projectRender ? (
                             <img src={reportSettings.projectRender} className="w-full h-full object-cover opacity-40" alt="Cover" />
@@ -355,7 +350,7 @@ export const ReportView: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent"></div>
                     </div>
 
-                    <div className="relative z-10 flex-1 flex flex-col justify-between p-16">
+                    <div className="relative z-10 flex-1 flex flex-col justify-between p-16 print:p-8">
                         <div className="flex justify-between items-start">
                             {reportSettings.firmLogo ? (
                                 <img src={reportSettings.firmLogo} className="h-20 object-contain bg-white/95 p-2 rounded shadow-lg" alt="Logo" />
@@ -366,7 +361,7 @@ export const ReportView: React.FC = () => {
                             )}
                             <div className="text-right">
                                 <input type="text" value={reportSettings.firmName} onChange={(e) => updateReportSettings({ firmName: e.target.value })} className="bg-transparent text-right text-xl font-bold text-white outline-none placeholder-white/30 uppercase tracking-widest" placeholder="FİRMA ADI" />
-                                <div className="text-sm text-white/60 mt-1">{new Date().toLocaleDateString()}</div>
+                                <div className="text-sm text-white/60 mt-1">{new Date().toLocaleDateString('tr-TR')}</div>
                             </div>
                         </div>
 
@@ -386,7 +381,7 @@ export const ReportView: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="w-full min-h-[297mm] p-12 bg-white relative print:break-after-page page-break">
+                <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white relative print:break-after-page page-break">
                     <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                         <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Proje Özeti</h2><p className="text-slate-500 text-sm mt-1">Genel teknik veriler ve bütçe dağılımı</p></div>
                         <div className="text-right"><span className="text-4xl font-bold text-slate-900 font-mono tracking-tighter">01</span></div>
@@ -404,7 +399,7 @@ export const ReportView: React.FC = () => {
                 </div>
 
                 {reportSettings.includeBuildingDetails && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white relative print:break-after-page page-break border-t border-slate-200">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white relative print:break-after-page page-break border-t border-slate-200">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div>
                                 <h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Yapı ve Bağımsız Bölüm Detayları</h2>
@@ -571,7 +566,7 @@ export const ReportView: React.FC = () => {
                 )}
 
                 {reportSettings.selectedBrands && Object.keys(reportSettings.selectedBrands).length > 0 && (
-                    <div className="w-full min-h-[150mm] p-12 bg-slate-50 relative print:break-after-page page-break border-t border-slate-200">
+                    <div className="w-full min-h-[150mm] print:min-h-0 p-12 print:p-8 bg-slate-50 relative print:break-after-page page-break border-t border-slate-200">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Malzeme Markaları</h2><p className="text-slate-500 text-sm mt-1">Kullanılması taahhüt edilen/önerilen markalar</p></div>
                         </div>
@@ -593,77 +588,65 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
+                <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-page page-break">
                     <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                         <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">İmalat Detayı</h2><p className="text-slate-500 text-sm mt-1">İş kalemleri bazında genel döküm</p></div>
                     </div>
-                    <table className="w-full text-sm border-collapse table-fixed">
-                        <thead className="bg-slate-900 text-white">
+                    <table className="w-full text-sm border-collapse">
+                        <thead className="bg-slate-900 text-white print:text-[10px]">
                             <tr>
-                                <th className="py-2 px-3 text-left text-xs w-[45%]">İmalat Kalemi</th>
-                                <th className="py-2 px-3 text-right text-xs w-[15%]">Miktar</th>
-                                <th className="py-2 px-3 text-center text-xs w-[10%]">Birim</th>
-                                <th className="py-2 px-3 text-right text-xs w-[15%]">Birim Fiyat</th>
-                                <th className="py-2 px-3 text-right text-xs w-[15%]">Toplam</th>
+                                <th className="py-2 px-2 text-left text-xs print:text-[10px]">İmalat Kalemi</th>
+                                <th className="py-2 px-2 text-right text-xs print:text-[10px]">Miktar</th>
+                                <th className="py-2 px-2 text-center text-xs print:text-[10px]">Birim</th>
+                                <th className="py-2 px-2 text-right text-xs print:text-[10px]">Birim Fiyat</th>
+                                <th className="py-2 px-2 text-right text-xs print:text-[10px]">Toplam</th>
                             </tr>
                         </thead>
-                        <tbody className="text-slate-700">
+                        <tbody className="text-slate-700 print:text-[10px]">
                             {finalCostDetails.map(cat => (
                                 <React.Fragment key={cat.id}>
-                                    <tr className="bg-slate-100 border-b border-slate-200"><td colSpan={5} className="py-2 px-3 font-bold text-slate-900 text-xs uppercase">{cat.title}</td></tr>
+                                    <tr className="bg-slate-100 border-b border-slate-200"><td colSpan={5} className="py-2 px-3 font-bold text-slate-900 text-xs print:text-[10px] uppercase">{cat.title}</td></tr>
                                     {cat.items.filter(i => i.totalPrice > 0).map((item, idx) => (
                                         <React.Fragment key={idx}>
                                             {/* ANA SATIR */}
                                             <tr className="border-b border-slate-100 break-inside-avoid">
-                                                <td className="py-1.5 px-3 pl-6 text-xs">{item.name}</td>
-                                                <td className="py-1.5 px-3 text-right font-mono text-xs whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
-                                                <td className="py-1.5 px-3 text-center font-mono text-xs">{item.unit}</td>
-                                                <td className="py-1.5 px-3 text-right font-mono text-xs whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
-                                                <td className="py-1.5 px-3 text-right font-bold font-mono text-xs whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                                <td className="py-1.5 px-2 pl-6 text-xs print:text-[10px]">{item.name}</td>
+                                                <td className="py-1.5 px-2 text-right font-mono text-xs print:text-[10px] whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : item.finalQty.toLocaleString('tr-TR')}</td>
+                                                <td className="py-1.5 px-2 text-center font-mono text-xs print:text-[10px]">{item.unit}</td>
+                                                <td className="py-1.5 px-2 text-right font-mono text-xs print:text-[10px] whitespace-nowrap">{item.inputType === 'manual_total' ? '-' : `${item.unit_price.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺`}</td>
+                                                <td className="py-1.5 px-2 text-right font-bold font-mono text-xs print:text-[10px] whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
 
                                             {/* YENİ: İCMAL KIRILIM SATIRI (Eğer ayar açıksa ve veri varsa) */}
                                             {reportSettings.includeQuantityBreakdown && item.breakdown && item.breakdown.length > 0 && (
                                                 item.breakdown.map((b: any, bIdx: number) => (
                                                     <tr key={`bd-${idx}-${bIdx}`} className="bg-slate-50 border-b border-slate-100 break-inside-avoid text-[10px] text-slate-500">
-                                                        {/* 1. Sütun: Kalem Adı */}
-                                                        <td className="py-1 px-3 pl-12 align-top">
+                                                        <td className="py-1 px-2 pl-12 align-top">
                                                             <i className="fas fa-level-up-alt rotate-90 text-[8px] mr-2 text-slate-300"></i>
                                                             {b.source}
                                                         </td>
-
-                                                        {/* 2. Sütun: Miktar (Üstteki miktarla tam hizalanır) */}
-                                                        <td className="py-1 px-3 text-right font-mono font-medium align-top whitespace-nowrap">
+                                                        <td className="py-1 px-2 text-right font-mono font-medium align-top whitespace-nowrap">
                                                             {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
                                                         </td>
-
-                                                        {/* 3. Sütun: Birim (Üstteki birimle tam hizalanır) */}
-                                                        <td className="py-1 px-3 text-center font-mono align-top text-[9px]">
+                                                        <td className="py-1 px-2 text-center font-mono align-top text-[9px]">
                                                             {item.unit}
                                                         </td>
-
-                                                        {/* 4. ve 5. Sütun: Birim Fiyat ve Toplam (Buraları boş bırakıyoruz) */}
-                                                        <td colSpan={2} className="py-1 px-3"></td>
+                                                        <td colSpan={2} className="py-1 px-2"></td>
                                                     </tr>
                                                 ))
                                             )}
                                             {reportSettings.includeQuantityBreakdown && item.costBreakdown && item.costBreakdown.length > 0 && (
                                                 item.costBreakdown.map((cb: any, cbIdx: number) => (
                                                     <tr key={`cbd-${idx}-${cbIdx}`} className="bg-emerald-50/40 border-b border-emerald-100/50 break-inside-avoid text-[10px] text-slate-600">
-                                                        {/* 1. Sütun: Kalem Adı (Biraz içeriden ve paket/kutu ikonuyla) */}
-                                                        <td className="py-1.5 px-3 pl-12 align-top flex items-start gap-2">
+                                                        <td className="py-1.5 px-2 pl-12 align-top flex items-start gap-2">
                                                             <i className="fas fa-level-up-alt rotate-90 text-[8px] text-emerald-400 mt-1"></i>
                                                             <i className="fas fa-box-open text-emerald-500 mt-0.5"></i>
                                                             <span className="leading-tight">{cb.label}</span>
                                                         </td>
-
-                                                        {/* Miktar, Birim ve B.Fiyat Sütunları (Paket içerik olduğu için boş bırakıyoruz / Tire koyuyoruz) */}
-                                                        <td className="py-1.5 px-3 text-right font-mono text-slate-400">-</td>
-                                                        <td className="py-1.5 px-3 text-center font-mono text-slate-400">-</td>
-                                                        <td className="py-1.5 px-3 text-right font-mono text-slate-400">-</td>
-
-                                                        {/* Toplam Sütunu: Bu alt kalemin kendi fiyatını koyu zümrüt renginde yazdırıyoruz */}
-                                                        <td className="py-1.5 px-3 text-right font-bold font-mono align-top text-emerald-700">
+                                                        <td className="py-1.5 px-2 text-right font-mono text-slate-400">-</td>
+                                                        <td className="py-1.5 px-2 text-center font-mono text-slate-400">-</td>
+                                                        <td className="py-1.5 px-2 text-right font-mono text-slate-400">-</td>
+                                                        <td className="py-1.5 px-2 text-right font-bold font-mono align-top text-emerald-700 whitespace-nowrap">
                                                             {cb.value.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                                         </td>
                                                     </tr>
@@ -675,13 +658,13 @@ export const ReportView: React.FC = () => {
                             ))}
                         </tbody>
                         <tfoot className="bg-slate-900 text-white break-inside-avoid">
-                            <tr><td colSpan={4} className="py-4 px-4 text-right font-bold uppercase text-sm">Genel Toplam</td><td className="py-4 px-4 text-right font-bold text-lg text-yellow-400 font-mono">{finalTotalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td></tr>
+                            <tr><td colSpan={4} className="py-4 px-4 text-right font-bold uppercase text-sm">Genel Toplam</td><td className="py-4 px-4 text-right font-bold text-lg text-yellow-400 font-mono whitespace-nowrap">{finalTotalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td></tr>
                         </tfoot>
                     </table>
                 </div>
 
                 {reportSettings.showUnitDetails && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Bağımsız Bölüm Metrajları</h2><p className="text-slate-500 text-sm mt-1">Daire ve yapı tiplerinin oda/mahal bazlı detayları</p></div>
                         </div>
@@ -751,7 +734,7 @@ export const ReportView: React.FC = () => {
                 )}
 
                 {reportSettings.includeSchedule && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">İş Zaman Programı</h2><p className="text-slate-500 text-sm mt-1">İş kalemlerinin planlanan başlangıç ve bitiş tarihleri</p></div>
                         </div>
@@ -773,9 +756,8 @@ export const ReportView: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- Rapor Görünümü Tedarik Kısmı --- */}
                 {reportSettings.includeProcurement && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Malzeme Tedarik Planı</h2><p className="text-slate-500 text-sm mt-1">İş programına göre sahaya sevk edilecek malzeme listesi</p></div>
                         </div>
@@ -785,13 +767,13 @@ export const ReportView: React.FC = () => {
                                     <span>{group.date.toLocaleDateString('tr-TR')} - {group.taskName}</span>
                                     <span className="text-emerald-700">{group.totalCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                                 </div>
-                                <table className="w-full text-[11px] table-fixed">
+                                <table className="w-full text-[11px] print:text-[10px]">
                                     <tbody>
                                         {group.items.map((item, i) => (
                                             <tr key={i} className="border-b border-slate-100 break-inside-avoid">
-                                                <td className="p-1.5 text-slate-600 w-[60%]">{item.name}</td>
-                                                <td className="p-1.5 text-right font-mono w-[20%] whitespace-nowrap">{item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR')} ${item.unit}`}</td>
-                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900 w-[20%] whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                                <td className="p-1.5 text-slate-600">{item.name}</td>
+                                                <td className="p-1.5 text-right font-mono whitespace-nowrap">{item.unit === 'Paket' ? '1 Paket' : `${item.quantity.toLocaleString('tr-TR')} ${item.unit}`}</td>
+                                                <td className="p-1.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">{item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -802,28 +784,28 @@ export const ReportView: React.FC = () => {
                 )}
 
                 {reportSettings.includeCashflow && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-page page-break">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-page page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Aylık Nakit Akışı</h2><p className="text-slate-500 text-sm mt-1">Proje süresince oluşacak tahmini gelir, gider ve bakiye tablosu</p></div>
                         </div>
-                        <table className="w-full text-xs text-left border-collapse table-fixed">
-                            <thead className="bg-slate-800 text-white">
+                        <table className="w-full text-xs text-left border-collapse">
+                            <thead className="bg-slate-800 text-white print:text-[10px]">
                                 <tr>
-                                    <th className="p-3 w-[15%]">Dönem</th>
-                                    <th className="p-3 w-[40%]">Açıklama</th>
-                                    <th className="p-3 text-right w-[15%]">Gelir (Satış)</th>
-                                    <th className="p-3 text-right w-[15%]">Gider (İnşaat)</th>
-                                    <th className="p-3 text-right w-[15%]">Kasa (Bakiye)</th>
+                                    <th className="p-2">Dönem</th>
+                                    <th className="p-2 w-[40%]">Açıklama</th> 
+                                    <th className="p-2 text-right">Gelir (Satış)</th>
+                                    <th className="p-2 text-right">Gider (İnşaat)</th>
+                                    <th className="p-2 text-right">Kasa (Bakiye)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200">
+                            <tbody className="divide-y divide-slate-200 print:text-[10px]">
                                 {cashflowTable.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 break-inside-avoid">
-                                        <td className="p-3 font-bold whitespace-nowrap">{row.month}</td>
-                                        <td className="p-3 text-slate-500 text-[10px] leading-snug pr-2">{row.description}</td>
-                                        <td className="p-3 text-right font-mono text-green-600 whitespace-nowrap">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
-                                        <td className="p-3 text-right font-mono text-red-600 whitespace-nowrap">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
-                                        <td className={`p-3 text-right font-mono font-bold whitespace-nowrap ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
+                                        <td className="p-2 font-bold whitespace-nowrap">{row.month}</td>
+                                        <td className="p-2 text-slate-500 text-[10px] print:text-[9px] leading-snug pr-2">{row.description}</td>
+                                        <td className="p-2 text-right font-mono text-green-600 whitespace-nowrap">{row.income > 0 ? `+${row.income.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className="p-2 text-right font-mono text-red-600 whitespace-nowrap">{row.expense > 0 ? `-${row.expense.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}` : '-'}</td>
+                                        <td className={`p-2 text-right font-mono font-bold whitespace-nowrap ${row.balance < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.balance.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -832,7 +814,7 @@ export const ReportView: React.FC = () => {
                 )}
 
                 {reportSettings.includeRiskAnalysis && (
-                    <div className="w-full min-h-[297mm] p-12 bg-white print:break-after-auto page-break">
+                    <div className="w-full min-h-[297mm] print:min-h-0 p-12 print:p-8 bg-white print:break-after-auto page-break">
                         <div className="flex justify-between items-end border-b-2 border-slate-900 pb-4 mb-8">
                             <div><h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Risk ve Yatırım Analizi</h2><p className="text-slate-500 text-sm mt-1">Enflasyon etkileri ve alternatif getiri maliyetleri</p></div>
                         </div>
@@ -867,17 +849,18 @@ export const ReportView: React.FC = () => {
                 .font-serif { font-family: 'Playfair Display', serif; }
                 
                 @media print {
-                    @page { margin: 10mm; size: A4; } /* Kenar boşlukları ayarlandı */
+                    @page { margin: 10mm; size: A4; }
                     body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: 'Inter', system-ui, sans-serif; }
                     .print\\:hidden { display: none !important; }
                     .print\\:shadow-none { box-shadow: none !important; }
                     .print\\:w-full { width: 100% !important; max-width: none !important; margin: 0 !important; }
                     .print\\:m-0 { margin: 0 !important; }
+                    .print\\:min-h-0 { min-height: 0 !important; }
+                    .print\\:p-8 { padding: 2rem !important; }
                     .print\\:break-after-page { break-after: page; page-break-after: always; }
                     .print\\:break-after-auto { break-after: auto; }
                     tr { break-inside: avoid !important; page-break-inside: avoid !important; }
                     thead { display: table-header-group; }
-                    /* TFOOT'un HER SAYFADA TEKRAR ETMESINI ENGELLER */
                     tfoot { display: table-row-group; } 
                 }
             `}</style>
