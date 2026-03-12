@@ -1036,19 +1036,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         
         const groundArea = buildingStats.groundFloorArea || 0;
         
-        // 1. Yönetmelik Min. Kuyu Sayısı
+        // 1. TBDY 2018 Min. Kuyu Sayısı: 300m²'ye kadar 3 kuyu, sonrası her 300m²'ye +1
         const boreholeCount = 3 + Math.floor(Math.max(0, groundArea - 300) / 300);
-
-        // 2. Minimum Sondaj Derinliği (Kuyu başı 10 mt)
+        
+        // 2. En Tasarruflu Sondaj Derinliği: Kuyu başı 10 metre
         const minDepthPerBorehole = 10;
         const totalMeters = boreholeCount * minDepthPerBorehole;
-
-        // 3. Deney Sayıları (Yönetmelik Alt Sınırları)
-        const sptCount = Math.floor(totalMeters / 3.0); 
-        const pressuremeterCount = boreholeCount; 
-        const labTestPackageCount = 1;
-
-        // 4. Alt Maliyetlerin Hesaplanması
+        
+        // 3. Yönetmelik Alt Sınırı Deney Sayıları
+        const sptCount = Math.floor(totalMeters / 3.0); // En seyrek (3 metrede 1) SPT
+        const pressuremeterCount = boreholeCount; // Kuyu başı sadece 1 Presiyometre
+        const labTestPackageCount = 1; // Proje geneli tek Laboratuvar Raporu
+        
+        // 4. Alt maliyetleri hesapla
         const costSondaj = totalMeters * subPrices.sondaj_mt;
         const costSpt = sptCount * subPrices.spt_adet;
         const costPresiyo = pressuremeterCount * subPrices.presiyometre_adet;
@@ -1056,13 +1056,13 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const totalCost = costSondaj + costSpt + costPresiyo + costLab;
 
-        // YENİ: Kırılımları Context üzerinden havuza kaydet
+        // 5. Kırılımları arayüzde (Tooltip/Akordiyon) göstermek için havuza kaydet
         if (costBreakdowns) {
             costBreakdowns[item.name] = [
                 { label: `${boreholeCount} Kuyu x ${minDepthPerBorehole} mt Sondaj`, value: costSondaj },
                 { label: `${sptCount} Adet SPT Deneyi`, value: costSpt },
                 { label: `${pressuremeterCount} Adet Presiyometre`, value: costPresiyo },
-                { label: `${labTestPackageCount} Set Laboratuvar Raporu`, value: costLab }
+                { label: `1 Set Laboratuvar Raporu`, value: costLab }
             ];
         }
 
