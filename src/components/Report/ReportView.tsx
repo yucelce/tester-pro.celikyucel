@@ -641,6 +641,28 @@ export const ReportView: React.FC = () => {
                                                     </tr>
                                                 ))
                                             )}
+                                            {reportSettings.includeQuantityBreakdown && item.costBreakdown && item.costBreakdown.length > 0 && (
+                                                item.costBreakdown.map((cb: any, cbIdx: number) => (
+                                                    <tr key={`cbd-${idx}-${cbIdx}`} className="bg-emerald-50/40 border-b border-emerald-100/50 break-inside-avoid text-[10px] text-slate-600">
+                                                        {/* 1. Sütun: Kalem Adı (Biraz içeriden ve paket/kutu ikonuyla) */}
+                                                        <td className="py-1.5 px-3 pl-12 align-top flex items-start gap-2">
+                                                            <i className="fas fa-level-up-alt rotate-90 text-[8px] text-emerald-400 mt-1"></i>
+                                                            <i className="fas fa-box-open text-emerald-500 mt-0.5"></i>
+                                                            <span className="leading-tight">{cb.label}</span>
+                                                        </td>
+
+                                                        {/* Miktar, Birim ve B.Fiyat Sütunları (Paket içerik olduğu için boş bırakıyoruz / Tire koyuyoruz) */}
+                                                        <td className="py-1.5 px-3 text-right font-mono text-slate-400">-</td>
+                                                        <td className="py-1.5 px-3 text-center font-mono text-slate-400">-</td>
+                                                        <td className="py-1.5 px-3 text-right font-mono text-slate-400">-</td>
+
+                                                        {/* Toplam Sütunu: Bu alt kalemin kendi fiyatını koyu zümrüt renginde yazdırıyoruz */}
+                                                        <td className="py-1.5 px-3 text-right font-bold font-mono align-top text-emerald-700">
+                                                            {cb.value.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
                                         </React.Fragment>
                                     ))}
                                 </React.Fragment>
