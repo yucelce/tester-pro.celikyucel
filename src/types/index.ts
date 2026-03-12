@@ -159,8 +159,15 @@ export interface BuildingStats {
     subasmanHeight?: number;
     roofTerraceArea?: number;
 
-    indoorParkingArea?: number; // Kapalı otopark alanı (m2)
-    shelterArea?: number;       // Sığınak alanı (m2)
+    indoorParkingArea?: number; 
+    indoorParkingFloor?: 'basement' | 'ground' | 'normal';
+    indoorParkingPerimeter?: number;
+    isIndoorParkingPerimeterManual?: boolean;
+
+    shelterArea?: number;       
+    shelterFloor?: 'basement' | 'ground' | 'normal';
+    shelterPerimeter?: number;
+    isShelterPerimeterManual?: boolean;
 
     hasRoofFloor?: boolean;
     roofFloorArea?: number;

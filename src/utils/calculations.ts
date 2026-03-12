@@ -1670,22 +1670,33 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             return netFacade * 1.15; // %15 zayiat
 
         } else {
-            // Apartman için
-            let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+            // Apartman için - Her katın kendi çevresi ayrı ayrı hesaplanacak şekilde güncellendi
+            let groundFacadeHeight = buildingStats.groundFloorHeight;
 
-            // DÜZELTME: Bodrum yoksa subasman (topraktan koparma) yüksekliğini cephe alanına ekle
+            // DÜZELTME: Bodrum yoksa subasman (topraktan koparma) yüksekliğini zemin kat cephe alanına ekle
             if (buildingStats.basementFloorCount === 0) {
                 const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
-                facadeHeight += subasmanH;
+                groundFacadeHeight += subasmanH;
             }
 
-            const perim = buildingStats.normalFloorPerimeter || (Math.sqrt(buildingStats.normalFloorArea) * 4);
+            // 1. Zemin Kat Cephesi (Kendi çevresi ile çarpılır)
+            const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
+            const groundFacade = groundPerim * groundFacadeHeight;
 
-            // Alt katların dış cephesi (Prizma) + Sadece çatı kalkan/parapet cephesi (Ayrıldı)
-            const grossFacade = (perim * facadeHeight) + roofFacade;
+            // 2. Normal Katlar Cephesi (Kendi çevresi ile çarpılır)
+            let normalFacade = 0;
+            let normalPerim = 0;
+            if (buildingStats.normalFloorCount > 0) {
+                normalPerim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea || 0);
+                normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
+            }
+
+            // Alt katların dış cephesi + Sadece çatı kalkan/parapet cephesi
+            const grossFacade = groundFacade + normalFacade + roofFacade;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
 
-            const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, perim);
+            // Zayiat hesabı (Binanın büyük kısmını normal katlar oluşturduğu için normal kat perimetresi baz alınır)
+            const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, normalPerim);
             return netFacade * facadeWaste;
         }
     },
@@ -1873,12 +1884,18 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 totalSteps += flights * (normalStepsPerFlight + landingBonus);
             }
         } else {
-            // APARTMAN DUBLEKS MANTIĞI: Düşüm yapılan dubleks adedi kadar merdiven eklenir.
-            const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
-            if (duplexCount > 0) {
-                const normalHeight = buildingStats.normalFloorHeight || 3.00;
-                const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
-                totalSteps += duplexCount * (normalStepsPerFlight + landingBonus);
+            // APARTMAN DUBLEKS MANTIĞI (YENİ VE KESİN HESAP)
+            const duplexSteps = aggregatedUnitStats['total_duplex_stair_steps'];
+            if (duplexSteps !== undefined) {
+                totalSteps += duplexSteps;
+            } else {
+                // Eğer eski sistemden kalmış bir veri varsa (Fallback)
+                const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
+                if (duplexCount > 0) {
+                    const normalHeight = buildingStats.normalFloorHeight || 3.00;
+                    const normalStepsPerFlight = Math.round(normalHeight / idealRiserHeight);
+                    totalSteps += duplexCount * (normalStepsPerFlight + landingBonus);
+                }
             }
         }
         return totalSteps;
@@ -1906,10 +1923,16 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 totalRailingMt += (buildingStats.normalFloorCount - 1) * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
             }
         } else {
-            // APARTMAN DUBLEKS MANTIĞI
-            const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
-            if (duplexCount > 0) {
-                totalRailingMt += duplexCount * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+            // APARTMAN DUBLEKS MANTIĞI (YENİ VE KESİN HESAP)
+            const duplexRailing = aggregatedUnitStats['total_duplex_stair_railing'];
+            if (duplexRailing !== undefined) {
+                totalRailingMt += duplexRailing;
+            } else {
+                // Eski sistemden kalmış veri (Fallback)
+                const duplexCount = aggregatedUnitStats['total_duplex_count'] || 0;
+                if (duplexCount > 0) {
+                    totalRailingMt += duplexCount * calcFlightRailing(buildingStats.normalFloorHeight || 3.00);
+                }
             }
         }
         return Math.round(totalRailingMt * 100) / 100;

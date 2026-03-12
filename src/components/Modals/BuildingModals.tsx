@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BuildingStats, UnitType, Point, WallMaterial } from '../../types';
 import { CostCategory } from '../../cost_data';
+import { estimatePerimeter } from '../../utils/calculations';
 
 import { useProjectStore } from '../../stores/projectStore';
 import { NumericInput } from '../Shared/NumericInput';
@@ -567,32 +568,135 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                     </div>
                                 </div>
                                 {/* Bodrum Kat - Otopark ve Sığınak Detayları */}
-                                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700/50 animate-fadeIn">
-                                    <div>
-                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                                            İçindeki Kapalı Otopark (m²)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={buildingStats.indoorParkingArea || ''}
-                                            onChange={(e) => setBuildingStats({ ...buildingStats, indoorParkingArea: parseFloat(e.target.value) || 0 })}
-                                            className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-orange-500 outline-none"
-                                            placeholder="Örn: 200"
-                                        />
-                                        <p className="text-[9px] text-slate-500 mt-1">İnce işlerden düşülür, zemin sertleştirici ve Jet Fan eklenir.</p>
+                                <div className="space-y-4 bg-slate-800/30 p-4 md:p-5 rounded-xl border border-slate-700/50 hover:border-blue-500/30 transition mt-4">
+                                    <h4 className="font-bold text-blue-400 text-sm md:text-base flex items-center gap-2 border-b border-blue-900/50 pb-2">
+                                        <i className="fas fa-parking"></i> Ortak Alanlar (Kapalı Otopark & Sığınak)
+                                    </h4>
+
+                                    {/* Kapalı Otopark */}
+                                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                            <div className="flex-1">
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Kapalı Otopark Alanı (m²)</label>
+                                                <input
+                                                    type="number"
+                                                    value={buildingStats.indoorParkingArea || ''}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        let updates: Partial<BuildingStats> = { indoorParkingArea: val };
+                                                        if (!buildingStats.isIndoorParkingPerimeterManual) {
+                                                            updates.indoorParkingPerimeter = parseFloat(estimatePerimeter(val).toFixed(2));
+                                                        }
+                                                        if (val > 0 && !buildingStats.indoorParkingFloor) updates.indoorParkingFloor = 'basement';
+                                                        setBuildingStats({ ...buildingStats, ...updates });
+                                                    }}
+                                                    className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-blue-500 outline-none transition"
+                                                    placeholder="Örn: 200"
+                                                />
+                                            </div>
+
+                                            {/* Kullanıcı alan girdiyse Detaylar açılır */}
+                                            {(buildingStats.indoorParkingArea || 0) > 0 && (
+                                                <>
+                                                    <div className="flex-1 animate-fadeIn">
+                                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">Bulunduğu Kat</label>
+                                                        <select
+                                                            value={buildingStats.indoorParkingFloor || 'basement'}
+                                                            onChange={(e) => setBuildingStats({ ...buildingStats, indoorParkingFloor: e.target.value as any })}
+                                                            className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-white text-sm focus:border-blue-500 outline-none"
+                                                        >
+                                                            <option value="basement">Bodrum Kat</option>
+                                                            <option value="ground">Zemin Kat</option>
+                                                            <option value="normal">Normal Kat</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1 animate-fadeIn">
+                                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">Çevre Duvarı Uzunluğu (m)</label>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                value={buildingStats.indoorParkingPerimeter || 0}
+                                                                onChange={(e) => setBuildingStats({ ...buildingStats, indoorParkingPerimeter: parseFloat(e.target.value) || 0, isIndoorParkingPerimeterManual: true })}
+                                                                className={`w-full bg-slate-950 border rounded p-2 text-white text-sm font-mono pr-7 transition ${buildingStats.isIndoorParkingPerimeterManual ? 'border-yellow-500' : 'border-slate-600'}`}
+                                                            />
+                                                            {buildingStats.isIndoorParkingPerimeterManual && (
+                                                                <button
+                                                                    onClick={() => setBuildingStats({ ...buildingStats, isIndoorParkingPerimeterManual: false, indoorParkingPerimeter: parseFloat(estimatePerimeter(buildingStats.indoorParkingArea || 0).toFixed(2)) })}
+                                                                    className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400"
+                                                                    title="Alana göre otomatik hesapla"
+                                                                >
+                                                                    <i className="fas fa-undo text-[10px]"></i>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] text-slate-500 mt-2">Bu alan ve çevre, seçilen katın ince işlerinden (sıva, boya, parke vb.) otomatik düşülür (Minha). Helikopter şap ve Jet Fan ilave edilir.</p>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">
-                                            İçindeki Sığınak Alanı (m²)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={buildingStats.shelterArea || ''}
-                                            onChange={(e) => setBuildingStats({ ...buildingStats, shelterArea: parseFloat(e.target.value) || 0 })}
-                                            className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-orange-500 outline-none"
-                                            placeholder="Örn: 50"
-                                        />
-                                        <p className="text-[9px] text-slate-500 mt-1">İnce işlerden düşülür, çelik kapı ve santral eklenir.</p>
+
+                                    {/* Sığınak */}
+                                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mt-3">
+                                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                            <div className="flex-1">
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Sığınak Alanı (m²)</label>
+                                                <input
+                                                    type="number"
+                                                    value={buildingStats.shelterArea || ''}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        let updates: Partial<BuildingStats> = { shelterArea: val };
+                                                        if (!buildingStats.isShelterPerimeterManual) {
+                                                            updates.shelterPerimeter = parseFloat(estimatePerimeter(val).toFixed(2));
+                                                        }
+                                                        if (val > 0 && !buildingStats.shelterFloor) updates.shelterFloor = 'basement';
+                                                        setBuildingStats({ ...buildingStats, ...updates });
+                                                    }}
+                                                    className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-white text-sm font-mono focus:border-blue-500 outline-none transition"
+                                                    placeholder="Örn: 50"
+                                                />
+                                            </div>
+
+                                            {/* Kullanıcı alan girdiyse Detaylar açılır */}
+                                            {(buildingStats.shelterArea || 0) > 0 && (
+                                                <>
+                                                    <div className="flex-1 animate-fadeIn">
+                                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">Bulunduğu Kat</label>
+                                                        <select
+                                                            value={buildingStats.shelterFloor || 'basement'}
+                                                            onChange={(e) => setBuildingStats({ ...buildingStats, shelterFloor: e.target.value as any })}
+                                                            className="w-full bg-slate-950 border border-slate-600 rounded p-2 text-white text-sm focus:border-blue-500 outline-none"
+                                                        >
+                                                            <option value="basement">Bodrum Kat</option>
+                                                            <option value="ground">Zemin Kat</option>
+                                                            <option value="normal">Normal Kat</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1 animate-fadeIn">
+                                                        <label className="text-[10px] text-slate-400 font-bold block mb-1">Bölme Duvarı / Çevre (m)</label>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                value={buildingStats.shelterPerimeter || 0}
+                                                                onChange={(e) => setBuildingStats({ ...buildingStats, shelterPerimeter: parseFloat(e.target.value) || 0, isShelterPerimeterManual: true })}
+                                                                className={`w-full bg-slate-950 border rounded p-2 text-white text-sm font-mono pr-7 transition ${buildingStats.isShelterPerimeterManual ? 'border-yellow-500' : 'border-slate-600'}`}
+                                                            />
+                                                            {buildingStats.isShelterPerimeterManual && (
+                                                                <button
+                                                                    onClick={() => setBuildingStats({ ...buildingStats, isShelterPerimeterManual: false, shelterPerimeter: parseFloat(estimatePerimeter(buildingStats.shelterArea || 0).toFixed(2)) })}
+                                                                    className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400"
+                                                                    title="Alana göre otomatik hesapla"
+                                                                >
+                                                                    <i className="fas fa-undo text-[10px]"></i>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] text-slate-500 mt-2">Daire içi imalatlar metrajdan düşülür. Sığınak standartlarına uygun çelik kapı, havalandırma santrali ve asgari WC maliyeti otomatik yansıtılır.</p>
                                     </div>
                                 </div>
                                 {/* Çatı Katı (Dubleks / Piyes) */}

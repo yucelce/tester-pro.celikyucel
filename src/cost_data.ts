@@ -46,6 +46,7 @@ export interface CostItem {
   manualPrice?: number;
   scope?: 'global' | 'unit' | 'hidden';
   inputType?: 'quantity_x_price' | 'manual_total';
+  vatRate?: number;
 }
 
 type RawCostItem = Omit<CostItem, 'unit_price'> & { unit_price?: number };
@@ -67,14 +68,14 @@ const RAW_COST_DATA: RawCostCategory[] = [
     id: "arsa_finansman",
     title: "0. Arsa ve Finansman Giderleri",
     items: [
-      { name: "Hak Sahipleri Kira Yardımı (Toplam)", unit: "Toplam", auto_source: "calc_rent_assistance", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Hak Sahipleri Tahliye/Taşınma Bedeli", unit: "Toplam", auto_source: "calc_eviction_cost", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Tapu Harçları ve Noter Masrafları", unit: "Toplam", auto_source: "calc_tapu_noter", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Emlak Vergisi Tutarı", unit: "Toplam", auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Arsa Rayiç Bedeli (Maliyet)", unit: "Toplam", auto_source: "calc_land_tax", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Tapu Döner Sermaye", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Noter Yazı Ücreti", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Standart Sözleşme Harcı", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
+      { name: "Hak Sahipleri Kira Yardımı (Toplam)", unit: "Toplam", auto_source: "calc_rent_assistance", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Hak Sahipleri Tahliye/Taşınma Bedeli", unit: "Toplam", auto_source: "calc_eviction_cost", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Tapu Harçları ve Noter Masrafları", unit: "Toplam", auto_source: "calc_tapu_noter", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Emlak Vergisi Tutarı", unit: "Toplam", auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Arsa Rayiç Bedeli (Maliyet)", unit: "Toplam", auto_source: "calc_land_tax", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Tapu Döner Sermaye", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden', vatRate: 0 },
+      { name: "Noter Yazı Ücreti", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden', vatRate: 0 },
+      { name: "Standart Sözleşme Harcı", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden', vatRate: 0 },
     ]
   },
   {
@@ -99,9 +100,9 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Yapı Sınıfı 4A", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Yapı Sınıfı 4B", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Yıkım Teknik Sorumlu Ücreti", unit: "Paket", auto_source: "calc_demolition_supervisor", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Mevcut Bina Yıkım Ruhsat Bedeli", unit: "Paket", auto_source: "calc_demolition_area", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Ruhsat Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global' },
-      { name: "İskan Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global' },
+      { name: "Mevcut Bina Yıkım Ruhsat Bedeli", unit: "Paket", auto_source: "calc_demolition_area", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Ruhsat Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global', vatRate: 0 },
+      { name: "İskan Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global', vatRate: 0 },
       { name: "Enerji Kimlik Belgesi", unit: "Paket", auto_source: "calc_ekb", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Yeşil Etiket (Asansör Ruhsat)", unit: "Toplam", auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
@@ -111,8 +112,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
     title: "2. Şantiye Kurulumu ve Genel Giderler",
     items: [
       { name: "Şantiye Şefi (Aylık)", unit: "Ay", auto_source: "calc_site_chief", multiplier: 1, scope: 'global' },
-      { name: "SGK Asgari İşçilik Primi", unit: "Paket", auto_source: "calc_sgk_premium", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "İnşaat All Risk Sigortası", unit: "Paket", auto_source: "calc_all_risk", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "SGK Asgari İşçilik Primi", unit: "Paket", auto_source: "calc_sgk_premium", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "İnşaat All Risk Sigortası", unit: "Paket", auto_source: "calc_all_risk", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "OSGB Hizmet Bedeli (Aylık)", unit: "Ay", auto_source: "calc_osgb_service", multiplier: 1, scope: 'global' },
       { name: "Hafriyat (Kazı ve Döküm)", unit: "m3", auto_source: "calc_excavation", multiplier: 1, scope: 'global' },
       { name: "Kuyu Temel Kazı İşçiliği", unit: "m3", auto_source: "calc_well_foundation_excavation", multiplier: 1, scope: 'global' },
@@ -150,7 +151,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", auto_source: "calc_foundation_xps", multiplier: 1.05, scope: 'global' },
       { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", auto_source: "calc_roof", multiplier: 1, scope: 'global' },
-      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "calc_terrace_waterproofing", multiplier: 1, scope: 'global' }, { name: "Yangın Merdiveni (Çelik)", unit: "Kat", auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }
+      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "calc_terrace_waterproofing", multiplier: 1, scope: 'global' }, 
+      { name: "Yangın Merdiveni (Çelik)", unit: "Kat", auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
   {
@@ -221,7 +223,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Çelik Kapı (Daire Giriş)", unit: "Adet", auto_source: "calc_steel_door", multiplier: 1, scope: 'unit' },
       { name: "İç Kapı (Panel/Lake)", unit: "Adet", auto_source: "calc_inner_door", multiplier: 1, scope: 'unit' },
       { name: "Yangın Kapısı (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-{ name: "Mutfak Dolabı (Standart)", unit: "mt", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' },      { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
+      { name: "Mutfak Dolabı (Standart)", unit: "mt", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' }, 
+      { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "İç Merdiven Kaplama", unit: "Basamak", auto_source: "calc_internal_stair_steps", multiplier: 1, scope: 'global' },
       { name: "İç Merdiven Korkuluk", unit: "mt", auto_source: "calc_internal_stair_railing_mt", multiplier: 1, scope: 'global' },
@@ -266,7 +269,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Asansör (Paket)", unit: "Adet", auto_source: "calc_elevator", multiplier: 1, scope: 'global' },
       { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global', inputType: 'manual_total' }, { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global', inputType: 'manual_total' }, 
+      { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
   {
@@ -282,7 +286,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Jeneratör (Ortak Alan)", unit: "Paket", auto_source: "calc_generator", multiplier: 1, scope: 'global', inputType: 'manual_total' }, { name: "Akıllı Ev Altyapı ve Donanım Paketi", unit: "Paket", auto_source: 'calc_smart_home', multiplier: 1, scope: 'global', inputType: 'manual_total' }
+      { name: "Jeneratör (Ortak Alan)", unit: "Paket", auto_source: "calc_generator", multiplier: 1, scope: 'global', inputType: 'manual_total' }, 
+      { name: "Akıllı Ev Altyapı ve Donanım Paketi", unit: "Paket", auto_source: 'calc_smart_home', multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
   {
