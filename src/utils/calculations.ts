@@ -1094,7 +1094,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         return totalConcrete * 1.03 * (item.multiplier || 1);
     },
-    
+
     'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
@@ -2116,7 +2116,8 @@ export const calculateComplexGlobalQuantity = (
         globalWallMaterial,
         totalFloors,
         totalBuildingHeight,
-        regulationHeight
+        regulationHeight,
+        costBreakdowns
     };
 
     const strategy = globalQuantityStrategies[item.auto_source];
