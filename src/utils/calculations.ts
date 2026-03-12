@@ -776,7 +776,11 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalConstructionArea;
     },
 
-    'calc_indoor_parking_screed': ({ buildingStats }) => buildingStats.indoorParkingArea || 0,
+    'calc_indoor_parking_screed': ({ buildingStats, aggregatedUnitStats }) => {
+        const parkingArea = buildingStats.indoorParkingArea || 0;
+        const shelterExtraScreed = aggregatedUnitStats['calc_indoor_parking_screed'] || 0;
+        return parkingArea + shelterExtraScreed;
+    },
 
     'calc_parking_ventilation': ({ buildingStats, currentCosts }) => {
         if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;

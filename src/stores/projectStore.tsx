@@ -1123,6 +1123,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
                     aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
                     aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15));
+                    
+                    // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
+                    const generatedInnerWalls = parkingArea * 1.1 * (pH / 3.0);
+                    aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls + pWallArea);
+                    addBreakdown(`wall_${innerThickStr}_area`, 'Otopark İç Duvar (Açık Alan) Düzeltmesi', pWallArea - generatedInnerWalls);
                 }
 
                 // 2. SIĞINAK DÜŞÜMÜ
@@ -1140,8 +1145,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - sWallArea);
                     addBreakdown('calc_plaster_area', 'Sığınak Duvar Minhası', -sWallArea);
 
-                    aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - shelterArea);
-                    addBreakdown('dry_area', 'Sığınak Zemin Minhası', -shelterArea);
+                    // YENİ EKLENEN EKSİK DÜŞÜMLER
+                    aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - shelterArea);
+                    addBreakdown('calc_ceiling_paint_area', 'Sığınak Tavan Minhası', -shelterArea);
+
+                    aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - shelterArea);
+
+                    aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
+                    addBreakdown('dry_area', 'Sığınak Zemin Minhası', -(shelterArea * 0.85));
+                    
+                    aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (shelterArea * 0.15));
+                    aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (shelterArea * 0.15));
+
+                    // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
+                    const generatedInnerWalls = shelterArea * 1.1 * (sH / 3.0);
+                    aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls + sWallArea);
+                    addBreakdown(`wall_${innerThickStr}_area`, 'Sığınak İç Duvar Düzeltmesi', sWallArea - generatedInnerWalls);
                 }
             }
 
