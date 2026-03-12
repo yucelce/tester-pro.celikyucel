@@ -782,6 +782,11 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return parkingArea + shelterExtraScreed;
     },
 
+    'calc_parking_ceiling_insulation': ({ buildingStats }) => {
+        // Sadece otopark alanını döndür, sığınak alanını dahil etme
+        return buildingStats.indoorParkingArea || 0;
+    },
+
     'calc_parking_ventilation': ({ buildingStats, currentCosts }) => {
         if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
 
@@ -796,7 +801,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const sprinklerTotal = area * sprinklerPrice;
 
         // 3. Jet Fan Maliyeti (Ortalama her 350 m²'ye 1 adet itici/yönlendirici fan hesaplanır)
-        const jetFanCount = Math.ceil(area / 350);
+        const jetFanCount = area >= 400 ? Math.ceil(area / 350) : 0;
         const jetFanTotal = jetFanCount * jetFanPrice;
 
         // 4. Ana Şaft Fanları ve Otomasyon Santrali Maliyeti
