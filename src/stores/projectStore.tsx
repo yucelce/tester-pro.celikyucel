@@ -873,26 +873,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
 
-
-        // sistemin duvar ve beton metrajlarını hesaplayabilmesi için yapı istatistiklerine (buildingStats) dayalı sanal kat planları oluşturulur.
-        if (structuralUnits.length === 0 && (globalWallMode === 'auto' || globalConcreteMode === 'auto')) {
-            effectiveStructuralUnits = [];
-
-            if (buildingStats.normalFloorCount > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_n', name: 'Normal Kat (Sanal)', floorType: 'normal', count: buildingStats.normalFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
-            }
-            if (buildingStats.groundFloorArea > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_g', name: 'Zemin Kat (Sanal)', floorType: 'ground', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
-            }
-            if (buildingStats.basementFloorCount > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_b', name: 'Bodrum Kat (Sanal)', floorType: 'basement', count: buildingStats.basementFloorCount, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
-            }
-            if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea && buildingStats.roofFloorArea > 0) {
-                effectiveStructuralUnits.push({ id: 'auto_r', name: 'Çatı Katı (Sanal)', floorType: 'roof', count: 1, scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [] } as unknown as UnitType);
-            }
-        }
-
-
         effectiveStructuralUnits.forEach(u => {
             const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
 
@@ -989,8 +969,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             aggregatedUnitStats['calc_ceiling_paint_area'] = (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) + totalHallCeilingArea;
             addBreakdown('calc_ceiling_paint_area', 'Ortak Alan (Kat Holü) Tavanları', totalHallCeilingArea); // <--- EKLENDİ
 
-            aggregatedUnitStats['calc_rough_plaster_area'] = (aggregatedUnitStats['calc_rough_plaster_area'] || 0) + totalHallWallArea;
-            addBreakdown('calc_rough_plaster_area', 'Ortak Alan (Kat Holü) Duvarları', totalHallWallArea); // <--- EKLENDİ
 
             aggregatedUnitStats['calc_paint_wall_area'] = (aggregatedUnitStats['calc_paint_wall_area'] || 0) + totalHallWallArea;
             addBreakdown('calc_paint_wall_area', 'Ortak Alan (Kat Holü) Boyası', totalHallWallArea); // <--- EKLENDİ

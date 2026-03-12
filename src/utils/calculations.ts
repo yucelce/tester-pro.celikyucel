@@ -243,28 +243,28 @@ export class QuantityTakeoffService {
     }
 
     private static applyFinishesAndOpenings(stats: any, room: any, dHeight: number, avgThick: number) {
-        const doorDeduction = (room.properties.doorCount || 0) * 1.89;
+       const doorDeduction = (room.properties.doorCount || 0) * 1.89;
         const windowDeduction = room.properties.windowArea || 0;
         const grossWallArea = Math.max(0, (room.perimeterM * room.roomHeight) - (doorDeduction + windowDeduction));
 
-        // YENİ: Asma tavan kontrolü (Varsayılan olarak bath ve wc, ancak kullanıcı seçimine öncelik verilir)
         const isSuspendedCeiling = room.properties.hasSuspendedCeiling ?? (room.type === 'bath' || room.type === 'wc');
 
         if (isSuspendedCeiling) {
             stats.calc_suspended_ceiling_area = (stats.calc_suspended_ceiling_area || 0) + room.areaM2;
         } else {
-            stats.calc_ceiling_paint_area += room.areaM2; // Sadece asma tavan olmayan yerlere tavan boyası
+            stats.calc_ceiling_paint_area += room.areaM2; 
         }
 
-        stats.calc_rough_plaster_area += grossWallArea;
-
+        // --- GÜNCELLENEN KISIM: SIVA MANTIĞI AYRIŞTIRILDI ---
         if (room.properties.wallFinish === 'boya') {
             stats.calc_paint_wall_area += grossWallArea;
-            stats.calc_plaster_area += grossWallArea + (isSuspendedCeiling ? 0 : room.areaM2);
+            stats.calc_plaster_area += grossWallArea + (isSuspendedCeiling ? 0 : room.areaM2); // Sadece Alçı Sıva
         } else {
             stats.wet_area += grossWallArea;
             stats.net_wet_area += grossWallArea;
+            stats.calc_rough_plaster_area += grossWallArea; // Seramik altına sadece Kara Sıva
         }
+        // -----------------------------------------------------
 
         if (room.properties.hasCornice) stats.cornice_length += room.perimeterM;
         if (room.properties.floorType === 'seramik' || room.properties.hasWaterproofing) {
