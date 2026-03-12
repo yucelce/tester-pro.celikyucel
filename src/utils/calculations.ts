@@ -696,29 +696,32 @@ export const calculateSoilInvestigationPackage = (
         laboratuvar_paket: number
     }
 ): number => {
-    // 1. Sondaj Sayısı Hesabı: <300m2 için 3 adet, her ek 300m2 için +1
+    // 1. TBDY 2018'e Göre Minimum Kuyu Sayısı: 300m2'ye kadar 3 adet, sonrası için her 300m2'ye +1
     const boreholeCount = 3 + Math.floor(Math.max(0, groundArea - 300) / 300);
 
-    // 2. Sondaj Derinliği Hesabı: Yapı genişliğinin 1.5 katı (Kare kabulü ile sqrt(Alan) * 1.5)
-    // Minimum 15m, Maksimum 30m (standart yapılar için güvenli aralık)
-    const estimatedWidth = Math.sqrt(groundArea);
-    const calculatedDepth = Math.max(15, Math.min(30, Math.ceil(estimatedWidth * 1.5)));
+    // 2. Minimum Sondaj Derinliği: Sığ temeller ve standart yapılar için yönetmelik alt sınırı kuyu başı 10-15 metredir.
+    // Maliyeti asgaride tutmak için kuyu başı 10 metre (sert/standart zemin kabulü) alıyoruz.
+    const minDepthPerBorehole = 10;
+    const totalMeters = boreholeCount * minDepthPerBorehole;
 
-    const totalMeters = boreholeCount * calculatedDepth;
+    // 3. Deney Sayıları (Yönetmelik Alt Sınırları)
+    // SPT: Yönetmelikte genelde 1.5m istenir ancak alt sınır olarak 3 metrede bir kabul edilebilir.
+    const sptCount = Math.floor(totalMeters / 3.0); 
+    
+    // Presiyometre: Her kuyu için asgari 1 adet kritik derinlik testi.
+    const pressuremeterCount = boreholeCount; 
 
-    // 3. Deney Sayıları
-    const sptCount = Math.floor(totalMeters / 1.5); // Her 1.5m'de bir SPT
-    const pressuremeterCount = Math.floor(totalMeters / 3.0); // Her 3m'de bir Presiyometre
-    const labTestPackageCount = boreholeCount; // Her kuyu için 1 ana laboratuvar paketi
+    // 4. Laboratuvar Paketi: Proje başına asgari 1 tam set yeterlidir.
+    const labTestPackageCount = 1;
 
-    // 4. Toplam Maliyet Hesabı
+    // 5. Toplam Maliyet Hesabı (Wix'ten gelen birim fiyatlar ile minimum metrajların çarpımı)
     const totalCost =
         (totalMeters * prices.sondaj_mt) +
         (sptCount * prices.spt_adet) +
         (pressuremeterCount * prices.presiyometre_adet) +
         (labTestPackageCount * prices.laboratuvar_paket);
 
-    return totalCost;
+    return Math.round(totalCost);
 };
 
 
@@ -737,6 +740,7 @@ export interface CalculationContext {
     totalFloors: number;
     totalBuildingHeight: number;
     regulationHeight: number;
+    costBreakdowns?: Record<string, { label: string; value: number }[]>;
 }
 
 type CalculatorFn = (ctx: CalculationContext) => number;
@@ -1022,16 +1026,47 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalTerraceAndBalcony;
     },
 
-    'calc_soil_investigation': ({ buildingStats, currentCosts }) => {
-
+    'calc_soil_investigation': ({ buildingStats, currentCosts, item, costBreakdowns }) => {
         const subPrices = {
             sondaj_mt: getGlobalPrice(currentCosts, "Zemin Sondaj Birim Fiyatı"),
             spt_adet: getGlobalPrice(currentCosts, "SPT Deneyi Birim Fiyatı"),
             presiyometre_adet: getGlobalPrice(currentCosts, "Presiyometre Deneyi Birim Fiyatı"),
             laboratuvar_paket: getGlobalPrice(currentCosts, "Zemin Laboratuvar Paketi")
         };
+        
         const groundArea = buildingStats.groundFloorArea || 0;
-        return calculateSoilInvestigationPackage(groundArea, subPrices);
+        
+        // 1. Yönetmelik Min. Kuyu Sayısı
+        const boreholeCount = 3 + Math.floor(Math.max(0, groundArea - 300) / 300);
+
+        // 2. Minimum Sondaj Derinliği (Kuyu başı 10 mt)
+        const minDepthPerBorehole = 10;
+        const totalMeters = boreholeCount * minDepthPerBorehole;
+
+        // 3. Deney Sayıları (Yönetmelik Alt Sınırları)
+        const sptCount = Math.floor(totalMeters / 3.0); 
+        const pressuremeterCount = boreholeCount; 
+        const labTestPackageCount = 1;
+
+        // 4. Alt Maliyetlerin Hesaplanması
+        const costSondaj = totalMeters * subPrices.sondaj_mt;
+        const costSpt = sptCount * subPrices.spt_adet;
+        const costPresiyo = pressuremeterCount * subPrices.presiyometre_adet;
+        const costLab = labTestPackageCount * subPrices.laboratuvar_paket;
+
+        const totalCost = costSondaj + costSpt + costPresiyo + costLab;
+
+        // YENİ: Kırılımları Context üzerinden havuza kaydet
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${boreholeCount} Kuyu x ${minDepthPerBorehole} mt Sondaj`, value: costSondaj },
+                { label: `${sptCount} Adet SPT Deneyi`, value: costSpt },
+                { label: `${pressuremeterCount} Adet Presiyometre`, value: costPresiyo },
+                { label: `${labTestPackageCount} Set Laboratuvar Raporu`, value: costLab }
+            ];
+        }
+
+        return Math.round(totalCost);
     },
 
     'calc_concrete_global': ({ buildingStats, totalFloors, aggregatedUnitStats, totalConstructionArea, item }) => {
@@ -2046,7 +2081,8 @@ export const calculateComplexGlobalQuantity = (
     constructionDuration: number,
     aggregatedUnitStats: Record<string, number>,
     currentCosts?: CostCategory[],
-    globalWallMaterial: WallMaterial = 'gazbeton'
+    globalWallMaterial: WallMaterial = 'gazbeton',
+    costBreakdowns?: Record<string, { label: string; value: number }[]>
 ): number => {
     const totalFloors = buildingStats.basementFloorCount + buildingStats.normalFloorCount + 1; // +1 Ground
 

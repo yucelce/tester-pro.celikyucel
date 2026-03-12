@@ -900,36 +900,61 @@ export const DashboardView: React.FC = () => {
                                                                             <div className="flex items-center gap-1">
                                                                                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
 
-                                                                                {/* YENİ: METRAJ İCMAL (KIRILIM) İKONU VE LİSTESİ */}
-                                                                                {item.breakdown &&
-                                                                                    item.breakdown.length > 0 &&
-                                                                                    !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) && (
-                                                                                        <div className="relative flex items-center cursor-help">                                                                                        <i className="fas fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30 p-1 rounded transition"></i>
+                                                                                {/* BİRLEŞTİRİLMİŞ İCMAL VE MALİYET BALONU */}
+                                                                                {(
+                                                                                    (item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source)) ||
+                                                                                    (item.costBreakdown && item.costBreakdown.length > 0)
+                                                                                ) && (
+                                                                                        <div className="relative flex items-center cursor-help group/breakdown">
+                                                                                            {/* İkon: Eğer maliyet paketi ise yeşil kutu, metraj ise mavi liste ikonu gösterir */}
+                                                                                            <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
 
-                                                                                            {/* TOOLTIP BALONU */}
-                                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 group-hover/breakdown:opacity-100 pointer-events-none transition-opacity duration-200 z-[100] border border-slate-600">
-                                                                                                <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
-                                                                                                    <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
-                                                                                                </div>
+                                                                                            {/* ANA TOOLTIP BALONU */}
+                                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
 
-                                                                                                {/* max-h-40 yerine max-h-60 yapıldı ki liste biraz daha uzun görünebilsin */}
-                                                                                                <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
-                                                                                                    {item.breakdown.map((b: any, idx: number) => (
-                                                                                                        // items-center yerine items-start yapıldı ki metin alt satıra geçerse rakam yukarıda düzgün dursun
-                                                                                                        <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
-                                                                                                            {/* truncate KALDIRILDI, leading-tight eklendi. Böylece metin sığmazsa alt satıra tam olarak yazılır */}
-                                                                                                            <span className="opacity-90 leading-tight" title={b.source}>{b.source}</span>
-                                                                                                            <span className={`font-mono font-bold shrink-0 mt-0.5 ${b.qty > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                                                                {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
-                                                                                                            </span>
+                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
+                                                                                                {item.costBreakdown && item.costBreakdown.length > 0 && (
+                                                                                                    <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
+                                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+                                                                                                            <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
                                                                                                         </div>
-                                                                                                    ))}
-                                                                                                </div>
+                                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                                                                            {item.costBreakdown.map((cb: any, idx: number) => (
+                                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                                    <span className="opacity-90 leading-tight">{cb.label}</span>
+                                                                                                                    <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
+                                                                                                                        {cb.value.toLocaleString('tr-TR')} ₺
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
 
-                                                                                                <div className="border-t border-slate-600 mt-2 pt-2 flex justify-between items-center text-yellow-400 font-bold">
-                                                                                                    <span>Sistem Toplamı:</span>
-                                                                                                    <span>{item.calculatedAutoQty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {item.unit}</span>
-                                                                                                </div>
+                                                                                                {/* 2. KISIM: METRAJ İCMAL DÖKÜMÜ */}
+                                                                                                {item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) && (
+                                                                                                    <div>
+                                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
+                                                                                                            <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
+                                                                                                        </div>
+                                                                                                        <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                                                                                            {item.breakdown.map((b: any, idx: number) => (
+                                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                                    <span className="opacity-90 leading-tight" title={b.source}>{b.source}</span>
+                                                                                                                    <span className={`font-mono font-bold shrink-0 mt-0.5 ${b.qty > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                                                                        {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+
+                                                                                                        <div className="border-t border-slate-600 mt-2 pt-2 flex justify-between items-center text-yellow-400 font-bold">
+                                                                                                            <span>Sistem Toplamı:</span>
+                                                                                                            <span>{item.calculatedAutoQty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {item.unit}</span>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+
                                                                                                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
                                                                                             </div>
                                                                                         </div>

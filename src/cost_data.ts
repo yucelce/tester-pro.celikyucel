@@ -47,6 +47,8 @@ export interface CostItem {
   scope?: 'global' | 'unit' | 'hidden';
   inputType?: 'quantity_x_price' | 'manual_total';
   vatRate?: number;
+  breakdown?: any[]; // Var olan metraj kırılımı
+  costBreakdown?: { label: string; value: number }[];
 }
 
 type RawCostItem = Omit<CostItem, 'unit_price'> & { unit_price?: number };

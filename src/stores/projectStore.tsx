@@ -789,6 +789,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const aggregatedUnitStats: Record<string, number> = {};
         // YENİ: Kırılımları tutacağımız ana liste
         const quantityBreakdowns: Record<string, { source: string, qty: number }[]> = {};
+        const globalCostBreakdowns: Record<string, { label: string; value: number }[]> = {};
 
         // YENİ: Kırılıma veri ekleyen yardımcı fonksiyon
         const addBreakdown = (key: string, source: string, qty: number) => {
@@ -1245,7 +1246,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 constructionDuration,
                                 aggregatedUnitStats,
                                 costs,
-                                globalWallMaterial
+                                globalWallMaterial,
+                                globalCostBreakdowns
                             );
                             dynamicUnitPrice = calculatedValue;
                         }
@@ -1297,7 +1299,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         finalQty,
                         totalPrice,
                         unit_price: dynamicUnitPrice,
-                        breakdown: quantityBreakdowns[item.auto_source] || [] // <--- YENİ EKLENDİ: Kırılımları UI'a aktarıyor
+                        breakdown: quantityBreakdowns[item.auto_source] || [],
+                        costBreakdown: globalCostBreakdowns[item.name] || null 
                     };
                 });
 
