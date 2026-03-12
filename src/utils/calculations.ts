@@ -243,7 +243,7 @@ export class QuantityTakeoffService {
     }
 
     private static applyFinishesAndOpenings(stats: any, room: any, dHeight: number, avgThick: number) {
-       const doorDeduction = (room.properties.doorCount || 0) * 1.89;
+        const doorDeduction = (room.properties.doorCount || 0) * 1.89;
         const windowDeduction = room.properties.windowArea || 0;
         const grossWallArea = Math.max(0, (room.perimeterM * room.roomHeight) - (doorDeduction + windowDeduction));
 
@@ -252,7 +252,7 @@ export class QuantityTakeoffService {
         if (isSuspendedCeiling) {
             stats.calc_suspended_ceiling_area = (stats.calc_suspended_ceiling_area || 0) + room.areaM2;
         } else {
-            stats.calc_ceiling_paint_area += room.areaM2; 
+            stats.calc_ceiling_paint_area += room.areaM2;
         }
 
         // --- GÜNCELLENEN KISIM: SIVA MANTIĞI AYRIŞTIRILDI ---
@@ -706,10 +706,10 @@ export const calculateSoilInvestigationPackage = (
 
     // 3. Deney Sayıları (Yönetmelik Alt Sınırları)
     // SPT: Yönetmelikte genelde 1.5m istenir ancak alt sınır olarak 3 metrede bir kabul edilebilir.
-    const sptCount = Math.floor(totalMeters / 3.0); 
-    
+    const sptCount = Math.floor(totalMeters / 3.0);
+
     // Presiyometre: Her kuyu için asgari 1 adet kritik derinlik testi.
-    const pressuremeterCount = boreholeCount; 
+    const pressuremeterCount = boreholeCount;
 
     // 4. Laboratuvar Paketi: Proje başına asgari 1 tam set yeterlidir.
     const labTestPackageCount = 1;
@@ -791,57 +791,58 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return buildingStats.indoorParkingArea || 0;
     },
 
-    'calc_parking_ventilation': ({ buildingStats, currentCosts }) => {
+    'calc_parking_ventilation': ({ buildingStats, currentCosts, item, costBreakdowns }) => {
         if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
 
         const area = buildingStats.indoorParkingArea;
 
-        // 1. Gizli kalem birim fiyatlarını çek
         const sprinklerPrice = getGlobalPrice(currentCosts, "Otopark Sprinkler Altyapısı (m²)");
         const jetFanPrice = getGlobalPrice(currentCosts, "Otopark Jet Fan Cihazı (Adet)");
         const centralVentPrice = getGlobalPrice(currentCosts, "Egzost/Taze Hava Santrali ve Otomasyon (Paket)");
 
-        // 2. Sulu Söndürme (Sprinkler) Maliyeti (Doğrudan m2 ile orantılı)
         const sprinklerTotal = area * sprinklerPrice;
-
-        // 3. Jet Fan Maliyeti (Ortalama her 500 m²'ye 1 adet itici/yönlendirici fan hesaplanır)
         const jetFanCount = area >= 2000 ? Math.ceil(area / 500) : 0;
         const jetFanTotal = jetFanCount * jetFanPrice;
 
-        // 4. Ana Şaft Fanları ve Otomasyon Santrali Maliyeti
-        // Temel santral 500 m²'ye kadar yeterli kabul edilir.
         let ventScale = 1.0;
-        if (area > 500) {
-            // 500 m²'yi aşan her 500 m² dilim için santral motor ve şaft büyüklüğü %50 oranında artırılır.
-            ventScale = 1.0 + ((area - 500) / 500) * 0.50;
-        }
+        if (area > 500) ventScale = 1.0 + ((area - 500) / 500) * 0.50;
         const ventTotal = centralVentPrice * ventScale;
 
-        // 5. Tüm bu mühendislik hesabının toplamını ana ekrandaki "Paket" fiyata yansıt
+        // ---> YENİ EKLENEN KIRILIM KISMI <---
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${area} m² Sulu Söndürme (Sprinkler)`, value: sprinklerTotal },
+                ...(jetFanCount > 0 ? [{ label: `${jetFanCount} Adet Jet Fan Cihazı`, value: jetFanTotal }] : []),
+                { label: `Egzost ve Taze Hava Santrali Otomasyonu`, value: ventTotal }
+            ];
+        }
+
         return Math.round(sprinklerTotal + jetFanTotal + ventTotal);
     },
 
-    'calc_shelter_package': ({ buildingStats, currentCosts }) => {
+    'calc_shelter_package': ({ buildingStats, currentCosts, item, costBreakdowns }) => {
         if (!buildingStats.shelterArea || buildingStats.shelterArea <= 0) return 0;
 
         const area = buildingStats.shelterArea;
 
-        // 1. Arka plandaki birim fiyatları çek
         const doorPrice = getGlobalPrice(currentCosts, "Sığınak Kapısı (Adet)");
         const ventPrice = getGlobalPrice(currentCosts, "Sığınak Havalandırma Santrali (Adet)");
 
-        // 2. KAPI HESABI (Yönetmelik Pratiği)
-        // Her 100 m² alan için 1 adet ana çelik kapı (veya kaçış holü kapağı takımı) gerekir.
-        // (Örn: 1-100m² arası = 1 Kapı, 101-200m² arası = 2 Kapı)
         const doorCount = Math.ceil(area / 100);
-
-        // 3. HAVALANDIRMA SANTRALİ HESABI
-        // Standart bir radyoaktif/karbon filtreli havalandırma santrali ortalama 50 m² (30-40 kişi) destekler.
-        // (Örn: 50m² = 1 Santral, 100m² = 2 Santral veya 2 katı kapasiteli motor)
         const ventCount = Math.ceil(area / 50);
 
-        // 4. Nihai paket fiyatını (Toplamları birleştirerek) döndür
-        return (doorCount * doorPrice) + (ventCount * ventPrice);
+        const totalDoor = doorCount * doorPrice;
+        const totalVent = ventCount * ventPrice;
+
+        // ---> YENİ EKLENEN KIRILIM KISMI <---
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${doorCount} Adet Çelik Sığınak Kapısı`, value: totalDoor },
+                { label: `${ventCount} Adet Karbon Filtreli Sığınak Santrali`, value: totalVent }
+            ];
+        }
+
+        return totalDoor + totalVent;
     },
 
     'calc_satellite_system': ({ aggregatedUnitStats, totalConstructionArea, item }) => {
@@ -890,7 +891,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.max(totalConstructionArea, minQty);
     },
 
-    'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts }) => {
+    'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts, item, costBreakdowns }) => {
         const totalApartments = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         const verticalPipePrice = getGlobalPrice(currentCosts, "Doğalgaz Kolon Hattı (mt) Birim");
         const connectionSetPrice = getGlobalPrice(currentCosts, "Doğalgaz Daire Başı Set Birim");
@@ -918,9 +919,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             (1 * unitsPerFloor * (groundHallLen / 2)) +
             (buildingStats.basementFloorCount * unitsPerFloor * (basementHallLen / 2));
 
-        return (totalVerticalMetres * verticalPipePrice) +
-            (totalHorizontalMetres * horizontalPipePrice) +
-            (totalApartments * connectionSetPrice);
+        const costVertical = totalVerticalMetres * verticalPipePrice;
+        const costHorizontal = totalHorizontalMetres * horizontalPipePrice;
+        const costSets = totalApartments * connectionSetPrice;
+
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${totalVerticalMetres.toFixed(1)} mt Dikey Kolon Hattı`, value: costVertical },
+                { label: `${totalHorizontalMetres.toFixed(1)} mt Yatay Dağıtım Hattı`, value: costHorizontal },
+                { label: `${totalApartments} Daire Gaz Bağlantı Seti`, value: costSets }
+            ];
+        }
+
+        return costVertical + costHorizontal + costSets;
     },
 
 
@@ -947,29 +958,32 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return 0;
     },
 
-    'calc_garage_drainage': ({ buildingStats, currentCosts }) => {
+    'calc_garage_drainage': ({ buildingStats, currentCosts, item, costBreakdowns }) => {
         if (!buildingStats.indoorParkingArea || buildingStats.indoorParkingArea <= 0) return 0;
 
         const area = buildingStats.indoorParkingArea;
 
-        // 1. Gizli kalem birim fiyatlarını çek
         const channelPrice = getGlobalPrice(currentCosts, "Otopark Drenaj Kanalı (mt)");
         const separatorPrice = getGlobalPrice(currentCosts, "Yağ Ayırıcı Ünite (Adet)");
         const pumpPrice = getGlobalPrice(currentCosts, "Atıksu Dalgıç Pompa Sistemi (Set)");
 
-        // 2. Drenaj Kanalı Maliyeti (Ortalama her 20 m² alan için 1 metre ızgaralı kanal kabulü)
         const perimeter = buildingStats.indoorParkingPerimeter || estimatePerimeter(area);
         const channelLength = Math.ceil(perimeter * 0.40);
         const channelTotal = channelLength * channelPrice;
 
-        // 3. Yağ Ayırıcı Kapasite Maliyeti (Her 1000 m² için 1 adet veya 1 üst kapasite birimi)
         const separatorCount = Math.ceil(area / 1000);
         const separatorTotal = separatorCount * separatorPrice;
+        const pumpTotal = pumpPrice; // Standart 1 Set
 
-        // 4. Dalgıç Pompa Seti (Suyu rögara basmak için kapalı otoparklarda standart 1 set gerekir)
-        const pumpTotal = pumpPrice;
+        // ---> YENİ EKLENEN KIRILIM KISMI <---
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${channelLength} mt Izgaralı Drenaj Kanalı`, value: channelTotal },
+                { label: `${separatorCount} Adet Yağ Tutucu Ayırıcı Ünite`, value: separatorTotal },
+                { label: `1 Set Atıksu Dalgıç Pompa Sistemi`, value: pumpTotal }
+            ];
+        }
 
-        // 5. Tüm altyapı hesabı toplanıp tek paket fiyatı olarak yansıtılır
         return Math.round(channelTotal + separatorTotal + pumpTotal);
     },
 
@@ -1033,21 +1047,21 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             presiyometre_adet: getGlobalPrice(currentCosts, "Presiyometre Deneyi Birim Fiyatı"),
             laboratuvar_paket: getGlobalPrice(currentCosts, "Zemin Laboratuvar Paketi")
         };
-        
+
         const groundArea = buildingStats.groundFloorArea || 0;
-        
+
         // 1. TBDY 2018 Min. Kuyu Sayısı: 300m²'ye kadar 3 kuyu, sonrası her 300m²'ye +1
         const boreholeCount = 3 + Math.floor(Math.max(0, groundArea - 300) / 300);
-        
+
         // 2. En Tasarruflu Sondaj Derinliği: Kuyu başı 10 metre
         const minDepthPerBorehole = 10;
         const totalMeters = boreholeCount * minDepthPerBorehole;
-        
+
         // 3. Yönetmelik Alt Sınırı Deney Sayıları
         const sptCount = Math.floor(totalMeters / 3.0); // En seyrek (3 metrede 1) SPT
         const pressuremeterCount = boreholeCount; // Kuyu başı sadece 1 Presiyometre
         const labTestPackageCount = 1; // Proje geneli tek Laboratuvar Raporu
-        
+
         // 4. Alt maliyetleri hesapla
         const costSondaj = totalMeters * subPrices.sondaj_mt;
         const costSpt = sptCount * subPrices.spt_adet;
@@ -1082,8 +1096,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         } else if (buildingStats.subasmanHeight && buildingStats.subasmanHeight > 0) {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
-        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35); 
-        
+        const vKatlar = aggregatedUnitStats['calc_concrete_unit'] !== undefined ? aggregatedUnitStats['calc_concrete_unit'] : (totalConstructionArea * 0.35);
+
         let totalConcrete = vTemel + vBodrumPerde + vKatlar;
 
         // MÜHENDİSLİK DÜZELTMESİ: Bodrumsuz binalarda subasman üstü hasırlı zemin betonu (10 cm)
@@ -1095,7 +1109,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalConcrete * 1.03 * (item.multiplier || 1);
     },
 
-    'calc_pool_concrete': ({ buildingStats, currentCosts }) => {
+    'calc_pool_concrete': ({ buildingStats, currentCosts, item, costBreakdowns }) => {
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
 
@@ -1113,13 +1127,11 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const wallArea = perimeter * depth;
         const innerSurfaceArea = poolArea + wallArea;
 
-        // Hassas Metrajlar
         const excavationVol = (poolArea + perimeter * 0.5) * (depth + 0.3);
         const concreteVol = (poolArea * 0.20) + (wallArea * 0.20);
         const ironTon = concreteVol * 0.120;
         const formworkArea = wallArea * 2;
 
-        // Tutar Hesaplamaları
         const costExcavation = excavationVol * p_excavation;
         const costConcrete = concreteVol * p_concrete;
         const costIron = ironTon * p_iron;
@@ -1131,10 +1143,19 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const totalPoolMaterialCost = costExcavation + costConcrete + costIron + costFormwork + costInsulation + costCeramic + costAdhesive + costFiller;
 
-        // Toplam paket fiyatını (%10 marj ile) döndürüyoruz
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${excavationVol.toFixed(1)} m³ Hafriyat`, value: Math.round(costExcavation * 1.10) },
+                { label: `${concreteVol.toFixed(1)} m³ Betonarme`, value: Math.round(costConcrete * 1.10) },
+                { label: `${ironTon.toFixed(2)} Ton Demir`, value: Math.round(costIron * 1.10) },
+                { label: `${formworkArea.toFixed(1)} m² Kalıp`, value: Math.round(costFormwork * 1.10) },
+                { label: `${innerSurfaceArea.toFixed(1)} m² Yalıtım`, value: Math.round(costInsulation * 1.10) },
+                { label: `${innerSurfaceArea.toFixed(1)} m² Seramik ve Harç`, value: Math.round((costCeramic + costAdhesive + costFiller) * 1.10) }
+            ];
+        }
+
         return Math.round(totalPoolMaterialCost * 1.10);
     },
-
     'calc_pool_system': ({ buildingStats, item, currentCosts }) => { // currentCosts eklendi
         const poolArea = buildingStats.poolArea || 0;
         if (poolArea <= 0) return 0;
@@ -1152,9 +1173,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_villa_veranda': ({ buildingStats }) => buildingStats.verandaArea || 0,
 
-    'calc_haritaci': ({ item, buildingStats, currentCosts }) => {
+    'calc_haritaci': ({ item, buildingStats, currentCosts, costBreakdowns }) => {
         const baseP = getGlobalPrice(currentCosts, item.name);
-
         const landArea = buildingStats.landArea || 0;
 
         let areaCoeff = 1.0;
@@ -1167,6 +1187,14 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const aplikasyonBedeli = baseP * areaCoeff;
         const roperliFarki = baseP * 0.479;
         const planOrnegiBedeli = baseP * 0.072;
+
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `Aplikasyon Krokisi`, value: aplikasyonBedeli },
+                { label: `Röperli Kroki`, value: roperliFarki },
+                { label: `Plan Örneği Bedeli`, value: planOrnegiBedeli }
+            ];
+        }
 
         return aplikasyonBedeli + roperliFarki + planOrnegiBedeli;
     },
@@ -1263,37 +1291,30 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(finalEkbCost);
     },
 
-    'calc_utilities_subscription': ({ currentCosts, totalConstructionArea, buildingStats }) => {
+    'calc_utilities_subscription': ({ currentCosts, totalConstructionArea, buildingStats, item, costBreakdowns }) => {
         const unitGuvenlikBedeli = getGlobalPrice(currentCosts, "Elektrik Güvence Birim Bedeli");
         const waterAndOtherFees = getGlobalPrice(currentCosts, "Su Abonelik Paket Bedeli");
 
         let estimatedPowerKW = 0;
 
         if (buildingStats.buildingType === 'villa') {
-            // Villalar için temel elektrik gücü asgari 15 kW kabul edilir
             estimatedPowerKW = Math.max(15, (totalConstructionArea / 100) * 8);
-
-            // Eğer havuz varsa ekstra güç gerekir (+5 kW)
-            if (buildingStats.poolArea && buildingStats.poolArea > 0) {
-                estimatedPowerKW += 5;
-            }
-            // Eğer ısı pompası veya VRF gibi yüksek tüketimli bir ısıtma/soğutma varsa (+10 kW)
-            if (buildingStats.heatingSystem === 'heat_pump' || buildingStats.heatingSystem === 'vrf') {
-                estimatedPowerKW += 10;
-            }
+            if (buildingStats.poolArea && buildingStats.poolArea > 0) estimatedPowerKW += 5;
+            if (buildingStats.heatingSystem === 'heat_pump' || buildingStats.heatingSystem === 'vrf') estimatedPowerKW += 10;
         } else {
-            // Apartmanların ortak alan sayacı için eski formülü koruyabiliriz
-            estimatedPowerKW = (totalConstructionArea / 1000) * 12.5;
-
-            // Asansör ve Hidrofor gibi donanımlar olacağı için ortak alanın minimum 10 kW olması sağlıklıdır
-            estimatedPowerKW = Math.max(10, estimatedPowerKW);
+            estimatedPowerKW = Math.max(10, (totalConstructionArea / 1000) * 12.5);
         }
 
         const electricityGuvence = estimatedPowerKW * unitGuvenlikBedeli;
         const totalSubscription = electricityGuvence + waterAndOtherFees;
-
-        // Dinamik alt limit
         const dynamicMinLimit = waterAndOtherFees * 3;
+
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `Elektrik Güvence Bedeli (~${estimatedPowerKW.toFixed(0)} kW)`, value: electricityGuvence },
+                { label: `Şantiye Su Aboneliği ve Ücretler`, value: Math.max(waterAndOtherFees, dynamicMinLimit - electricityGuvence) }
+            ];
+        }
 
         return Math.round(Math.max(dynamicMinLimit, totalSubscription));
     },
@@ -1465,13 +1486,10 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
 
-    'calc_smart_home': ({ buildingStats, totalConstructionArea, aggregatedUnitStats, item, currentCosts }) => {
+    'calc_smart_home': ({ buildingStats, totalConstructionArea, aggregatedUnitStats, item, currentCosts, costBreakdowns }) => {
         if (buildingStats.buildingType !== 'villa' || !buildingStats.hasSmartHome) return 0;
 
-        // Orijinal taban fiyatı sabit tutuyoruz
         const originalBaseCost = getGlobalPrice(currentCosts, item.name);
-
-        // Eklemeleri bu değişkende biriktireceğiz
         let totalCost = originalBaseCost;
 
         let estimatedZones = Math.max(1, Math.ceil(totalConstructionArea / 25));
@@ -1479,33 +1497,38 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             estimatedZones = aggregatedUnitStats['calc_inner_door'] + 1;
         }
 
-        // Bütün modüller "originalBaseCost" üzerinden hesaplanıp totalCost'a ekleniyor
-        if (buildingStats.smartHomeLighting) {
-            totalCost += (estimatedZones * (originalBaseCost * 0.07));
-        }
-        if (buildingStats.smartHomeHeating) {
-            totalCost += (estimatedZones * (originalBaseCost * 0.08));
-        }
+        let costLighting = 0, costHeating = 0, costSensors = 0, costBlinds = 0;
+
+        if (buildingStats.smartHomeLighting) { costLighting = (estimatedZones * (originalBaseCost * 0.07)); totalCost += costLighting; }
+        if (buildingStats.smartHomeHeating) { costHeating = (estimatedZones * (originalBaseCost * 0.08)); totalCost += costHeating; }
         if (buildingStats.smartHomeSensors) {
             let wetAreaZones = 2;
             if (aggregatedUnitStats && (aggregatedUnitStats['calc_toilet'] > 0 || aggregatedUnitStats['calc_kitchen_sink'] > 0)) {
                 wetAreaZones = (aggregatedUnitStats['calc_toilet'] || 1) + (aggregatedUnitStats['calc_kitchen_sink'] || 1);
             }
             const floors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
-
-            totalCost += (wetAreaZones * (originalBaseCost * 0.04)) + (1 * (originalBaseCost * 0.05)) + (floors * (originalBaseCost * 0.02)) + (originalBaseCost * 0.12);
+            costSensors = (wetAreaZones * (originalBaseCost * 0.04)) + (1 * (originalBaseCost * 0.05)) + (floors * (originalBaseCost * 0.02)) + (originalBaseCost * 0.12);
+            totalCost += costSensors;
         }
         if (buildingStats.smartHomeBlinds) {
             let windowCount = estimatedZones;
             if (aggregatedUnitStats && aggregatedUnitStats['calc_window_area'] > 0) {
                 windowCount = Math.max(estimatedZones, Math.ceil(aggregatedUnitStats['calc_window_area'] / 2.5));
             }
-            totalCost += (windowCount * (originalBaseCost * 0.05));
+            costBlinds = (windowCount * (originalBaseCost * 0.05)); totalCost += costBlinds;
         }
 
         let areaMultiplier = 1.0;
-        if (totalConstructionArea > 200) {
-            areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003);
+        if (totalConstructionArea > 200) areaMultiplier = 1.0 + ((totalConstructionArea - 200) * 0.003);
+
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `Ana Panel ve Altyapı`, value: originalBaseCost * areaMultiplier },
+                ...(costLighting > 0 ? [{ label: `Aydınlatma (${estimatedZones} Zon)`, value: costLighting * areaMultiplier }] : []),
+                ...(costHeating > 0 ? [{ label: `Isıtma Otomasyonu (${estimatedZones} Zon)`, value: costHeating * areaMultiplier }] : []),
+                ...(costSensors > 0 ? [{ label: `Sensörler (Su, Gaz, Hareket)`, value: costSensors * areaMultiplier }] : []),
+                ...(costBlinds > 0 ? [{ label: `Panjur/Perde Kontrolü`, value: costBlinds * areaMultiplier }] : [])
+            ];
         }
 
         return Math.round(totalCost * areaMultiplier);
