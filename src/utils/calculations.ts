@@ -800,8 +800,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // 2. Sulu Söndürme (Sprinkler) Maliyeti (Doğrudan m2 ile orantılı)
         const sprinklerTotal = area * sprinklerPrice;
 
-        // 3. Jet Fan Maliyeti (Ortalama her 350 m²'ye 1 adet itici/yönlendirici fan hesaplanır)
-        const jetFanCount = area >= 400 ? Math.ceil(area / 350) : 0;
+        // 3. Jet Fan Maliyeti (Ortalama her 500 m²'ye 1 adet itici/yönlendirici fan hesaplanır)
+        const jetFanCount = area >= 2000 ? Math.ceil(area / 500) : 0;
         const jetFanTotal = jetFanCount * jetFanPrice;
 
         // 4. Ana Şaft Fanları ve Otomasyon Santrali Maliyeti
@@ -954,7 +954,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const pumpPrice = getGlobalPrice(currentCosts, "Atıksu Dalgıç Pompa Sistemi (Set)");
 
         // 2. Drenaj Kanalı Maliyeti (Ortalama her 20 m² alan için 1 metre ızgaralı kanal kabulü)
-        const channelLength = Math.ceil(area / 20);
+        const perimeter = buildingStats.indoorParkingPerimeter || estimatePerimeter(area);
+        const channelLength = Math.ceil(perimeter * 0.40);
         const channelTotal = channelLength * channelPrice;
 
         // 3. Yağ Ayırıcı Kapasite Maliyeti (Her 1000 m² için 1 adet veya 1 üst kapasite birimi)

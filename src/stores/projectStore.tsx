@@ -1029,13 +1029,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     // --- YENİ: DİNAMİK DUBLEKS MERDİVEN VE KORKULUK HESABI ---
                     // Alt katın tipine göre gerçek yüksekliğini buluyoruz (Ters dubleks vs. için)
                     const lowerHeight = lowerUnit.floorType === 'ground' ? buildingStats.groundFloorHeight :
-                                        lowerUnit.floorType === 'basement' ? buildingStats.basementFloorHeight :
-                                        buildingStats.normalFloorHeight;
-                                        
+                        lowerUnit.floorType === 'basement' ? buildingStats.basementFloorHeight :
+                            buildingStats.normalFloorHeight;
+
                     const idealRiserHeight = 0.175;
                     const landingBonus = 3;
                     const steps = Math.round(lowerHeight / idealRiserHeight) + landingBonus;
-                    
+
                     const riserCount = Math.round(lowerHeight / idealRiserHeight);
                     const treadDepth = 0.28;
                     const horizontalLength = (riserCount - 1) * treadDepth;
@@ -1085,7 +1085,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Artık villalarda da kapalı otopark veya sığınak girildiğinde hesaplama çalışacak.
         if (nonResidentialArea > 0) {
-            
+
             // YARDIMCI FONKSİYON: Seçilen katın yüksekliğini döndürür
             const getFloorHeight = (floorType?: string) => {
                 if (floorType === 'normal') return buildingStats.normalFloorHeight;
@@ -1093,71 +1093,71 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 return buildingStats.basementFloorHeight > 0 ? buildingStats.basementFloorHeight : 3.0; // Fallback
             };
 
-                // 1. KAPALI OTOPARK DÜŞÜMÜ
-                if (parkingArea > 0) {
-                    const pH = getFloorHeight(buildingStats.indoorParkingFloor);
-                    const pPerimeter = buildingStats.indoorParkingPerimeter || estimatePerimeter(parkingArea);
-                    const pWallArea = pPerimeter * pH; // Otoparkın iç duvar yüzeyi
+            // 1. KAPALI OTOPARK DÜŞÜMÜ
+            if (parkingArea > 0) {
+                const pH = getFloorHeight(buildingStats.indoorParkingFloor);
+                const pPerimeter = buildingStats.indoorParkingPerimeter || estimatePerimeter(parkingArea);
+                const pWallArea = pPerimeter * pH; // Otoparkın iç duvar yüzeyi
 
-                    aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - pWallArea);
-                    addBreakdown('calc_rough_plaster_area', `Otopark Duvar Minhası (${buildingStats.indoorParkingFloor || 'basement'})`, -pWallArea);
+                aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - pWallArea);
+                addBreakdown('calc_rough_plaster_area', `Otopark Duvar Minhası (${buildingStats.indoorParkingFloor || 'basement'})`, -pWallArea);
 
-                    aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - pWallArea);
-                    addBreakdown('calc_paint_wall_area', 'Kapalı Otopark Duvar Minhası', -pWallArea);
+                aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - pWallArea);
+                addBreakdown('calc_paint_wall_area', 'Kapalı Otopark Duvar Minhası', -pWallArea);
 
-                    aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - pWallArea);
-                    addBreakdown('calc_plaster_area', 'Kapalı Otopark Duvar Minhası', -pWallArea);
+                aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - pWallArea);
+                addBreakdown('calc_plaster_area', 'Kapalı Otopark Duvar Minhası', -pWallArea);
 
-                    aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
-                    addBreakdown('calc_ceiling_paint_area', 'Kapalı Otopark Tavan Minhası', -parkingArea);
+                aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - parkingArea);
+                addBreakdown('calc_ceiling_paint_area', 'Kapalı Otopark Tavan Minhası', -parkingArea);
 
-                    aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea);
+                aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - parkingArea);
 
-                    aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85));
-                    addBreakdown('dry_area', 'Kapalı Otopark Zemin Minhası', -(parkingArea * 0.85));
+                aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85));
+                addBreakdown('dry_area', 'Kapalı Otopark Zemin Minhası', -(parkingArea * 0.85));
 
-                    aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
-                    aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15));
-                    
-                    // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
-                    const generatedInnerWalls = parkingArea * 1.1 * (pH / 3.0);
-                    aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls + pWallArea);
-                    addBreakdown(`wall_${innerThickStr}_area`, 'Otopark İç Duvar (Açık Alan) Düzeltmesi', pWallArea - generatedInnerWalls);
-                }
+                aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
+                aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15));
 
-                // 2. SIĞINAK DÜŞÜMÜ
-                if (shelterArea > 0) {
-                    const sH = getFloorHeight(buildingStats.shelterFloor);
-                    const sPerimeter = buildingStats.shelterPerimeter || estimatePerimeter(shelterArea);
-                    const sWallArea = sPerimeter * sH; // Sığınağın iç duvar yüzeyi
+                // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
+                const generatedInnerWalls = parkingArea * 1.1 * (pH / 3.0);
+                aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls);
+                addBreakdown(`wall_${innerThickStr}_area`, 'Otopark İç Duvar (Açık Alan) Düzeltmesi', -generatedInnerWalls);
+            }
 
-                    aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - sWallArea);
-                    addBreakdown('calc_rough_plaster_area', `Sığınak Duvar Minhası (${buildingStats.shelterFloor || 'basement'})`, -sWallArea);
+            // 2. SIĞINAK DÜŞÜMÜ
+            if (shelterArea > 0) {
+                const sH = getFloorHeight(buildingStats.shelterFloor);
+                const sPerimeter = buildingStats.shelterPerimeter || estimatePerimeter(shelterArea);
+                const sWallArea = sPerimeter * sH; // Sığınağın iç duvar yüzeyi
 
-                    aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - sWallArea);
-                    addBreakdown('calc_paint_wall_area', 'Sığınak Duvar Minhası', -sWallArea);
+                aggregatedUnitStats['calc_rough_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_rough_plaster_area'] || 0) - sWallArea);
+                addBreakdown('calc_rough_plaster_area', `Sığınak Duvar Minhası (${buildingStats.shelterFloor || 'basement'})`, -sWallArea);
 
-                    aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - sWallArea);
-                    addBreakdown('calc_plaster_area', 'Sığınak Duvar Minhası', -sWallArea);
+                aggregatedUnitStats['calc_paint_wall_area'] = Math.max(0, (aggregatedUnitStats['calc_paint_wall_area'] || 0) - sWallArea);
+                addBreakdown('calc_paint_wall_area', 'Sığınak Duvar Minhası', -sWallArea);
 
-                    // YENİ EKLENEN EKSİK DÜŞÜMLER
-                    aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - shelterArea);
-                    addBreakdown('calc_ceiling_paint_area', 'Sığınak Tavan Minhası', -shelterArea);
+                aggregatedUnitStats['calc_plaster_area'] = Math.max(0, (aggregatedUnitStats['calc_plaster_area'] || 0) - sWallArea);
+                addBreakdown('calc_plaster_area', 'Sığınak Duvar Minhası', -sWallArea);
 
-                    aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - shelterArea);
+                // YENİ EKLENEN EKSİK DÜŞÜMLER
+                aggregatedUnitStats['calc_ceiling_paint_area'] = Math.max(0, (aggregatedUnitStats['calc_ceiling_paint_area'] || 0) - shelterArea);
+                addBreakdown('calc_ceiling_paint_area', 'Sığınak Tavan Minhası', -shelterArea);
 
-                    aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
-                    addBreakdown('dry_area', 'Sığınak Zemin Minhası', -(shelterArea * 0.85));
-                    
-                    aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (shelterArea * 0.15));
-                    aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (shelterArea * 0.15));
+                aggregatedUnitStats['total_area'] = Math.max(0, (aggregatedUnitStats['total_area'] || 0) - shelterArea);
 
-                    // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
-                    const generatedInnerWalls = shelterArea * 1.1 * (sH / 3.0);
-                    aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls + sWallArea);
-                    addBreakdown(`wall_${innerThickStr}_area`, 'Sığınak İç Duvar Düzeltmesi', sWallArea - generatedInnerWalls);
-                }
-            
+                aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
+                addBreakdown('dry_area', 'Sığınak Zemin Minhası', -(shelterArea * 0.85));
+
+                aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (shelterArea * 0.15));
+                aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (shelterArea * 0.15));
+
+                // YENİ: Kaba Duvar (Tuğla/Gazbeton) Düzenlemesi
+                const generatedInnerWalls = shelterArea * 1.1 * (sH / 3.0);
+                aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls);
+                addBreakdown(`wall_${innerThickStr}_area`, 'Sığınak İç Duvar Düzeltmesi', -generatedInnerWalls);
+            }
+
 
             // OTO YA DA DETAYLI FARK ETMEZ: Sığınak için zorunlu mekanik ve zemin ilaveleri
             if (shelterArea > 0) {
@@ -1187,7 +1187,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
                 // 5. HELİKOPTER ŞAP (Endüstriyel Zemin) EKLENTİSİ (Sığınağın geri kalanı)
                 aggregatedUnitStats['calc_indoor_parking_screed'] = (aggregatedUnitStats['calc_indoor_parking_screed'] || 0) + shelterDryArea;
-                addBreakdown('calc_indoor_parking_screed', 'Sığınak Zemin Sertleştirici', shelterDryArea);          
+                addBreakdown('calc_indoor_parking_screed', 'Sığınak Zemin Sertleştirici', shelterDryArea);
             }
         }
 
