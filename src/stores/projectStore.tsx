@@ -1093,11 +1093,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 return buildingStats.basementFloorHeight > 0 ? buildingStats.basementFloorHeight : 3.0; // Fallback
             };
 
-            const totalRoomsEntered = units.reduce((acc, u) => acc + u.rooms.length, 0);
-            const isAutoMode = totalRoomsEntered === 0;
-
-            // SADECE OTO MODDAYKEN (Kullanıcı hiç oda çizmemiş/girmemişse) düşüm (minha) yap!
-            if (isAutoMode) {
                 // 1. KAPALI OTOPARK DÜŞÜMÜ
                 if (parkingArea > 0) {
                     const pH = getFloorHeight(buildingStats.indoorParkingFloor);
@@ -1162,7 +1157,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls + sWallArea);
                     addBreakdown(`wall_${innerThickStr}_area`, 'Sığınak İç Duvar Düzeltmesi', sWallArea - generatedInnerWalls);
                 }
-            }
+            
 
             // OTO YA DA DETAYLI FARK ETMEZ: Sığınak için zorunlu mekanik ve zemin ilaveleri
             if (shelterArea > 0) {
