@@ -852,8 +852,34 @@ export const DashboardView: React.FC = () => {
                                                             {item.inputType === 'manual_total' ? (
                                                                 <div className="mt-1 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 gap-2">
                                                                     <div className="text-xs text-slate-500">
-                                                                        <span className="font-bold text-slate-700 dark:text-slate-300">Sabit Tutar / Paket Fiyatı</span>
-                                                                        <div className="text-[10px] text-slate-400">Bu kalem için miktar girilmez, doğrudan toplam tutar giriniz.</div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-bold text-slate-700 dark:text-slate-300">Sabit Tutar / Paket Fiyatı</span>
+
+                                                                            {/* YENİ EKLENEN: Paket fiyatı olan kalemler (Zemin Etüdü vb.) için kırılım butonu */}
+                                                                            {item.costBreakdown && item.costBreakdown.length > 0 && (
+                                                                                <div className="relative flex items-center cursor-help group/breakdown">
+                                                                                    <i className="fas fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded transition shadow-sm"></i>
+
+                                                                                    <div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
+                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+                                                                                            <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
+                                                                                        </div>
+                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                                                            {item.costBreakdown.map((cb: any, idx: number) => (
+                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                    <span className="opacity-90 leading-tight">{cb.label}</span>
+                                                                                                    <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
+                                                                                                        {cb.value.toLocaleString('tr-TR')} ₺
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                        <div className="absolute top-full left-3 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-slate-400 mt-0.5">Bu kalem için miktar girilmez, doğrudan toplam tutar giriniz.</div>
                                                                     </div>
 
                                                                     <div className="flex items-center gap-2 self-end sm:self-auto">
