@@ -145,6 +145,9 @@ export interface UnitType {
 }
 export type HeatingSystem = 'radiator' | 'underfloor' | 'heat_pump' | 'vrf';
 
+export type ConcreteClass = 'C25' | 'C30' | 'C35' | 'C40';
+export type GlobalSlabType = 'plak' | 'asmolen' | 'mantar';
+
 export interface BuildingStats {
 
     buildingType?: 'apartment' | 'villa';

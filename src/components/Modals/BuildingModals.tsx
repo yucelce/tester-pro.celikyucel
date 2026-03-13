@@ -23,8 +23,7 @@ interface BuildingModalProps {
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
-    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor'>('general');
-    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor'>('general');    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
 
     const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor') => {
         setActiveTab(tabId);
@@ -237,6 +236,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                 <div className="flex border-b border-slate-700 bg-slate-800/80 px-2 md:px-4 overflow-x-auto shrink-0 hide-scrollbar scroll-smooth">
                     {renderTab('general', 'fa-file-alt', 'Genel Bilgiler')}
                     {renderTab('floors', 'fa-layer-group', 'Kat Bilgileri')}
+                    {renderTab('structural', 'fa-cubes', 'Statik & Taşıyıcı')} 
                     {renderTab('special', 'fa-tools', 'Malzeme & Tesisat')}
                     {renderTab('contract', 'fa-file-contract', 'Sözleşme & Mevcut Yapı')}
 
@@ -998,6 +998,48 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                         </span>
                                     </div>
                                 </label>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'structural' && (
+                        <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                            <div className="bg-slate-800/40 p-4 md:p-6 rounded-xl border border-slate-700/50">
+                                <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center"><i className="fas fa-cubes"></i></div>
+                                    Betonarme ve Taşıyıcı Sistem
+                                </h4>
+                                <p className="text-xs text-slate-400 mb-6">Seçtiğiniz taşıyıcı sistem, demir/beton metrajlarını ve birim fiyatlarını otomatik olarak etkiler.</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-2">Beton Sınıfı</label>
+                                        <select
+                                            value={buildingStats.concreteClass || 'C30'}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, concreteClass: e.target.value as any })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-orange-500 transition"
+                                        >
+                                            <option value="C25">C25 (Düşük Dayanım / Eski Tip)</option>
+                                            <option value="C30">C30 (Standart / Deprem Yönetmeliği)</option>
+                                            <option value="C35">C35 (Yüksek Dayanım / Çok Katlı)</option>
+                                            <option value="C40">C40 (Özel Proje / Gökdelen)</option>
+                                        </select>
+                                        <p className="text-[10px] text-slate-500 mt-2">Beton fiyatını ve döküm maliyetlerini doğrudan değiştirir.</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] md:text-xs text-slate-400 font-bold block mb-2">Döşeme Sistemi</label>
+                                        <select
+                                            value={buildingStats.slabType || 'plak'}
+                                            onChange={(e) => setBuildingStats({ ...buildingStats, slabType: e.target.value as any })}
+                                            className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-orange-500 transition"
+                                        >
+                                            <option value="plak">Plak Döşeme (Standart Kirişli)</option>
+                                            <option value="asmolen">Asmolen Döşeme (Gizli Kirişli)</option>
+                                            <option value="mantar">Mantar Döşeme (Kirişsiz)</option>
+                                        </select>
+                                        <p className="text-[10px] text-slate-500 mt-2">Beton hacmini, donatı (demir) tonajını ve kalıp metrajını değiştirir.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

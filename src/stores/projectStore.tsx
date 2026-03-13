@@ -265,6 +265,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const [buildingStats, setBuildingStatsState] = useState<BuildingStats>({
         buildingType: 'apartment',
+        concreteClass: 'C30',  // <--- EKLENDİ
+        slabType: 'plak',      // <--- EKLENDİ
         visitedTabs: ['general'],
         province: 'İstanbul', district: 'Kadıköy', landArea: 500, heatZone: 2, earthquakeZone: 1,
         normalFloorCount: 5, basementFloorCount: 1,
@@ -1375,6 +1377,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setBuildingStatsState(prev => ({
             ...prev,
             buildingType: type,
+            concreteClass: 'C30',  // <--- EKLENDİ
+            slabType: 'plak',      // <--- EKLENDİ
             normalFloorCount: isVilla ? 1 : 5,
             basementFloorCount: isVilla ? 0 : 1,
             groundFloorHeight: isVilla ? 3.2 : 3.0,

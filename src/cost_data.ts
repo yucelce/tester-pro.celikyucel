@@ -250,7 +250,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
     id: "mekanik_tesisat",
     title: "9. Mekanik ve Asansör Tesisatı",
     items: [
-      { name: "Sıhhi Tesisat (Temiz+Pis Su)", unit: "Daire", auto_source: "calc_plumbing_unit", multiplier: 1, scope: 'unit' },
+      { name: "Sıhhi Tesisat (Temiz+Pis Su)", unit: "Sistem", auto_source: "calc_plumbing_unit", multiplier: 1, scope: 'unit' },
       { name: "Kombi ve Baca Montajı", unit: "Adet", auto_source: "calc_combi_count", multiplier: 1, scope: 'unit' },
       { name: "Kalorifer Altyapısı (Mobil Sistem)", unit: "m2", auto_source: "calc_radiator_infrastructure", multiplier: 1, scope: 'unit' },
       { name: "Panel Radyatör (DemirDöküm vb.)", unit: "mt", auto_source: "calc_radiator_len", multiplier: 1, scope: 'unit' },

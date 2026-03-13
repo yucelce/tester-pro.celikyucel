@@ -485,11 +485,39 @@ export class QuantityTakeoffService {
             } else {
                 const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
                 const heightRatio = metrics.defaultFloorHeight / 3.0;
-                const totalConcrete = refArea * 0.35 * heightRatio;
-                stats.slab_concrete_volume = totalConcrete * 0.65; stats.column_concrete_volume = totalConcrete * 0.20; stats.beam_concrete_volume = totalConcrete * 0.15;
-                const totalForm = refArea * 2.8 * heightRatio;
-                stats.slab_formwork_area = totalForm * 0.5; stats.column_formwork_area = totalForm * 0.25; stats.beam_formwork_area = totalForm * 0.25;
-                stats.calc_iron_unit = (stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume) * ironCoeff;
+
+                // --- YENİ: DÖŞEME TİPİNE GÖRE OTO-METRAJ ÇARPANLARI ---
+                let concreteMult = 1.0;
+                let ironMult = 1.0;
+                let formMult = 1.0;
+
+                if (buildingStats.slabType === 'asmolen') {
+                    concreteMult = 1.15; // Beton hacmi ~%15 artar
+                    ironMult = 1.10;     // Demir ~%10 artar
+                    formMult = 0.90;     // Kiriş yanakları olmadığı için kalıp ~%10 azalır
+                } else if (buildingStats.slabType === 'mantar') {
+                    concreteMult = 1.20; // Beton hacmi ~%20 artar
+                    ironMult = 1.20;     // Zımbalama donatıları yüzünden demir ~%20 artar
+                    formMult = 0.85;     // Dümdüz tavan olduğu için kalıp ~%15 azalır
+                }
+
+                // 1. Beton Hesabı
+                const baseConcrete = refArea * 0.35 * heightRatio;
+                const totalConcrete = baseConcrete * concreteMult;
+                stats.slab_concrete_volume = totalConcrete * 0.65; 
+                stats.column_concrete_volume = totalConcrete * 0.20; 
+                stats.beam_concrete_volume = totalConcrete * 0.15;
+
+                // 2. Kalıp Hesabı
+                const baseForm = refArea * 2.8 * heightRatio;
+                const totalForm = baseForm * formMult;
+                stats.slab_formwork_area = totalForm * 0.5; 
+                stats.column_formwork_area = totalForm * 0.25; 
+                stats.beam_formwork_area = totalForm * 0.25;
+
+                // 3. Demir Hesabı
+                // Demir tonajı çarpanını "baz beton" üzerinden uyguluyoruz ki katlanarak şişmesin
+                stats.calc_iron_unit = baseConcrete * ironCoeff * ironMult;
             }
 
             stats.calc_concrete_unit = stats.column_concrete_volume + stats.beam_concrete_volume + stats.slab_concrete_volume;
@@ -2067,23 +2095,29 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_duration_months': ({ constructionDuration }) => constructionDuration,
 
     'calc_foundation_area': ({ buildingStats, totalFloors }) => {
-        let foundationArea = buildingStats.basementFloorCount > 0
+        const footprintArea = buildingStats.basementFloorCount > 0
             ? buildingStats.basementFloorArea
             : buildingStats.groundFloorArea;
 
-        let totalInsulationArea = foundationArea;
-
-        // Radye temel kalınlığı ve ampatman (yanak) hesabı (Opsiyonel: Daha hassas metraj için)
+        // Radye temel kalınlığı ve ampatman (çıkma) uzunluğu hesabı
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = Math.min(raftHeight * 1.5, 1.00);
         const { perimeter: basePerim } = getFoundationMetrics(buildingStats);
 
-        const foundationPerimeter = basePerim + (8 * ampatman);
+        // Saf Ampatman (Çıkma) Alanı: Çevre x Çıkma Payı + Köşe Dönüşleri (4 x a²)
+        const ampatmanArea = (basePerim * ampatman) + (4 * Math.pow(ampatman, 2));
 
-        // Radye temel yanak alanı
+        // 1. TEMEL ALTI YALITIMI (Bina oturumu + Ampatman genişliği kadar)
+        let totalInsulationArea = footprintArea + ampatmanArea;
+
+        // 2. YANAK YALITIMI (Genişletilmiş dış çevre x Temel yüksekliği)
+        const foundationPerimeter = basePerim + (8 * ampatman);
         totalInsulationArea += (foundationPerimeter * raftHeight);
 
-        // Bodrum katlar varsa toprak altında kalan perde duvarların dış yüzey alanı
+        // 3. AMPATMAN ÜSTÜ YATAY YALITIM (Yanaktan çıkıp perde duvara yatay dönüş)
+        totalInsulationArea += ampatmanArea;
+
+        // 4. DİKEY PERDE YALITIMI (Toprak altında kalan kısımlar)
         if (buildingStats.basementFloorCount > 0) {
             const totalBasementHeight = buildingStats.basementFloorCount * buildingStats.basementFloorHeight;
             totalInsulationArea += (basePerim * totalBasementHeight);
@@ -2095,7 +2129,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             }
         }
 
-        return totalInsulationArea;
+        // Genellikle binaya %10'luk bir bindirme ve fire payı eklenir (Opsiyonel ama gerçekçidir)
+        return totalInsulationArea * 1.10;
     },
 
     'calc_scaffolding_area': ({ buildingStats }) => {
@@ -2238,9 +2273,22 @@ export const calculateDynamicUnitPrice = (
     globalWallMaterial?: WallMaterial    // YENİ EKLENDİ
 ): number => {
     // --- YENİ DUVAR DİNAMİK FİYAT HESAPLAMASI ---
-    if (item.name === "Kuyu Temel Betonu") {
-        return getGlobalPrice(currentCosts, "Betonarme Betonu");
+    if (item.name === "Betonarme Betonu" || item.name === "Kuyu Temel Betonu") {
+        const basePrice = getGlobalPrice(currentCosts, "Betonarme Betonu");
+        let multiplier = 1.0;
+        
+        // C30 varsayılan (1.0) kabul edilir. Diğerleri orantılanır.
+        if (buildingStats?.concreteClass === 'C25') multiplier = 0.92;
+        else if (buildingStats?.concreteClass === 'C35') multiplier = 1.08;
+        else if (buildingStats?.concreteClass === 'C40') multiplier = 1.15;
+        
+        return Math.round(basePrice * multiplier);
     }
+
+    if (item.name === "Kuyu Temel Demiri") {
+        return getGlobalPrice(currentCosts, "İnşaat Demiri");
+    }
+
     if (item.name === "Kuyu Temel Demiri") {
         return getGlobalPrice(currentCosts, "İnşaat Demiri");
     }
