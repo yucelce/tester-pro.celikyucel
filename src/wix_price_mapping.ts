@@ -18,7 +18,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Haritacı Ücreti (Lihkab)": "likhap1000m2altiisc",
   "Akustik Rapor": "akustikraporisc",
   "Yapı Denetim Hizmet Bedeli": "yapidenetim",
-"Ruhsat Harcı": "ruhsatm2buyuksehirpaket", 
+  "Ruhsat Harcı": "ruhsatm2buyuksehirpaket",
   "İskan Harcı": "iskanm2buyuksehirpaket",
   "Şantiye Şefi (Aylık)": "santiyesefiisc",
   "Enerji Kimlik Belgesi": "enerjikimlikisc",
@@ -82,12 +82,12 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "İnşaat Demiri": "demirmal",
   "Kalıp İşçiliği & Malzeme": "kalipdemirbetonisc",
   "Temel Su Yalıtımı (Bohçalama)": "membranmalisc",
-  
+
   "Çatı Konstrüksiyon ve Kaplama": "catipaket",
-  "Subasman Dolgusu (Stabilize/Mıcır)":"micirm3mal",
+  "Subasman Dolgusu (Stabilize/Mıcır)": "micirm3mal",
 
   "Balkon ve Teras Su Yalıtımı": "banyoyalitimpaket",
-  "Temel Yalıtım Koruma (XPS)":"xpsm2mal",
+  "Temel Yalıtım Koruma (XPS)": "xpsm2mal",
 
   "Kalıp Yağı (Litre)": "kalipyagiltmal",
   "Kereste (m3)": "kerestem3mal",
@@ -99,7 +99,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Banyo ve Islak Hacim Su Yalıtımı": "banyoyalitimpaket",
   "Sert Zemin / Yürüyüş Yolu": "kilittasmalisc",
   "Bahçe / Çevre Duvarı": "bahceduvarimtpaket",
-  "Çim Ekimi ve Otomatik Sulama Sistemi":"cim_ve_sulama_sistemi_m2paket",
+  "Çim Ekimi ve Otomatik Sulama Sistemi": "cim_ve_sulama_sistemi_m2paket",
 
   "Mutfak Evyesi": "evyemal",
 
@@ -126,14 +126,14 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Mantolama Malzemesi": "mantolamamal",
   "Mantolama İşçiliği": "mantolamaisc",
   "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)": "mantolamamalisc",
-  "Otomatik Garaj Kapısı":"otopark_kepenkpaket",
+  "Otomatik Garaj Kapısı": "otopark_kepenkpaket",
 
   // --- 6. ZEMİN VE MERDİVEN ---
   // Eskisi: "Şap Atılması (Malz.+İşçilik)": "sappaket",
- "Şap Malzemesi": "sapm2malmal",
+  "Şap Malzemesi": "sapm2malmal",
   "Şap İşçiliği": "sapisc",
 
-  "Sığınak Kapısı (Adet)":"siginak_kapimal",
+  "Sığınak Kapısı (Adet)": "siginak_kapimal",
 
   "PVC Pencere (Doğrama)": "pvcpencerepaket",
   "Mermer Denizlik": "denizlikmalisc",
@@ -145,13 +145,15 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Pencere Söveleri": "sovemalisc",
 
   // --- 6. ZEMİN VE MERDİVEN ---
- 
-  "Laminat Parke (Anahtar Teslim)": "parkepaket",
-  "Seramik Kaplama": "seramikmalisc",
+
+  "Laminat Parke Malzemesi": "parkemal",
+  "Laminat Parke İşçiliği": "parkeisc",
+  "Seramik Malzemesi": "seramikmal",
+  "Seramik İşçiliği": "seramikisc",
   "Merdiven Mermer Kaplama": "basamakmalisc",
   "Merdiven Korkuluğu": "aluminyumkorkulukpaket",
-  "İç Merdiven Kaplama":"parkebasamakmalisc",
-  "İç Merdiven Korkuluk":"aluminyumkorkulukmalisc",
+  "İç Merdiven Kaplama": "parkebasamakmalisc",
+  "İç Merdiven Korkuluk": "aluminyumkorkulukmalisc",
   "Süpürgelik": "supurgelikmalisc",
   "Sahanlık ve Kat Holü Mermer": "sahanlikmalisc",
   "Mermer Harcı ve Kumu": "harcm3paket",
@@ -162,7 +164,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Çimento (kg)": "cimentomal",
   "Kum (m3)": "kummal",
   "Kireç (kg)": "kirecmal", // YENİ EKLENDİ
-  "Otopark Yüzey Sertleştirici (Helikopterli Beton)":'otopark_helikopter_sert_yuzeypaket',
+  "Otopark Yüzey Sertleştirici (Helikopterli Beton)": 'otopark_helikopter_sert_yuzeypaket',
 
   // --- 7. İNCE İŞLER ---
   // --- 7. İNCE İŞLER (LİSTEDEN EŞLEŞTİRİLDİ) ---
@@ -183,7 +185,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Evye Bataryası": "evyebataryasimal",     // Mutfak için               // Fiyat: 3.625 TL
   "Duş Seti (Başlık/Hortum)": "dussetimal",           // Fiyat: 2.588 TL
 
-  "Ağaç Dikimi":"agacmal",
+  "Ağaç Dikimi": "agacmal",
 
   // --- 8. MEKANİK TESİSAT ---
   "Sıhhi Tesisat (Temiz+Pis Su)": "sihhitesisatmalisc", // cost_data'daki isim güncellendi
@@ -194,7 +196,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Yağmur Suyu Hasat Sistemi (Zorunlu)": "yagmursuyuhasatsistemi2000ltpaket",
   "Otopark Jet Fan Cihazı (Adet)": "jetfanotoparkmal", // YENİ EKLENDİ,
   "Atıksu Dalgıç Pompa Sistemi (Set)": "dalgicpompamal", // YENİ EKLENDİ
-  "Yağ Ayırıcı Ünite (Adet)":"otopark_yag_tutucumal",
+  "Yağ Ayırıcı Ünite (Adet)": "otopark_yag_tutucumal",
 
   // YENİ: Yerden Isıtma Kalemleri (Wix'te bu ID'leri açmanız gerekebilir)
   "Yerden Isıtma (Strafor+Boru+İşçilik)": "yerdenisitmam2paket",
@@ -221,7 +223,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Zayıf Akım Sorti (TV/Data/Tel)": "zayifakimsortiadetpaket",       // Yeni ID gerekli
   "Anahtar/Priz Montajı ve Malzemesi": "anahtarprizadetpaket",             // Mevcut ID kullanılabilir
   "Daire Sigorta Panosu ve Şalt Malz.": "dairesigortasalterpaket",          // Mevcut ID kullanılabilir
-  "Temel Topraklaması (Galvaniz Şerit)":"galvaniz_topraklama_seritmtmal",
+  "Temel Topraklaması (Galvaniz Şerit)": "galvaniz_topraklama_seritmtmal",
 
   "Görüntülü Diafon Sistemi": "goruntuludiyafonpaket",
   "Merkezi Uydu Sistemi": "uydusistemipaket",

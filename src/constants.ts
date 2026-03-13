@@ -345,7 +345,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "İnşaat Demiri": 30700,                  // demirmal
     "Kalıp İşçiliği & Malzeme": 1417.5,      // kalipdemirbetonisc
     "Temel Su Yalıtımı (Bohçalama)": 338.6,  // membranmalisc
-    "Seramik Kaplama": 1373.8,               // seramikmalisc
+    "Seramik Malzemesi": 660,
+    "Seramik İşçiliği": 640,           // seramikmalisc
     "Seramik Yapıştırıcısı": 8.7,            // seramikyapistiricimal
     "Seramik Derz Dolgusu": 35.8,            // seramikderzmal
     "Gazbeton Blok (m3)": 3580,              // gazbetonmalm3mal
@@ -409,7 +410,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Cam Balkon Sistemleri": 3830,
     "Giydirme Cephe (Kompozit vb.)": 2810,
     "Pencere Söveleri": 335.7,
-    "Laminat Parke (Anahtar Teslim)": 460,
+    "Laminat Parke Malzemesi": 478,
+    "Laminat Parke İşçiliği": 263,
     "Merdiven Mermer Kaplama": 1341.5,
     "Merdiven Korkuluğu": 2045,
     "İç Merdiven Kaplama": 2172.5,

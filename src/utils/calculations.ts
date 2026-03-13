@@ -314,11 +314,11 @@ export class QuantityTakeoffService {
 
     private static applySpecificRooms(stats: any, room: any) {
         const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
-        
+
         // --- SIHHİ TESİSAT HASSASİYET MATEMATİĞİ ---
         // Kullanıcının girdiği oda çevresi (yatay PPRC/PVC borulama uzunluğunu etkiler)
         const roomPerimeter = room.perimeterM || 0;
-        
+
         // Kullanıcının girdiği tavan yüksekliği (dikey borulama/şaft inişlerini etkiler). 
         // 2.8m standart kabul edilmiştir. Tavan yükseldikçe maliyet artar.
         const heightFactor = Math.max(0, ((room.roomHeight || 2.8) - 2.8) * 0.05);
@@ -339,17 +339,17 @@ export class QuantityTakeoffService {
             // Banyo: Sabit armatürler (0.30) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
             stats.calc_plumbing_unit += 0.30 + (roomPerimeter * 0.020) + heightFactor;
 
-            stats.calc_bathroom_cabinet += 1; 
+            stats.calc_bathroom_cabinet += 1;
             stats.calc_toilet += 1;
-            stats.calc_basin_mixer += 1; 
-            stats.calc_shower_cabin += 1; 
+            stats.calc_basin_mixer += 1;
+            stats.calc_shower_cabin += 1;
             stats.calc_shower_set += 1;
         }
         if (room.type === 'wc') {
             // WC: Sabit armatürler (0.15) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
             stats.calc_plumbing_unit += 0.15 + (roomPerimeter * 0.015) + heightFactor;
 
-            stats.calc_toilet += 1; 
+            stats.calc_toilet += 1;
             stats.calc_basin_mixer += 1;
         }
         if (room.type === 'balcony') {
@@ -504,15 +504,15 @@ export class QuantityTakeoffService {
                 // 1. Beton Hesabı
                 const baseConcrete = refArea * 0.35 * heightRatio;
                 const totalConcrete = baseConcrete * concreteMult;
-                stats.slab_concrete_volume = totalConcrete * 0.65; 
-                stats.column_concrete_volume = totalConcrete * 0.20; 
+                stats.slab_concrete_volume = totalConcrete * 0.65;
+                stats.column_concrete_volume = totalConcrete * 0.20;
                 stats.beam_concrete_volume = totalConcrete * 0.15;
 
                 // 2. Kalıp Hesabı
                 const baseForm = refArea * 2.8 * heightRatio;
                 const totalForm = baseForm * formMult;
-                stats.slab_formwork_area = totalForm * 0.5; 
-                stats.column_formwork_area = totalForm * 0.25; 
+                stats.slab_formwork_area = totalForm * 0.5;
+                stats.column_formwork_area = totalForm * 0.25;
                 stats.beam_formwork_area = totalForm * 0.25;
 
                 // 3. Demir Hesabı
@@ -2276,12 +2276,12 @@ export const calculateDynamicUnitPrice = (
     if (item.name === "Betonarme Betonu" || item.name === "Kuyu Temel Betonu") {
         const basePrice = getGlobalPrice(currentCosts, "Betonarme Betonu");
         let multiplier = 1.0;
-        
+
         // C30 varsayılan (1.0) kabul edilir. Diğerleri orantılanır.
         if (buildingStats?.concreteClass === 'C25') multiplier = 0.92;
         else if (buildingStats?.concreteClass === 'C35') multiplier = 1.08;
         else if (buildingStats?.concreteClass === 'C40') multiplier = 1.15;
-        
+
         return Math.round(basePrice * multiplier);
     }
 
@@ -2560,7 +2560,8 @@ export const calculateDynamicUnitPrice = (
             "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
             "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
             "Portmanto / Vestiyer", "İç Merdiven (Dubleks)", "Balkon Korkulukları (Alüminyum)",
-            "Cam Balkon Sistemleri", "Laminat Parke (Anahtar Teslim)", "Seramik Kaplama"
+            "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
+            "Seramik Malzemesi", "Seramik İşçiliği"
         ];
 
         // Mekanik ve Vitrifiye (Çok lüks armatürler seçileceği için en yüksek çarpan)

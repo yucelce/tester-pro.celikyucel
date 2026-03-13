@@ -153,7 +153,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Temel Yalıtım Koruma (XPS)", unit: "m2", auto_source: "calc_foundation_xps", multiplier: 1.05, scope: 'global' },
       { name: "Subasman Dolgusu (Stabilize/Mıcır)", unit: "m3", auto_source: "calc_subasman_filling", multiplier: 1, scope: 'global' },
       { name: "Çatı Konstrüksiyon ve Kaplama", unit: "m2", auto_source: "calc_roof", multiplier: 1, scope: 'global' },
-      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "calc_terrace_waterproofing", multiplier: 1, scope: 'global' }, 
+      { name: "Balkon ve Teras Su Yalıtımı", unit: "m2", auto_source: "calc_terrace_waterproofing", multiplier: 1, scope: 'global' },
       { name: "Yangın Merdiveni (Çelik)", unit: "Kat", auto_source: "calc_fire_escape", multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
@@ -195,7 +195,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Cam Balkon Sistemleri", unit: "m2", auto_source: "manual", multiplier: 1, scope: 'global' },
       { name: "Giydirme Cephe (Kompozit vb.)", unit: "m2", auto_source: "calc_facade_composite", multiplier: 0.25, scope: 'global' },
       { name: "Pencere Söveleri", unit: "mt", auto_source: "calc_window_perimeter", multiplier: 1, scope: 'unit' },
-{ name: "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)", unit: "m2", auto_source: "calc_parking_ceiling_insulation", multiplier: 1, scope: 'global' },    ]
+      { name: "Otopark Tavanı Yangın/Isı Yalıtımı (Taşyünü)", unit: "m2", auto_source: "calc_parking_ceiling_insulation", multiplier: 1, scope: 'global' },]
   },
   {
     id: "zemin_kaplama",
@@ -204,9 +204,10 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Banyo ve Islak Hacim Su Yalıtımı", unit: "m2", auto_source: "waterproofing_area", multiplier: 1.05, scope: 'unit' },
       { name: "Şap Malzemesi", unit: "m2", auto_source: "total_area", multiplier: 1.05, scope: 'unit' },
       { name: "Şap İşçiliği", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'unit' },
-      { name: "Laminat Parke (Anahtar Teslim)", unit: "m2", auto_source: "dry_area", multiplier: 1, scope: 'unit' },
-      { name: "Seramik Kaplama", unit: "m2", auto_source: "wet_area", multiplier: 1, scope: 'unit' },
-      { name: "Seramik Yapıştırıcısı", unit: "kg", auto_source: "net_wet_area", multiplier: 5, scope: 'unit' },
+      { name: "Laminat Parke Malzemesi", unit: "m2", auto_source: "dry_area", multiplier: 1.05, scope: 'unit' },
+      { name: "Laminat Parke İşçiliği", unit: "m2", auto_source: "dry_area", multiplier: 1, scope: 'unit' },
+      { name: "Seramik Malzemesi", unit: "m2", auto_source: "wet_area", multiplier: 1.05, scope: 'unit' },
+      { name: "Seramik İşçiliği", unit: "m2", auto_source: "wet_area", multiplier: 1, scope: 'unit' }, { name: "Seramik Yapıştırıcısı", unit: "kg", auto_source: "net_wet_area", multiplier: 5, scope: 'unit' },
       { name: "Seramik Derz Dolgusu", unit: "kg", auto_source: "net_wet_area", multiplier: 0.5, scope: 'unit' },
       { name: "Sahanlık ve Kat Holü Mermer", unit: "m2", auto_source: "calc_hall_area", multiplier: 1, scope: 'global' },
       { name: "Merdiven Mermer Kaplama", unit: "Basamak", auto_source: "calc_stairs", multiplier: 1, scope: 'global' },
@@ -224,7 +225,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Çelik Kapı (Daire Giriş)", unit: "Adet", auto_source: "calc_steel_door", multiplier: 1, scope: 'unit' },
       { name: "İç Kapı (Panel/Lake)", unit: "Adet", auto_source: "calc_inner_door", multiplier: 1, scope: 'unit' },
       { name: "Yangın Kapısı (Adet)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-      { name: "Mutfak Dolabı (Standart)", unit: "mt", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' }, 
+      { name: "Mutfak Dolabı (Standart)", unit: "mt", auto_source: "calc_kitchen_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Banyo Dolabı & Lavabo", unit: "Adet", auto_source: "calc_bathroom_cabinet", multiplier: 1, scope: 'unit' },
       { name: "Portmanto / Vestiyer", unit: "Adet", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "İç Merdiven Kaplama", unit: "Basamak", auto_source: "calc_internal_stair_steps", multiplier: 1, scope: 'global' },
@@ -270,7 +271,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Asansör (Paket)", unit: "Adet", auto_source: "calc_elevator", multiplier: 1, scope: 'global' },
       { name: "Klima Altyapısı (Bakır Borulama)", unit: "Adet", auto_source: "manual", multiplier: 0, scope: 'unit' },
       { name: "Sığınak Kapısı ve Havalandırma Paketi", unit: "Paket", auto_source: "calc_shelter_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global', inputType: 'manual_total' }, 
+      { name: "Otopark Yangın ve Jet Fan Sistemi", unit: "Paket", auto_source: "calc_parking_ventilation", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Otopark Drenaj ve Yağ Ayırıcı Sistem", unit: "Paket", auto_source: "calc_garage_drainage", multiplier: 1, scope: 'global', inputType: 'manual_total' },
     ]
   },
@@ -287,7 +288,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Görüntülü Diafon Sistemi", unit: "Daire", auto_source: "calc_unit_count", multiplier: 1, scope: 'unit' },
       { name: "Kamera ve Güvenlik Altyapısı", unit: "Paket", auto_source: "calc_cctv_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Cephe Aydınlatma (Wallwasher)", unit: "mt", auto_source: "manual", multiplier: 1, scope: 'global' },
-      { name: "Jeneratör (Ortak Alan)", unit: "Paket", auto_source: "calc_generator", multiplier: 1, scope: 'global', inputType: 'manual_total' }, 
+      { name: "Jeneratör (Ortak Alan)", unit: "Paket", auto_source: "calc_generator", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Akıllı Ev Altyapı ve Donanım Paketi", unit: "Paket", auto_source: 'calc_smart_home', multiplier: 1, scope: 'global', inputType: 'manual_total' }
     ]
   },
@@ -396,9 +397,10 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
 
   // --- 6. Zemin ve Merdiven ---
   "Şap Malzemesi": "Döşeme üzerindeki tesisat borularını örtmek ve zemin kaplaması (parke/seramik) döşenmeden önce teraziye (su mastarına) alınmış dümdüz bir satıh elde etmek için dökülen kum-çimento harcıdır.",
-  "Seramik Kaplama": "Banyo, wc, mutfak tezgah arası, balkon, koridor gibi suya maruz kalan alanların (ıslak hacimler) zemin ve duvarlarına uygulanan fayans/granit seramik kaplama malzemesi ve yapıştırıcı/işçiliğidir.",
-  "Laminat Parke (Anahtar Teslim)": "Salon, yatak odası, oturma odası gibi kuru hacimlerin zeminlerine uygulanan kilitli parke paneller, altına serilen ses yalıtım şiltesi (kapron) ve köşe süpürgelikleri dahil tam maliyettir.",
-
+"Seramik Malzemesi": "Banyo, wc, mutfak tezgah arası, balkon gibi suya maruz kalan alanların zemin ve duvarlarına uygulanan fayans/granit malzemedir (fire payı dahildir).",
+"Seramik İşçiliği": "Seramik ve fayansların yüzeye yapıştırılması, mastarlanması ve derz dolgu işlemlerinin ustalık bedelidir.",
+"Laminat Parke Malzemesi": "Salon ve yatak odaları gibi kuru hacimlerin zeminlerine uygulanan kilitli parke panelleri ve alt şilte (kapron) malzemesidir.",
+"Laminat Parke İşçiliği": "Laminat parkelerin kesilmesi, kilitlenerek döşenmesi ve süpürgeliklerin montaj ustalık bedelidir.",
   // --- 7. İnce İşler ve Mobilya ---
   "Bina Giriş Kapısı (Ana)": "Apartman veya site bloklarının ana girişinde kullanılan, estetik, korozyona ve dış hava şartlarına dayanıklı, şifreli/kartlı veya görüntülü otomat sistemine sahip büyük bina kapısıdır.",
   "Çelik Kapı (Daire Giriş)": "Bağımsız bölümlerin (dairelerin) girişlerinde kullanılan, ahşap görünümlü giydirmeye sahip, levye/kriko zorlamalarına ve hırsızlığa karşı dayanıklı çok kilitli ağır çelik kapıların maliyetidir.",

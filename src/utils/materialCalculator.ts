@@ -28,7 +28,7 @@ export const generateProcurementPlan = (
     const getTaskForCategory = (catId: string, itemName: string): string => {
         // TÜRKÇE KARAKTER DÜZELTMESİ (İ -> i dönüşümü için)
         const nameLower = itemName.toLocaleLowerCase('tr-TR');
-        
+
         if (nameLower.includes('yeşil etiket') || nameLower.includes('asansör ruhsat') || nameLower.includes('enerji kimlik')) return 'handover';
         switch (catId) {
             case 'kaba_insaat': return nameLower.includes('çatı') ? 'roof' : 'structure';
@@ -49,20 +49,20 @@ export const generateProcurementPlan = (
         cement: getGlobalPrice(costs, "Çimento (kg)"),
         sand: getGlobalPrice(costs, "Kum (m3)"),
         lime: getGlobalPrice(costs, "Kireç (kg)"),
-        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000, 
+        iron: getGlobalPrice(costs, "İnşaat Demiri") / 1000,
         concrete: getGlobalPrice(costs, "Betonarme Betonu"),
         adhesive: getGlobalPrice(costs, "Gazbeton Yapıştırıcısı"),
-        ceramicTile: getGlobalPrice(costs, "Seramik Kaplama"),
+        ceramicTile: getGlobalPrice(costs, "Seramik Malzemesi"),
         ceramicAdhesive: getGlobalPrice(costs, "Seramik Yapıştırıcısı"),
         jointFiller: getGlobalPrice(costs, "Seramik Derz Dolgusu"),
         civi: getGlobalPrice(costs, "İnşaat Çivisi (kg)"),
         kalipYagi: getGlobalPrice(costs, "Kalıp Yağı (Litre)"),
         kereste: getGlobalPrice(costs, "Kereste (m3)"),
         bagTeli: getGlobalPrice(costs, "Bağ Teli (kg)"),
-        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)")) * 35, 
-        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)")) * 25, 
-        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)")) * 20, 
-        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)")) * 20 
+        sivaAlcisi: (getGlobalPrice(costs, "Sıva Alçısı (kg)")) * 35,
+        satenAlci: (getGlobalPrice(costs, "Saten Alçı (kg)")) * 25,
+        astarBoya: (getGlobalPrice(costs, "Astar Boya (kg)")) * 20,
+        icCepheBoya: (getGlobalPrice(costs, "İç Cephe Boyası (kg)")) * 20
     };
 
     // Listeye Ekleme Fonksiyonu
@@ -120,12 +120,12 @@ export const generateProcurementPlan = (
 
     const paintArea = (stats.calc_paint_wall_area || 0) + (stats.calc_ceiling_paint_area || 0);
     addCalculatedMaterial('siva_alcisi', 'Makine Sıva Alçısı', 'Torba (35kg)', (paintArea * 9.5) / 35, 'plaster', prices.sivaAlcisi);
-    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1) / 25, 'plaster', prices.satenAlci); 
+    addCalculatedMaterial('saten_alci', 'Saten Perdah Alçısı', 'Torba (25kg)', (paintArea * 1) / 25, 'plaster', prices.satenAlci);
     addCalculatedMaterial('ic_cephe_boya', 'İç Cephe Boyası (2 Kat)', 'Kova (20kg)', (paintArea * 0.45) / 20, 'paint', prices.icCepheBoya);
 
     const wetArea = stats.wet_area || 0;
     const netWetArea = stats.net_wet_area || wetArea;
-    addCalculatedMaterial('seramik_karo', 'Seramik / Fayans', 'm²', wetArea, 'flooring', prices.ceramicTile * 0.7);
+    addCalculatedMaterial('seramik_karo', 'Seramik / Fayans', 'm²', wetArea, 'flooring', prices.ceramicTile);
     addCalculatedMaterial('seramik_yapis', 'Seramik Yapıştırıcısı', 'Torba (25kg)', (netWetArea * 5) / 25, 'flooring', prices.ceramicAdhesive * 25);
     addCalculatedMaterial('derz_dolgu', 'Derz Dolgusu', 'kg', netWetArea * 0.5, 'flooring', prices.jointFiller);
 
@@ -135,7 +135,7 @@ export const generateProcurementPlan = (
     const brokenDownItems = [
         "betonarme betonu", "inşaat demiri", "kalıp işçiliği", "duvar örme harcı", "gazbeton yapıştırıcısı",
         "iç sıva", "alçı sıva", "iç cephe boyası", "tavan boyası", "şap malzemesi", "şap işçiliği",
-        "seramik yapıştırıcısı", "seramik derz dolgusu", "seramik kaplama"
+        "seramik yapıştırıcısı", "seramik derz dolgusu", "seramik malzemesi", "seramik işçiliği" // İsimler güncellendi
     ];
 
     // Şantiyeye gelmeyen soyut hizmet, harç, işçilik ve operasyonel gider filtreleri (Genişletildi)
@@ -158,7 +158,7 @@ export const generateProcurementPlan = (
             const nameLower = item.name.toLocaleLowerCase('tr-TR');
 
             const isBrokenDown = brokenDownItems.some(kw => nameLower.includes(kw));
-            
+
             // "Yerden Isıtma (Strafor+Boru+İşçilik)" içinde "işçilik" geçse de, fiziksel malzeme olduğu için koruyoruz.
             const isNonPhysical = nonPhysicalKeywords.some(kw => nameLower.includes(kw)) && !nameLower.includes("yerden ısıtma");
 
@@ -170,24 +170,35 @@ export const generateProcurementPlan = (
                 // --- YENİ EKLENEN: SIHHİ TESİSAT TEDARİK KIRILIMI ---
                 if (item.name === "Sıhhi Tesisat (Temiz+Pis Su)") {
                     const delivery = task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date();
-                    
+
+                    // TOPLAM FİYATIN %65'İ MALZEME, %35'İ İŞÇİLİKTİR.
+                    // Tedarik listesine sadece malzeme bedeli olan %65'i kendi içinde kırarak yansıtıyoruz.
+                    const materialRatio = 0.65;
+
                     procurementList.push({
-                        id: 'pprc_boru', name: 'PPRC Temiz Su Boru ve Ek Parçaları', unit: 'Paket', 
-                        quantity: item.finalQty, unitPrice: item.unit_price * 0.40, totalPrice: item.totalPrice * 0.40,
+                        id: 'pprc_boru', name: 'PPRC Temiz Su Boru ve Ek Parçaları', unit: 'Paket',
+                        quantity: item.finalQty,
+                        unitPrice: item.unit_price * materialRatio * 0.50, // Malzemenin %50'si PPRC
+                        totalPrice: item.totalPrice * materialRatio * 0.50,
                         taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
                     });
                     procurementList.push({
-                        id: 'pvc_boru', name: 'PVC Atık Su Boru ve Ek Parçaları', unit: 'Paket', 
-                        quantity: item.finalQty, unitPrice: item.unit_price * 0.35, totalPrice: item.totalPrice * 0.35,
+                        id: 'pvc_boru', name: 'PVC Atık Su Boru ve Ek Parçaları', unit: 'Paket',
+                        quantity: item.finalQty,
+                        unitPrice: item.unit_price * materialRatio * 0.35, // Malzemenin %35'i PVC
+                        totalPrice: item.totalPrice * materialRatio * 0.35,
                         taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
                     });
                     procurementList.push({
-                        id: 'tesisat_sarf', name: 'Vana, Sifon ve Tesisat Sarf Malzemeleri', unit: 'Paket', 
-                        quantity: item.finalQty, unitPrice: item.unit_price * 0.25, totalPrice: item.totalPrice * 0.25,
+                        id: 'tesisat_sarf', name: 'Vana, Sifon ve Tesisat Sarf Malzemeleri', unit: 'Paket',
+                        quantity: item.finalQty,
+                        unitPrice: item.unit_price * materialRatio * 0.15, // Malzemenin %15'i Sarf/Vana
+                        totalPrice: item.totalPrice * materialRatio * 0.15,
                         taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
                     });
-                    
-                    return; // Tesisatın ana ismini (Sıhhi Tesisat) eklemeyi atla ve sıradakine geç
+
+                    // Kalan %35'lik "İşçilik" bedeli fiziksel bir ürün olmadığı için "Tedarik Listesi"ne basılmaz.
+                    return;
                 }
                 // ---------------------------------------------------
 
@@ -200,7 +211,7 @@ export const generateProcurementPlan = (
                     totalPrice: item.totalPrice,
                     taskId: task ? task.id : 'other',
                     taskName: task ? task.name : 'Genel',
-                    deliveryDate: task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date() 
+                    deliveryDate: task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date()
                 });
             }
         });
