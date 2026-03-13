@@ -470,6 +470,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Sert Zemin / Yürüyüş Yolu": 675,
 
     "Veranda / Kış Bahçesi (Zemin ve Çatı Sistemi)": 9370,
+    "Bahçe / Çevre Duvarı": 1420, // Metretül (mt) tahmini fiyatı
+    "Ağaç Dikimi": 2100,          // Adet tahmini fiyatı
 
     // --- TESİSAT, DOĞALGAZ & YANGIN ---
     "Doğalgaz Kolon Hattı (mt) Birim": 1984.2,     // dogalgazkolonhattimtmalisc
