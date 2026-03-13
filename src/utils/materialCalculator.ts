@@ -167,6 +167,30 @@ export const generateProcurementPlan = (
                 const taskId = getTaskForCategory(cat.id, item.name);
                 const task = schedule.find(t => t.id === taskId);
 
+                // --- YENİ EKLENEN: SIHHİ TESİSAT TEDARİK KIRILIMI ---
+                if (item.name === "Sıhhi Tesisat (Temiz+Pis Su)") {
+                    const delivery = task ? new Date(task.startDate.getTime() - 7 * 24 * 60 * 60 * 1000) : new Date();
+                    
+                    procurementList.push({
+                        id: 'pprc_boru', name: 'PPRC Temiz Su Boru ve Ek Parçaları', unit: 'Paket', 
+                        quantity: item.finalQty, unitPrice: item.unit_price * 0.40, totalPrice: item.totalPrice * 0.40,
+                        taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
+                    });
+                    procurementList.push({
+                        id: 'pvc_boru', name: 'PVC Atık Su Boru ve Ek Parçaları', unit: 'Paket', 
+                        quantity: item.finalQty, unitPrice: item.unit_price * 0.35, totalPrice: item.totalPrice * 0.35,
+                        taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
+                    });
+                    procurementList.push({
+                        id: 'tesisat_sarf', name: 'Vana, Sifon ve Tesisat Sarf Malzemeleri', unit: 'Paket', 
+                        quantity: item.finalQty, unitPrice: item.unit_price * 0.25, totalPrice: item.totalPrice * 0.25,
+                        taskId: task ? task.id : 'other', taskName: task ? task.name : 'Genel', deliveryDate: delivery
+                    });
+                    
+                    return; // Tesisatın ana ismini (Sıhhi Tesisat) eklemeyi atla ve sıradakine geç
+                }
+                // ---------------------------------------------------
+
                 procurementList.push({
                     id: item.name,
                     name: item.name,

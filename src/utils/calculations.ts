@@ -314,12 +314,21 @@ export class QuantityTakeoffService {
 
     private static applySpecificRooms(stats: any, room: any) {
         const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
+        
+        // --- SIHHİ TESİSAT HASSASİYET MATEMATİĞİ ---
+        // Kullanıcının girdiği oda çevresi (yatay PPRC/PVC borulama uzunluğunu etkiler)
+        const roomPerimeter = room.perimeterM || 0;
+        
+        // Kullanıcının girdiği tavan yüksekliği (dikey borulama/şaft inişlerini etkiler). 
+        // 2.8m standart kabul edilmiştir. Tavan yükseldikçe maliyet artar.
+        const heightFactor = Math.max(0, ((room.roomHeight || 2.8) - 2.8) * 0.05);
+
         if (isKitchen) {
-            stats.calc_plumbing_unit += 0.5;
+            // Mutfak: Sabit armatürler (0.25) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
+            stats.calc_plumbing_unit += 0.25 + (roomPerimeter * 0.015) + heightFactor;
+
             // Tezgah uzunluğu = Mutfak dolabı uzunluğu (Tül Metre)
             const cabinetLength = Math.min(Math.max(2.5, 2.5 + (room.areaM2 * 0.15)), 7.0);
-
-            // DÜZELTME: Alan hesabı iptal edildi, direkt tül metre (uzunluk) baz alınıyor
             stats.calc_kitchen_cabinet += cabinetLength;
             stats.kitchen_cabinet_length += cabinetLength;
             stats.calc_kitchen_counter_length += cabinetLength;
@@ -327,13 +336,27 @@ export class QuantityTakeoffService {
             stats.calc_sink_mixer += 1;
         }
         if (room.type === 'bath') {
-            stats.calc_plumbing_unit += 0.5; stats.calc_bathroom_cabinet += 1; stats.calc_toilet += 1;
-            stats.calc_basin_mixer += 1; stats.calc_shower_cabin += 1; stats.calc_shower_set += 1;
+            // Banyo: Sabit armatürler (0.30) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
+            stats.calc_plumbing_unit += 0.30 + (roomPerimeter * 0.020) + heightFactor;
+
+            stats.calc_bathroom_cabinet += 1; 
+            stats.calc_toilet += 1;
+            stats.calc_basin_mixer += 1; 
+            stats.calc_shower_cabin += 1; 
+            stats.calc_shower_set += 1;
         }
         if (room.type === 'wc') {
-            stats.calc_plumbing_unit += 0.25; stats.calc_toilet += 1; stats.calc_basin_mixer += 1;
+            // WC: Sabit armatürler (0.15) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
+            stats.calc_plumbing_unit += 0.15 + (roomPerimeter * 0.015) + heightFactor;
+
+            stats.calc_toilet += 1; 
+            stats.calc_basin_mixer += 1;
         }
         if (room.type === 'balcony') {
+            // Balkon: 5m²'den büyük balkonlara süzgeç ve yıkama musluğu tesisatı payı eklenir
+            if (room.areaM2 > 5) {
+                stats.calc_plumbing_unit += 0.05 + (roomPerimeter * 0.005);
+            }
             stats.calc_balcony_railing += (room.perimeterM / 2);
         }
     }

@@ -186,7 +186,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Ağaç Dikimi":"agacmal",
 
   // --- 8. MEKANİK TESİSAT ---
-  "Sıhhi Tesisat (Temiz+Pis Su)": "sihhitesisatisc", // cost_data'daki isim güncellendi
+  "Sıhhi Tesisat (Temiz+Pis Su)": "sihhitesisatmalisc", // cost_data'daki isim güncellendi
   "Kombi ve Baca Montajı": "kombipaket",
   "Kalorifer Altyapısı (Mobil Sistem)": "isitmatesisatim2malisc",
   "Panel Radyatör (DemirDöküm vb.)": "radyatormal",

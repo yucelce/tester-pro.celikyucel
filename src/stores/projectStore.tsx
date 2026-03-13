@@ -981,18 +981,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 const c = Math.min(pair.count, availableLower, availableUpper);
 
                 if (c > 0) {
-                    // undefined kontrolü ile güvenli düşüm
-                    if (aggregatedUnitStats['calc_steel_door'] !== undefined) aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
-                    if (aggregatedUnitStats['calc_combi_count'] !== undefined) aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
-                    if (aggregatedUnitStats['calc_heat_pump'] !== undefined) aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
-                    if (aggregatedUnitStats['calc_sub_panel_count'] !== undefined) aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
-                    if (aggregatedUnitStats['calc_unit_count'] !== undefined) aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+                    // DUBLEKS KIRILIM ETİKETİ
+                    const duplexLabel = `Dubleks Düşümü (${lowerUnit.name} + ${upperUnit.name})`;
+
+                    // undefined kontrolü ile güvenli düşüm VE KIRILIM EKLEME
+                    if (aggregatedUnitStats['calc_steel_door'] !== undefined) {
+                        aggregatedUnitStats['calc_steel_door'] = Math.max(0, aggregatedUnitStats['calc_steel_door'] - c);
+                        addBreakdown('calc_steel_door', `Çelik Kapı İptali - ${duplexLabel}`, -c);
+                    }
+                    if (aggregatedUnitStats['calc_combi_count'] !== undefined) {
+                        aggregatedUnitStats['calc_combi_count'] = Math.max(0, aggregatedUnitStats['calc_combi_count'] - c);
+                        addBreakdown('calc_combi_count', `Kombi İptali - ${duplexLabel}`, -c);
+                    }
+                    if (aggregatedUnitStats['calc_heat_pump'] !== undefined) {
+                        aggregatedUnitStats['calc_heat_pump'] = Math.max(0, aggregatedUnitStats['calc_heat_pump'] - c);
+                        addBreakdown('calc_heat_pump', `Isı Pompası İptali - ${duplexLabel}`, -c);
+                    }
+                    if (aggregatedUnitStats['calc_sub_panel_count'] !== undefined) {
+                        aggregatedUnitStats['calc_sub_panel_count'] = Math.max(0, aggregatedUnitStats['calc_sub_panel_count'] - c);
+                        addBreakdown('calc_sub_panel_count', `Tali Pano İptali - ${duplexLabel}`, -c);
+                    }
+                    if (aggregatedUnitStats['calc_unit_count'] !== undefined) {
+                        aggregatedUnitStats['calc_unit_count'] = Math.max(0, aggregatedUnitStats['calc_unit_count'] - c);
+                        addBreakdown('calc_unit_count', `Bağımsız Bölüm İptali - ${duplexLabel}`, -c);
+                    }
 
                     // İç merdiven hesabı için dubleks adedini global değişkene yazıyoruz.
                     aggregatedUnitStats['total_duplex_count'] = (aggregatedUnitStats['total_duplex_count'] || 0) + c;
 
-                    // --- YENİ: DİNAMİK DUBLEKS MERDİVEN VE KORKULUK HESABI ---
-                    // Alt katın tipine göre gerçek yüksekliğini buluyoruz (Ters dubleks vs. için)
+                    // --- DİNAMİK DUBLEKS MERDİVEN VE KORKULUK HESABI ---
                     const lowerHeight = lowerUnit.floorType === 'ground' ? buildingStats.groundFloorHeight :
                         lowerUnit.floorType === 'basement' ? buildingStats.basementFloorHeight :
                             buildingStats.normalFloorHeight;
@@ -1009,6 +1026,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     // Bu değerleri doğrudan genel metraj havuzuna atıyoruz
                     aggregatedUnitStats['total_duplex_stair_steps'] = (aggregatedUnitStats['total_duplex_stair_steps'] || 0) + (steps * c);
                     aggregatedUnitStats['total_duplex_stair_railing'] = (aggregatedUnitStats['total_duplex_stair_railing'] || 0) + (railingMt * c);
+                    
+                    // İÇ MERDİVEN VE KORKULUK İÇİN POZİTİF KIRILIM EKLEME
+                    addBreakdown('calc_internal_stair_steps', `İç Merdiven (${lowerUnit.name} + ${upperUnit.name})`, steps * c);
+                    addBreakdown('calc_internal_stair_railing_mt', `İç Merdiven Korkuluğu (${lowerUnit.name} + ${upperUnit.name})`, railingMt * c);
                     // -------------------------------------------------------------
 
                     // Kullanılanları müsait listeden düş
