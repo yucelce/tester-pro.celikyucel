@@ -1018,10 +1018,10 @@ const renderTab = (id: 'general' | 'floors' | 'contract' | 'special' | 'structur
                                             onChange={(e) => setBuildingStats({ ...buildingStats, concreteClass: e.target.value as any })}
                                             className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-orange-500 transition"
                                         >
-                                            <option value="C25">C25 (Düşük Dayanım / Eski Tip)</option>
-                                            <option value="C30">C30 (Standart / Deprem Yönetmeliği)</option>
-                                            <option value="C35">C35 (Yüksek Dayanım / Çok Katlı)</option>
-                                            <option value="C40">C40 (Özel Proje / Gökdelen)</option>
+                                            <option value="C25">C25 (Düşük Dayanım)</option>
+                                            <option value="C30">C30 (Standart)</option>
+                                            <option value="C35">C35 (Yüksek Dayanım )</option>
+                                            <option value="C40">C40 (Özel Proje)</option>
                                         </select>
                                         <p className="text-[10px] text-slate-500 mt-2">Beton fiyatını ve döküm maliyetlerini doğrudan değiştirir.</p>
                                     </div>
