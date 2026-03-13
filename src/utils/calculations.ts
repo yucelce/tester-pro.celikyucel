@@ -2289,9 +2289,6 @@ export const calculateDynamicUnitPrice = (
         return getGlobalPrice(currentCosts, "İnşaat Demiri");
     }
 
-    if (item.name === "Kuyu Temel Demiri") {
-        return getGlobalPrice(currentCosts, "İnşaat Demiri");
-    }
 
     // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
     // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor

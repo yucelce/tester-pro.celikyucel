@@ -25,7 +25,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
 const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor'>('general');    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
 
-    const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor') => {
+    const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor') => {
         setActiveTab(tabId);
         const visited = buildingStats.visitedTabs || [];
         if (!visited.includes(tabId)) {
@@ -36,8 +36,7 @@ const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | '
         }
     };
 
-    const renderTab = (id: 'general' | 'floors' | 'contract' | 'special' | 'villa_outdoor', icon: string, label: string) => {
-        const isActive = activeTab === id;
+const renderTab = (id: 'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor', icon: string, label: string) => {        const isActive = activeTab === id;
         const isVisited = (buildingStats.visitedTabs || []).includes(id);
         const needsAttention = !isVisited && !isActive; // Ziyaret edilmemişse ve şu an aktif değilse
 

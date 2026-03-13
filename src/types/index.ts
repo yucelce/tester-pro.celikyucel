@@ -153,6 +153,8 @@ export interface BuildingStats {
     buildingType?: 'apartment' | 'villa';
 
     visitedTabs?: string[];
+    concreteClass?: ConcreteClass; // <-- BU SATIR EKSİKTİ
+    slabType?: GlobalSlabType;     // <-- BU SATIR EKSİKTİ
     outerWallThickness?: number;
     innerWallThickness?: number;
 
