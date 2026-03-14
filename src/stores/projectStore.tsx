@@ -1028,7 +1028,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     // Bu değerleri doğrudan genel metraj havuzuna atıyoruz
                     aggregatedUnitStats['total_duplex_stair_steps'] = (aggregatedUnitStats['total_duplex_stair_steps'] || 0) + (steps * c);
                     aggregatedUnitStats['total_duplex_stair_railing'] = (aggregatedUnitStats['total_duplex_stair_railing'] || 0) + (railingMt * c);
-                    
+
                     // İÇ MERDİVEN VE KORKULUK İÇİN POZİTİF KIRILIM EKLEME
                     addBreakdown('calc_internal_stair_steps', `İç Merdiven (${lowerUnit.name} + ${upperUnit.name})`, steps * c);
                     addBreakdown('calc_internal_stair_railing_mt', `İç Merdiven Korkuluğu (${lowerUnit.name} + ${upperUnit.name})`, railingMt * c);
@@ -1256,7 +1256,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 aggregatedUnitStats,
                                 costs,
                                 globalWallMaterial,
-                                globalCostBreakdowns
+                                globalCostBreakdowns,
+                                units
                             );
                             dynamicUnitPrice = calculatedValue;
                         }
@@ -1285,7 +1286,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                     constructionDuration,
                                     aggregatedUnitStats,
                                     costs,
-                                    globalWallMaterial // <-- BURAYI EKLEYİN
+                                    globalWallMaterial,
+                                    undefined,
+                                    units // <--- BURA EKLENDİ
                                 ));
                             }
                         }
@@ -1309,7 +1312,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         totalPrice,
                         unit_price: dynamicUnitPrice,
                         breakdown: quantityBreakdowns[item.auto_source] || [],
-                        costBreakdown: globalCostBreakdowns[item.name] || null 
+                        costBreakdown: globalCostBreakdowns[item.name] || null
                     };
                 });
 

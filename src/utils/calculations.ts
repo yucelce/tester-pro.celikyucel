@@ -801,6 +801,7 @@ export interface CalculationContext {
     totalBuildingHeight: number;
     regulationHeight: number;
     costBreakdowns?: Record<string, { label: string; value: number }[]>;
+    units?: any[];
 }
 
 type CalculatorFn = (ctx: CalculationContext) => number;
@@ -951,7 +952,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.max(totalConstructionArea, minQty);
     },
 
-    'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts, item, costBreakdowns }) => {
+    'calc_gas_infrastructure': ({ aggregatedUnitStats, buildingStats, currentCosts, item, costBreakdowns, units }) => {
         const totalApartments = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         const verticalPipePrice = getGlobalPrice(currentCosts, "Doğalgaz Kolon Hattı (mt) Birim");
         const connectionSetPrice = getGlobalPrice(currentCosts, "Doğalgaz Daire Başı Set Birim");
@@ -967,17 +968,36 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const totalVerticalMetres = verticalHeight + estimatedSetback;
 
-        const normalHallLen = (buildingStats.normalFloorHallArea || 10) / 1.5;
-        const groundHallLen = (buildingStats.groundFloorHallArea || 10) / 1.5;
-        const basementHallLen = (buildingStats.basementFloorHallArea || 10) / 1.5;
+        // --- YATAY BORU HESABI (GERÇEK DAİRE YERLEŞİMİNE GÖRE) ---
+        let totalHorizontalMetres = 0;
 
-        const totalFloors = buildingStats.normalFloorCount + 1 + buildingStats.basementFloorCount;
-        const unitsPerFloor = totalApartments / totalFloors;
+        if (buildingStats.buildingType !== 'villa') {
+            const normalHallLen = (buildingStats.normalFloorHallArea || 10) / 1.5;
+            const groundHallLen = (buildingStats.groundFloorHallArea || 10) / 1.5;
+            const basementHallLen = (buildingStats.basementFloorHallArea || 10) / 1.5;
 
-        const totalHorizontalMetres =
-            (buildingStats.normalFloorCount * unitsPerFloor * (normalHallLen / 2)) +
-            (1 * unitsPerFloor * (groundHallLen / 2)) +
-            (buildingStats.basementFloorCount * unitsPerFloor * (basementHallLen / 2));
+            // Kullanıcı birim (daire) eklemişse tam sayıları bul
+            if (units && units.length > 0) {
+                const unitCountsByFloor = { normal: 0, ground: 0, basement: 0, roof: 0 };
+                units.forEach(u => { unitCountsByFloor[u.floorType] += u.count; });
+
+                // Normal ve Bodrum katlar birden fazla olabileceği için kat başına düşen daireyi buluyoruz
+                const unitsPerNormalFloor = buildingStats.normalFloorCount > 0 ? unitCountsByFloor.normal / buildingStats.normalFloorCount : 0;
+                const unitsPerBasementFloor = buildingStats.basementFloorCount > 0 ? unitCountsByFloor.basement / buildingStats.basementFloorCount : 0;
+
+                // Yatay boru = O kattaki daire sayısı x (Hol Uzunluğu / 2) -> Kapı önü mesafesi
+                totalHorizontalMetres += buildingStats.normalFloorCount * (unitsPerNormalFloor * (normalHallLen / 2));
+                totalHorizontalMetres += unitCountsByFloor.ground * (groundHallLen / 2);
+                totalHorizontalMetres += buildingStats.basementFloorCount * (unitsPerBasementFloor * (basementHallLen / 2));
+            } else {
+                // Fallback: Daire girilmediyse sadece zemin ve normal katlara dağıt
+                const totalHabitableFloors = buildingStats.normalFloorCount + 1;
+                const unitsPerFloor = totalHabitableFloors > 0 ? totalApartments / totalHabitableFloors : 0;
+                totalHorizontalMetres =
+                    (buildingStats.normalFloorCount * unitsPerFloor * (normalHallLen / 2)) +
+                    (1 * unitsPerFloor * (groundHallLen / 2));
+            }
+        }
 
         const costVertical = totalVerticalMetres * verticalPipePrice;
         const costHorizontal = totalHorizontalMetres * horizontalPipePrice;
@@ -2198,32 +2218,23 @@ export const calculateComplexGlobalQuantity = (
     aggregatedUnitStats: Record<string, number>,
     currentCosts?: CostCategory[],
     globalWallMaterial: WallMaterial = 'gazbeton',
-    costBreakdowns?: Record<string, { label: string; value: number }[]>
+    costBreakdowns?: Record<string, { label: string; value: number }[]>,
+    units?: any[]
 ): number => {
     const totalFloors = buildingStats.basementFloorCount + buildingStats.normalFloorCount + 1; // +1 Ground
 
-    // Fiziksel İmalatlar İçin (Bodrum DAHİL Toplam Yükseklik)
     const totalBuildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
         buildingStats.groundFloorHeight +
         (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) +
         (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0);
 
-    // Yönetmelik Sınırları İçin (Bodrum HARİÇ Bina Yüksekliği)
     const regulationHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
         buildingStats.groundFloorHeight;
 
     const ctx: CalculationContext = {
-        item,
-        buildingStats,
-        totalConstructionArea,
-        constructionDuration,
-        aggregatedUnitStats,
-        currentCosts,
-        globalWallMaterial,
-        totalFloors,
-        totalBuildingHeight,
-        regulationHeight,
-        costBreakdowns
+        item, buildingStats, totalConstructionArea, constructionDuration,
+        aggregatedUnitStats, currentCosts, globalWallMaterial, totalFloors,
+        totalBuildingHeight, regulationHeight, costBreakdowns, units // <--- BURA EKLENDİ
     };
 
     const strategy = globalQuantityStrategies[item.auto_source];
