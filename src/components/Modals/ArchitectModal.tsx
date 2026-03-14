@@ -34,37 +34,38 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
     const fetchArchitects = async () => {
         setIsLoading(true);
         try {
-            // Artık Google'a değil, kendi güvenli sunucumuza istek atıyoruz
             const response = await fetch('/api/architects');
-
+            
             if (!response.ok) {
                 throw new Error("Sunucudan veri çekilemedi");
             }
 
             const result = await response.json();
-
+            
             if (!result.success) {
                 throw new Error(result.error);
             }
 
             // Sadece projeyle eşleşen ildeki mimarları filtrele
             const filtered = result.data.filter((a: Architect) => a.il === buildingStats.province);
-
-            // Seçili ilçedekileri öne alacak şekilde sırala
+            
+            // Seçili ilçedekileri öne al, diğerlerini ilçe adına göre alfabetik sırala
             const sorted = filtered.sort((a: Architect, b: Architect) => {
                 const isADistrict = a.ilce === buildingStats.district;
                 const isBDistrict = b.ilce === buildingStats.district;
-
+                
+                // Seçili ilçe en üstte olsun
                 if (isADistrict && !isBDistrict) return -1;
                 if (!isADistrict && isBDistrict) return 1;
-                return 0; // İkisi de aynı durumdaysa sıralamayı değiştirme
+                
+                // Kalanları (veya aynı ilçede olanları) ilçe adına göre Türkçe alfabetik sırala
+                return a.ilce.localeCompare(b.ilce, 'tr-TR');
             });
 
             setArchitects(sorted);
-
+            
         } catch (error) {
             console.error("Mimari ofis listesi çekilemedi:", error);
-            // alert("Mimari ofis listesi şu an yüklenemiyor."); 
         } finally {
             setIsLoading(false);
         }

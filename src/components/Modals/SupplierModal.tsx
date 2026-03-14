@@ -59,7 +59,6 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const fetchSuppliers = async () => {
         setIsLoading(true);
         try {
-            // Artık Google'a değil, kendi güvenli sunucumuza istek atıyoruz
             const response = await fetch('/api/suppliers');
 
             if (!response.ok) {
@@ -75,14 +74,17 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             // Sadece projeyle eşleşen ildeki tedarikçileri filtrele
             const filtered = result.data.filter((s: Supplier) => s.il === buildingStats.province);
 
-            // Seçili ilçedekileri öne alacak şekilde sırala
+            // Seçili ilçedekileri öne al, diğerlerini ilçe adına göre alfabetik sırala
             const sorted = filtered.sort((a: Supplier, b: Supplier) => {
                 const isADistrict = a.ilce === buildingStats.district;
                 const isBDistrict = b.ilce === buildingStats.district;
                 
+                // Seçili ilçe en üstte olsun
                 if (isADistrict && !isBDistrict) return -1;
                 if (!isADistrict && isBDistrict) return 1;
-                return 0; // İkisi de aynı durumdaysa sıralamayı değiştirme
+                
+                // Kalanları (veya aynı ilçede olanları) ilçe adına göre Türkçe alfabetik sırala
+                return a.ilce.localeCompare(b.ilce, 'tr-TR');
             });
 
             setSuppliers(sorted);
