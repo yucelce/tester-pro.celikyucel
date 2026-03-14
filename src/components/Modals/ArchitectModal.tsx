@@ -21,7 +21,7 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
     const { buildingStats, totalConstructionArea } = useProjectStore();
     const [isLoading, setIsLoading] = useState(false);
     const [architects, setArchitects] = useState<Architect[]>([]);
-    
+
     // Hangi butonun yüklendiğini takip etmek için
     const [loadingAction, setLoadingAction] = useState<{ id: string, type: 'wa' | 'email' } | null>(null);
 
@@ -36,21 +36,32 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
         try {
             // Artık Google'a değil, kendi güvenli sunucumuza istek atıyoruz
             const response = await fetch('/api/architects');
-            
+
             if (!response.ok) {
                 throw new Error("Sunucudan veri çekilemedi");
             }
 
             const result = await response.json();
-            
+
             if (!result.success) {
                 throw new Error(result.error);
             }
 
             // Sadece projeyle eşleşen ildeki mimarları filtrele
             const filtered = result.data.filter((a: Architect) => a.il === buildingStats.province);
-            setArchitects(filtered);
-            
+
+            // Seçili ilçedekileri öne alacak şekilde sırala
+            const sorted = filtered.sort((a: Architect, b: Architect) => {
+                const isADistrict = a.ilce === buildingStats.district;
+                const isBDistrict = b.ilce === buildingStats.district;
+
+                if (isADistrict && !isBDistrict) return -1;
+                if (!isADistrict && isBDistrict) return 1;
+                return 0; // İkisi de aynı durumdaysa sıralamayı değiştirme
+            });
+
+            setArchitects(sorted);
+
         } catch (error) {
             console.error("Mimari ofis listesi çekilemedi:", error);
             // alert("Mimari ofis listesi şu an yüklenemiyor."); 
@@ -173,10 +184,10 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                             {hasWebsite && architect.website && (
                                                 <div className="flex items-center gap-2">
                                                     <i className="fas fa-globe text-slate-400 w-4"></i>
-                                                    <a 
-                                                        href={architect.website.startsWith('http') ? architect.website : `https://${architect.website}`} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer" 
+                                                    <a
+                                                        href={architect.website.startsWith('http') ? architect.website : `https://${architect.website}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
                                                         className="truncate text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition hover:underline"
                                                         title={architect.website}
                                                     >
@@ -189,10 +200,10 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                                     <i className="fas fa-map-marker-alt text-slate-400 w-4 mt-0.5"></i>
                                                     <div className="flex flex-col items-start gap-1">
                                                         <span className="leading-snug line-clamp-2" title={architect.adres}>{architect.adres}</span>
-                                                        <a 
-                                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(architect.adres)}`} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
+                                                        <a
+                                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(architect.adres)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
                                                             className="text-[10px] text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold flex items-center gap-1 transition"
                                                         >
                                                             <i className="fas fa-location-arrow"></i> Haritada Gör
@@ -224,9 +235,9 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                             )}
 
                                             {!hasPhone && !hasEmail && hasAddress && (
-                                                <a 
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(architect.adres)}`} 
-                                                    target="_blank" 
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(architect.adres)}`}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
                                                 >

@@ -75,7 +75,17 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
             // Sadece projeyle eşleşen ildeki tedarikçileri filtrele
             const filtered = result.data.filter((s: Supplier) => s.il === buildingStats.province);
 
-            setSuppliers(filtered);
+            // Seçili ilçedekileri öne alacak şekilde sırala
+            const sorted = filtered.sort((a: Supplier, b: Supplier) => {
+                const isADistrict = a.ilce === buildingStats.district;
+                const isBDistrict = b.ilce === buildingStats.district;
+                
+                if (isADistrict && !isBDistrict) return -1;
+                if (!isADistrict && isBDistrict) return 1;
+                return 0; // İkisi de aynı durumdaysa sıralamayı değiştirme
+            });
+
+            setSuppliers(sorted);
         } catch (error) {
             console.error("Tedarikçi listesi çekilemedi:", error);
             alert("Tedarikçi listesi şu an yüklenemiyor. Bağlantınızı kontrol edin.");
