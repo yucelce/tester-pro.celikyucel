@@ -152,7 +152,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
         const expensesByMonth: Record<string, number> = {};
         const tasksByMonth: Record<string, string[]> = {};
 
-        let totalTaskWeeks = projectSchedule.reduce((acc, t) => acc + t.durationWeeks, 0);
         let projectStartMonthDate = new Date(formatMonth(startDate) + '-01');
         const taskActualCosts: Record<string, number> = {};
 
@@ -190,15 +189,15 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
         projectSchedule.forEach(task => {
             const baseTaskCost = (taskActualCosts[task.id] || 0) * stressMultiplier;
-            const startDate = new Date(task.startDate);
+            const taskStartDate = new Date(task.startDate); // <-- İSİM DEĞİŞTİ
             const endDate = new Date(task.endDate);
-            const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) || 1;
+            const totalDays = (endDate.getTime() - taskStartDate.getTime()) / (1000 * 3600 * 24) || 1; // <-- BURASI DA GÜNCELLENDİ
 
             let monthsDiff = (endDate.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (endDate.getMonth() - projectStartMonthDate.getMonth());
             monthsDiff = Math.max(0, monthsDiff);
             let finalTaskCost = fixedTasks.includes(task.id) ? baseTaskCost : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
 
-            let currentD = new Date(startDate);
+            let currentD = new Date(taskStartDate); // <-- BURASI DA GÜNCELLENDİ
             let accumulatedDays = 0;
 
             while (currentD <= endDate) {

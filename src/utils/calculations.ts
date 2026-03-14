@@ -61,7 +61,7 @@ export const getIronCoefficient = (
     if (floorHeight > 3.5) {
         const extraHeight = floorHeight - 3.5;
         // Her 1 metrelik fazlalık için donatı yoğunluğunu sadece %2 artır (Maksimum %5)
-        heightMultiplier += Math.min(0.05, extraHeight * 0.02); 
+        heightMultiplier += Math.min(0.05, extraHeight * 0.02);
     }
 
     return baseCoeff * spanMultiplier * heightMultiplier;
@@ -230,14 +230,15 @@ export class QuantityTakeoffService {
                 stats.calc_radiator_infrastructure += (heatedArea * windowFactor);
                 stats.calc_radiator_count += Math.max(1, Math.ceil(radLen / 1.6));
             } else if (heatingSystem === 'underfloor' || heatingSystem === 'heat_pump') {
-                const standardHeatLoad = 2.9 * 40 * 1.05;
-                const densityFactor = roomHeatLoad / standardHeatLoad;
-
                 stats.calc_underfloor_area += heatedArea;
 
-                const effectivePipeArea = heatedArea * Math.max(1, densityFactor);
-                const portsNeeded = Math.ceil(effectivePipeArea / 12);
-                stats.calc_underfloor_collector += Math.ceil(portsNeeded / 12);
+                // Gerçek Mühendislik Yaklaşımı:
+                // Yerden ısıtmada 1 kangal boru devresi (1 port) ortalama 15 m² alanı ısıtır.
+                const portsNeeded = Math.ceil(heatedArea / 15.0);
+
+                // 1 adet standart kolektör kutusunda ortalama 8-10 port bulunur.
+                // Küsuratları (0.1, 0.2 gibi) toplayıp, en son total_cost kısmında tamsayıya yuvarlayacak şekilde havuza ekliyoruz.
+                stats.calc_underfloor_collector += (portsNeeded / 10.0);
             } else if (heatingSystem === 'vrf') {
                 stats.calc_vrf_infrastructure += heatedArea;
                 stats.calc_vrf_indoor += Math.ceil(heatedArea / 35);
@@ -714,16 +715,16 @@ export const calculateUnitCost = (
     isStructural: boolean = false
 ) => {
 
-const isGroundFloor = unit.floorType === 'ground';
+    const isGroundFloor = unit.floorType === 'ground';
     const currentFloorArea = isGroundFloor ? buildingStats.groundFloorArea : buildingStats.normalFloorArea;
-    
+
     // O an HANGİ KAT hesaplanıyorsa onun kendi yüksekliğini bul
     let currentFloorHeight = buildingStats.normalFloorHeight;
     if (unit.floorType === 'ground') currentFloorHeight = buildingStats.groundFloorHeight;
     else if (unit.floorType === 'basement') currentFloorHeight = buildingStats.basementFloorHeight;
 
     // Fonksiyona o katın kendi yüksekliğini gönder
-    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, currentFloorHeight);    const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
+    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, currentFloorHeight); const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
 
     const settings = { globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, isStructural, ironCoeff };
 
@@ -1520,20 +1521,20 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
     'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const avgArea = totalConstructionArea / Math.max(1, totalFloors);
-        
+
         // Her kat tipi için KENDİ yüksekliğine göre gerçekçi katsayıları al
         const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight);
         const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight);
         const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight);
-        
+
         let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
-        
+
         // Detaylı çizim yoksa (otomatik moddaysa) katları ayrı ayrı kendi katsayılarıyla topla
         if (ironKatlar === undefined) {
             const ironGround = (buildingStats.groundFloorArea * 0.35) * coeffGround;
             const ironNormal = (buildingStats.normalFloorArea * buildingStats.normalFloorCount * 0.35) * coeffNormal;
             const ironBasement = (buildingStats.basementFloorArea * buildingStats.basementFloorCount * 0.35) * coeffBasement;
-            
+
             ironKatlar = ironGround + ironNormal + ironBasement;
         }
 
