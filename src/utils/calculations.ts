@@ -36,7 +36,7 @@ export const calculateEstimatedRaftHeight = (totalFloors: number): number => {
 export const getIronCoefficient = (
     zone?: number,
     averageFloorArea: number = 200,
-    isSoftStory: boolean = false
+    floorHeight: number = 3.0 // <-- Tüm bina değil, o an hesaplanan katın kendi yüksekliği
 ): number => {
     // 1. Temel katsayı (Deprem bölgesine göre)
     let baseCoeff = 0.125;
@@ -48,20 +48,23 @@ export const getIronCoefficient = (
         default: baseCoeff = 0.125;
     }
 
-    // 2. Açıklık/Alan Çarpanı (Ortalama kat alanı büyüdükçe demir yoğunluğu artar)
-    // Örn: 200 m²'ye kadar standart (1.0). Sonrasındaki her 100m² için %2 artış (Maksimum %15 artış).
+    // 2. Açıklık/Alan Çarpanı
     let spanMultiplier = 1.0;
     if (averageFloorArea > 200) {
         const extraArea = averageFloorArea - 200;
         spanMultiplier += Math.min(0.15, (extraArea / 100) * 0.02);
     }
 
-    // 3. Yumuşak Kat (Soft Story) Çarpanı
-    // Zemin kat 4.5 metreden yüksekse o katın demir yükü %20 artar
-    let softStoryMultiplier = isSoftStory ? 1.20 : 1.0;
+    // 3. Yükseklik Çarpanı (Narinlik ve Kesme Kuvveti Etkisi) - GERÇEKÇİ ORAN
+    // Sadece yüksekliği 3.5 metreyi geçen katın kendi demir yoğunluğu çok hafif artar.
+    let heightMultiplier = 1.0;
+    if (floorHeight > 3.5) {
+        const extraHeight = floorHeight - 3.5;
+        // Her 1 metrelik fazlalık için donatı yoğunluğunu sadece %2 artır (Maksimum %5)
+        heightMultiplier += Math.min(0.05, extraHeight * 0.02); 
+    }
 
-    // Nihai demir katsayısı
-    return baseCoeff * spanMultiplier * softStoryMultiplier;
+    return baseCoeff * spanMultiplier * heightMultiplier;
 };
 
 // ============================================================================
@@ -711,10 +714,16 @@ export const calculateUnitCost = (
     isStructural: boolean = false
 ) => {
 
-    const isGroundFloor = unit.floorType === 'ground';
+const isGroundFloor = unit.floorType === 'ground';
     const currentFloorArea = isGroundFloor ? buildingStats.groundFloorArea : buildingStats.normalFloorArea;
-    const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
-    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, isSoftStory);
+    
+    // O an HANGİ KAT hesaplanıyorsa onun kendi yüksekliğini bul
+    let currentFloorHeight = buildingStats.normalFloorHeight;
+    if (unit.floorType === 'ground') currentFloorHeight = buildingStats.groundFloorHeight;
+    else if (unit.floorType === 'basement') currentFloorHeight = buildingStats.basementFloorHeight;
+
+    // Fonksiyona o katın kendi yüksekliğini gönder
+    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, currentFloorHeight);    const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
 
     const settings = { globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, isStructural, ironCoeff };
 
@@ -1490,8 +1499,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
-        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone);
-        const ironKatlar = aggregatedUnitStats['calc_iron_unit'] !== undefined ? aggregatedUnitStats['calc_iron_unit'] : ((totalConstructionArea * 0.35) * ironCoeff);
+        const avgArea = totalConstructionArea / Math.max(1, totalFloors);
+        
+        // Her kat tipi için KENDİ yüksekliğine göre gerçekçi katsayıları al
+        const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight);
+        const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight);
+        const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight);
+        
+        let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
+        
+        // Detaylı çizim yoksa (otomatik moddaysa) katları ayrı ayrı kendi katsayılarıyla topla
+        if (ironKatlar === undefined) {
+            const ironGround = (buildingStats.groundFloorArea * 0.35) * coeffGround;
+            const ironNormal = (buildingStats.normalFloorArea * buildingStats.normalFloorCount * 0.35) * coeffNormal;
+            const ironBasement = (buildingStats.basementFloorArea * buildingStats.basementFloorCount * 0.35) * coeffBasement;
+            
+            ironKatlar = ironGround + ironNormal + ironBasement;
+        }
+
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
         const ampatman = Math.min(raftHeight * 1.5, 1.00);

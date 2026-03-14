@@ -51,12 +51,12 @@ export const calculateConstructionSchedule = (
     // BÜTÜN SÜRELER DAHA GERÇEKÇİ PİYASA HIZLARINA (FAST-TRACK) GÖRE OPTİMİZE EDİLDİ
     // Ruhsat eskiden 84-168 gündü. Şimdi 45-90 gün arası.
     const durOfficialDays = Math.min(90, Math.max(45, Math.ceil(45 + (totalArea / 1000) * 7)));
-    const durSitePrepDays = 14; 
+    const durSitePrepDays = 14;
 
     // Hafriyat eskiden çok uzundu (14 katsayısı 7'ye düşürüldü)
     let baseExcavationDays = Math.max(7, Math.ceil(7 * basementFactor * (Math.max(1, totalArea / 1000))));
     let soilFactor = 1.0;
-    if (buildingStats.soilType === 'hard') soilFactor = 2.0; 
+    if (buildingStats.soilType === 'hard') soilFactor = 2.0;
     else if (buildingStats.soilType === 'medium') soilFactor = 1.2;
 
     const durExcavationDays = Math.ceil(baseExcavationDays * soilFactor);
@@ -64,7 +64,7 @@ export const calculateConstructionSchedule = (
     // Kaba yapı: Kat başına ortalama 10-12 gün
     const durStructureDays = Math.ceil(totalFloors * 12 * areaFactor);
     const durRoofDays = Math.max(14, Math.ceil(14 * (averageFloorArea / 200)));
-    
+
     // İnce işler kat sayılarına oranlandı
     const durWallsDays = Math.ceil(durStructureDays * 0.6);
     const durMEP_RoughDays = Math.ceil(totalFloors * 5 * areaFactor);
@@ -75,15 +75,15 @@ export const calculateConstructionSchedule = (
     const durPaintDays = Math.ceil(totalFloors * 6 * areaFactor);
     const durJoineryDays = Math.ceil(totalFloors * 5 * areaFactor);
     const durMEP_FinishDays = Math.ceil(totalFloors * 4 * areaFactor);
-    
+
     const isVilla = buildingStats.buildingType === 'villa';
     const durLandscapeDays = Math.ceil(14 * Math.max(1, totalArea / 1000));
     const durHandoverDays = 14;
 
     // Villa'ya özel süre katsayıları
-    const durStructureVillaDays = Math.ceil(totalFloors * 14.0 * areaFactor); 
-    const durRoofVillaDays = Math.max(14, Math.ceil(21 * (averageFloorArea / 200)));  
-    const durFacadeVillaDays = Math.ceil(totalFloors * 10 * areaFactor);             
+    const durStructureVillaDays = Math.ceil(totalFloors * 14.0 * areaFactor);
+    const durRoofVillaDays = Math.max(14, Math.ceil(21 * (averageFloorArea / 200)));
+    const durFacadeVillaDays = Math.ceil(totalFloors * 10 * areaFactor);
     const durLandscapeVillaDays = Math.ceil(14 * Math.max(1, (buildingStats.landArea || 500) / 400));
 
     const durPoolVillaDays = (buildingStats.poolArea && buildingStats.poolArea > 0)
@@ -109,10 +109,13 @@ export const calculateConstructionSchedule = (
         ...(durPoolVillaDays > 0 ? [
             { id: 'pool', name: 'Havuz İnşaatı ve Mekanik', durationDays: durPoolVillaDays, color: 'bg-sky-500', dependencies: ['structure'], dependencyType: 'finish_to_start' as const, lagDays: 7 }
         ] : []),
-        { id: 'smart_home', name: 'Akıllı Ev Sistemi', durationDays: durSmartHomeVillaDays, color: 'bg-violet-500', dependencies: ['mep_rough'], dependencyType: 'finish_to_start', lagDays: 7 },
+        // Akıllı ev seçilmişse listeye ekle
+        ...(buildingStats.hasSmartHome ? [
+            { id: 'smart_home', name: 'Akıllı Ev Sistemi', durationDays: durSmartHomeVillaDays, color: 'bg-violet-500', dependencies: ['mep_rough'], dependencyType: 'finish_to_start' as const, lagDays: 7 }
+        ] : []),
         { id: 'landscape', name: 'Peyzaj ve Çevre Düzenleme', durationDays: durLandscapeVillaDays, color: 'bg-lime-600', dependencies: ['facade'], dependencyType: 'finish_to_start', lagDays: 0 },
-        { id: 'handover', name: 'Temizlik ve Teslim', durationDays: durHandoverDays, color: 'bg-emerald-600', dependencies: ['joinery', 'mep_finish', 'landscape', 'smart_home', ...(durPoolVillaDays > 0 ? ['pool'] : [])], dependencyType: 'finish_to_start', lagDays: 0 }
-    ] : [
+        // Handover (Teslim) görevinin dependencies (öncül görevler) dizisinde de smart_home'u koşullu yapıyoruz
+        { id: 'handover', name: 'Temizlik ve Teslim', durationDays: durHandoverDays, color: 'bg-emerald-600', dependencies: ['joinery', 'mep_finish', 'landscape', ...(buildingStats.hasSmartHome ? ['smart_home'] : []), ...(durPoolVillaDays > 0 ? ['pool'] : [])], dependencyType: 'finish_to_start', lagDays: 0 }] : [
         // ===== APARTMAN PROGRAMI =====
         { id: 'official', name: 'Projelendirme ve Ruhsat', durationDays: durOfficialDays, color: 'bg-slate-500', dependencies: [] },
         { id: 'site_prep', name: 'Şantiye Kurulumu', durationDays: durSitePrepDays, color: 'bg-slate-600', dependencies: ['official'], dependencyType: 'start_to_start', lagDays: Math.max(0, durOfficialDays - 14) },
@@ -120,7 +123,7 @@ export const calculateConstructionSchedule = (
         { id: 'structure', name: 'Kaba Yapı (Betonarme)', durationDays: durStructureDays, color: 'bg-yellow-600', dependencies: ['excavation'], dependencyType: 'finish_to_start', lagDays: 0 },
         { id: 'roof', name: 'Çatı Konstrüksiyon ve Kaplama', durationDays: durRoofDays, color: 'bg-rose-700', dependencies: ['structure'], dependencyType: 'finish_to_start', lagDays: 0 },
         // Kaba yapıda ilk 2 kat bittiğinde duvar örümü hemen peşine takılır (28 günden 14 güne düşürüldü)
-        { id: 'walls', name: 'Duvar Örümü', durationDays: durWallsDays, color: 'bg-blue-600', dependencies: ['structure'], dependencyType: 'start_to_start', lagDays: 14 }, 
+        { id: 'walls', name: 'Duvar Örümü', durationDays: durWallsDays, color: 'bg-blue-600', dependencies: ['structure'], dependencyType: 'start_to_start', lagDays: 14 },
         { id: 'mep_rough', name: 'Mekanik & Elektrik Altyapı', durationDays: durMEP_RoughDays, color: 'bg-cyan-600', dependencies: ['walls'], dependencyType: 'start_to_start', lagDays: 14 },
         { id: 'facade', name: 'Dış Cephe ve Pencereler', durationDays: durFacadeDays, color: 'bg-indigo-500', dependencies: ['walls', 'roof'], dependencyType: 'finish_to_start', lagDays: 0 },
         { id: 'plaster', name: 'Sıva ve Alçı İşleri', durationDays: durPlasterDays, color: 'bg-stone-400', dependencies: ['mep_rough', 'roof'], dependencyType: 'finish_to_start', lagDays: 0 },
@@ -132,14 +135,14 @@ export const calculateConstructionSchedule = (
         { id: 'landscape', name: 'Çevre Düzenleme ve Peyzaj', durationDays: durLandscapeDays, color: 'bg-lime-600', dependencies: ['facade'], dependencyType: 'finish_to_start', lagDays: 0 },
         { id: 'handover', name: 'Temizlik ve Teslim', durationDays: durHandoverDays, color: 'bg-emerald-600', dependencies: ['joinery', 'mep_finish', 'landscape', 'roof'], dependencyType: 'finish_to_start', lagDays: 0 }
     ];
-    
+
     const scheduleMap = new Map<string, ScheduleItem>();
 
     // Override'ları Uygula (Süre ve Bağımlılıklar)
     const tasks = defaultTasks.map(t => {
         const override = overrides[t.id!];
         if (override) {
-            if (override.manualDuration) t.durationDays = override.manualDuration * 7; 
+            if (override.manualDuration) t.durationDays = override.manualDuration * 7;
             if (override.manualDependencies) {
                 t.dependencies = override.manualDependencies;
                 if (override.manualDependencyType) t.dependencyType = override.manualDependencyType;
@@ -173,7 +176,7 @@ export const calculateConstructionSchedule = (
         }
 
         if (task.id && overrides[task.id]?.manualStartDelay) {
-            calculatedStartDay += overrides[task.id].manualStartDelay! * 7; 
+            calculatedStartDay += overrides[task.id].manualStartDelay! * 7;
         }
 
         calculatedStartDay = Math.max(0, calculatedStartDay);
@@ -186,11 +189,11 @@ export const calculateConstructionSchedule = (
             endDay: calculatedStartDay + task.durationDays!,
             startDate: addDays(startDate, calculatedStartDay),
             endDate: addDays(startDate, calculatedStartDay + task.durationDays!),
-            
+
             durationWeeks: Number((task.durationDays! / 7).toFixed(2)),
             startWeek: Number((calculatedStartDay / 7).toFixed(2)),
             endWeek: Number(((calculatedStartDay + task.durationDays!) / 7).toFixed(2)),
-            
+
             dependencies: task.dependencies || [],
             dependencyType: task.dependencyType as any || 'finish_to_start',
             lagDays: task.lagDays || 0,
@@ -270,8 +273,6 @@ export const calculateConstructionSchedule = (
             calculatedLateStart = Math.min(calculatedLateStart, ...ssConstraints);
         }
 
-        calculatedLateFinish = calculatedLateStart + task.durationDays;
-
         lateStartMap.set(taskId, calculatedLateStart);
         lateFinishMap.set(taskId, calculatedLateFinish);
         visitedForBackwardPass.delete(taskId);
@@ -293,7 +294,7 @@ export const calculateConstructionSchedule = (
         } else {
             if (floatDays <= 1) {
                 task.criticality = 'critical'; task.isCritical = true; task.color = 'bg-red-600';
-            } else if (floatDays <= 14) { 
+            } else if (floatDays <= 14) {
                 task.criticality = 'partial'; task.color = 'bg-orange-500';
             } else {
                 task.criticality = 'normal';
