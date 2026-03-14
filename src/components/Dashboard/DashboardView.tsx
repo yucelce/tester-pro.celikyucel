@@ -17,7 +17,7 @@ import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
 import { ITEM_DESCRIPTIONS } from '../../cost_data'; // <-- BUNU EKLEYİN
 import { SupplierModal } from '../Modals/SupplierModal';
 import { ArchitectModal } from '../Modals/ArchitectModal';
-const [showArchitectModal, setShowArchitectModal] = useState(false);
+
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -26,6 +26,8 @@ export const DashboardView: React.FC = () => {
     const [showDetailedModeInfo, setShowDetailedModeInfo] = useState(false);
     const [isHeaderPinned, setIsHeaderPinned] = useState(false);
     const [isStructuralPanelExpanded, setIsStructuralPanelExpanded] = useState(false);
+
+    const [showArchitectModal, setShowArchitectModal] = useState(false);
 
     const handleWallModeClick = (targetMode: 'auto' | 'detailed') => {
         if (globalWallMode !== targetMode) {
