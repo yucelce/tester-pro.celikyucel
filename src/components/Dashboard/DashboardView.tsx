@@ -16,6 +16,8 @@ import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtil
 import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
 import { ITEM_DESCRIPTIONS } from '../../cost_data'; // <-- BUNU EKLEYİN
 import { SupplierModal } from '../Modals/SupplierModal';
+import { ArchitectModal } from '../Modals/ArchitectModal';
+const [showArchitectModal, setShowArchitectModal] = useState(false);
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -265,7 +267,15 @@ export const DashboardView: React.FC = () => {
                             </h2>
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Arsa, Konum ve Kat Bilgileri {accountId && <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>}</p>                        </div>
 
-                        <div className="flex gap-2 w-full md:w-auto">
+                        <div className="flex gap-2 w-full md:w-auto flex-wrap md:flex-nowrap">
+                            <button
+                                onClick={() => setShowArchitectModal(true)}
+                                className="flex-1 md:flex-none bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-800 text-purple-600 dark:text-purple-400 px-4 py-2 rounded-lg text-sm font-bold transition border border-purple-200 dark:border-purple-700/50 flex justify-center items-center gap-2"
+                                title="Bölgenizdeki mimari ofislerden proje ve ruhsat teklifi alın"
+                            >
+                                <i className="fas fa-drafting-compass"></i><span className="hidden md:inline">Mimari Ofis Bul</span>
+                            </button>
+
                             <button onClick={() => openModal('brandSelection')} className="flex-1 md:flex-none bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-lg text-sm font-bold transition border border-indigo-200 dark:border-indigo-700/50 flex justify-center items-center gap-2">
                                 <i className="fas fa-tags"></i><span className="hidden md:inline">Marka Seç</span>
                             </button>
@@ -1310,6 +1320,11 @@ export const DashboardView: React.FC = () => {
                 isOpen={showSupplierModal}
                 onClose={() => setShowSupplierModal(false)}
                 procurementGroups={groupedProcurement}
+            />
+
+            <ArchitectModal
+                isOpen={showArchitectModal}
+                onClose={() => setShowArchitectModal(false)}
             />
             <TutorialOverlay />
             {showDuplexModal && <DuplexManagerModal onClose={() => setShowDuplexModal(false)} />}
