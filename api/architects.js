@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
     try {
         // BURAYA MİMARİ OFİSLERİN GOOGLE SHEET URL'SİNİ YAPIŞTIRIN
-        const sheetUrl = "https://docs.google.com/spreadsheets/d/1daoRuQvhWabjUzRT-TYxcwu-ZHHHmG36_rRCtrbheto"; 
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReSiTHM8ZpXOHSDsTyUf2mD2tKhTnwQbdIw3Wknz6wGH_cHega_31RkUVHfimufWUkikxbj7kEHFzb/pubhtml?gid=0&single=true"; 
         
         const response = await fetch(sheetUrl);
         if (!response.ok) throw new Error("Veri çekilemedi");
@@ -22,7 +22,8 @@ export default async function handler(req, res) {
                 ofisAdi: cols[2]?.trim() || '',
                 telefon: cols[3]?.trim() || '',
                 eposta: cols[4]?.trim() || '',
-                adres: cols[5]?.trim() || ''
+                adres: cols[5]?.trim() || '',
+                website: cols[5]?.trim() || ''
             };
         }).filter(a => a.il && a.ofisAdi); 
 
