@@ -23,7 +23,7 @@ export default async function handler(req, res) {
                 telefon: cols[3]?.trim() || '',
                 eposta: cols[4]?.trim() || '',
                 adres: cols[5]?.trim() || '',
-                website: cols[5]?.trim() || ''
+                website: cols[6]?.trim() || '' // 6. sütun web sitesi olarak güncellendi
             };
         }).filter(a => a.il && a.ofisAdi); 
 

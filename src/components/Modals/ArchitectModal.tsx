@@ -9,6 +9,7 @@ interface Architect {
     telefon: string;
     eposta: string;
     adres: string;
+    website?: string; // Website opsiyonel olarak eklendi
 }
 
 interface ArchitectModalProps {
@@ -58,7 +59,7 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
         }
     };
 
-    const isValidContact = (val: string) => {
+    const isValidContact = (val: string | undefined) => {
         if (!val) return false;
         const lower = val.trim().toLowerCase();
         return !['bulunamadı', 'bilinmiyor', 'yok', '-', 'null'].includes(lower);
@@ -140,6 +141,7 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                 const hasPhone = isValidContact(architect.telefon);
                                 const hasEmail = isValidContact(architect.eposta);
                                 const hasAddress = isValidContact(architect.adres);
+                                const hasWebsite = isValidContact(architect.website);
 
                                 return (
                                     <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm hover:shadow-lg transition flex flex-col">
@@ -166,6 +168,20 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                                 <div className="flex items-center gap-2">
                                                     <i className="fas fa-envelope text-slate-400 w-4"></i>
                                                     <span className="truncate" title={architect.eposta}>{architect.eposta}</span>
+                                                </div>
+                                            )}
+                                            {hasWebsite && architect.website && (
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fas fa-globe text-slate-400 w-4"></i>
+                                                    <a 
+                                                        href={architect.website.startsWith('http') ? architect.website : `https://${architect.website}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className="truncate text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition hover:underline"
+                                                        title={architect.website}
+                                                    >
+                                                        {architect.website.replace(/^https?:\/\//, '')}
+                                                    </a>
                                                 </div>
                                             )}
                                             {hasAddress && (
@@ -218,7 +234,7 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
                                                 </a>
                                             )}
 
-                                            {!hasPhone && !hasEmail && !hasAddress && (
+                                            {!hasPhone && !hasEmail && !hasAddress && !hasWebsite && (
                                                 <div className="text-center text-[10px] text-slate-400 italic py-2 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
                                                     İletişim bilgisi bulunamadı
                                                 </div>
