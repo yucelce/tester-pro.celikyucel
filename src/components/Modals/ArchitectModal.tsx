@@ -33,33 +33,25 @@ export const ArchitectModal: React.FC<ArchitectModalProps> = ({ isOpen, onClose 
     const fetchArchitects = async () => {
         setIsLoading(true);
         try {
-            // DİKKAT: Buraya MİMARİ OFİSLER İÇİN oluşturduğunuz yeni Google Sheet TSV linkini koymalısınız.
-            // Şimdilik test için tedarikçi linkini veya yeni linkinizi ekleyebilirsiniz.
-            const sheetUrl = "BURAYA_MIMARI_OFISLERIN_GOOGLE_SHEET_TSV_LINKINI_YAPISTIRIN"; 
+            // Artık Google'a değil, kendi güvenli sunucumuza istek atıyoruz
+            const response = await fetch('/api/architects');
             
-            const response = await fetch(sheetUrl);
-            if (!response.ok) throw new Error("Veri çekilemedi");
+            if (!response.ok) {
+                throw new Error("Sunucudan veri çekilemedi");
+            }
 
-            const text = await response.text();
-            const rows = text.split('\n').slice(1); 
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
-            const parsedData: Architect[] = rows.map(row => {
-                const cols = row.split('\t');
-                return {
-                    il: cols[0]?.trim() || '',
-                    ilce: cols[1]?.trim() || '',
-                    ofisAdi: cols[2]?.trim() || '',
-                    telefon: cols[3]?.trim() || '',
-                    eposta: cols[4]?.trim() || '',
-                    adres: cols[5]?.trim() || ''
-                };
-            }).filter(a => a.il && a.ofisAdi); 
-
-            const filtered = parsedData.filter(a => a.il === buildingStats.province);
+            // Sadece projeyle eşleşen ildeki mimarları filtrele
+            const filtered = result.data.filter((a: Architect) => a.il === buildingStats.province);
             setArchitects(filtered);
+            
         } catch (error) {
             console.error("Mimari ofis listesi çekilemedi:", error);
-            // Hata vermemesi için şimdilik boş bırakıyoruz veya uyarı veriyoruz
             // alert("Mimari ofis listesi şu an yüklenemiyor."); 
         } finally {
             setIsLoading(false);

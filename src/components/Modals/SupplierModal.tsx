@@ -59,29 +59,21 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, p
     const fetchSuppliers = async () => {
         setIsLoading(true);
         try {
-            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR7I9ioyi6FWmgpt3BimD2IDCBu0C0FzjGrC3MWMGDraun2cjS4RCC7XPtuGXnux-Rcy6UwhhSJLlVR/pub?output=tsv";
-            const response = await fetch(sheetUrl);
+            // Artık Google'a değil, kendi güvenli sunucumuza istek atıyoruz
+            const response = await fetch('/api/suppliers');
 
             if (!response.ok) {
-                throw new Error("Veri çekilemedi: " + response.statusText);
+                throw new Error("Sunucudan veri çekilemedi: " + response.statusText);
             }
 
-            const text = await response.text();
-            const rows = text.split('\n').slice(1); 
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
-            const parsedSuppliers: Supplier[] = rows.map(row => {
-                const cols = row.split('\t');
-                return {
-                    il: cols[0]?.trim() || '',
-                    ilce: cols[1]?.trim() || '',
-                    firmaAdi: cols[2]?.trim() || '',
-                    telefon: cols[3]?.trim() || '',
-                    eposta: cols[4]?.trim() || '',
-                    adres: cols[5]?.trim() || ''
-                };
-            }).filter(s => s.il && s.firmaAdi); 
-
-            const filtered = parsedSuppliers.filter(s => s.il === buildingStats.province);
+            // Sadece projeyle eşleşen ildeki tedarikçileri filtrele
+            const filtered = result.data.filter((s: Supplier) => s.il === buildingStats.province);
 
             setSuppliers(filtered);
         } catch (error) {
