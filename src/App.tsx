@@ -20,6 +20,13 @@ import { BrandSelectionModal } from './components/Modals/BrandSelectionModal';
 
 const AppLayout = () => {
 
+    const {
+        activeView, activeModal, activeModalUnitId, closeModal,
+        authStatus, authMessage, setAuthStatus, setAuthMessage, setAccountId
+    } = useUIStore();
+    const { units, structuralUnits, buildingStats, setBuildingStats, isFetchingHeat, updateUnit, costs, updateCostItem } = useProjectStore();
+
+
     const urlParams = new URLSearchParams(window.location.search);
     const downloadId = urlParams.get('downloadId');
 
@@ -28,12 +35,7 @@ const AppLayout = () => {
         return <DownloadView downloadId={downloadId} />;
     }
 
-    const {
-        activeView, activeModal, activeModalUnitId, closeModal,
-        authStatus, authMessage, setAuthStatus, setAuthMessage, setAccountId
-    } = useUIStore();
-    const { units, structuralUnits, buildingStats, setBuildingStats, isFetchingHeat, updateUnit, costs, updateCostItem } = useProjectStore();
-
+    
     // --- AUTHENTICATION LOGIC ---
     useEffect(() => {
         const checkAccess = async () => {
