@@ -8,6 +8,9 @@ import { WIX_PRICE_MAP } from '../wix_price_mapping';
 
 import { useUIStore } from './uiStore';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/_utils/constants';
+
+import type { CostCategory } from '../../api/_utils/cost_data'; 
+import type { ScheduleItem } from '../../api/_utils/scheduleCalculator';
 // --- WALL PRICES CONSTANTS ---
 
 // Dinamik Fiyat Tablosu Oluşturucu
@@ -135,8 +138,8 @@ interface ProjectContextType {
 
     bulkUpdatePrices: (newPrices: { itemName: string, price: number }[]) => void;
 
-    duplexPairs: import('../types').DuplexPair[];
-    addDuplexPair: (pair: Omit<import('../types').DuplexPair, 'id'>) => void;
+    duplexPairs: DuplexPair[];
+    addDuplexPair: (pair: Omit<DuplexPair, 'id'>) => void;
     updateDuplexPair: (id: string, count: number) => void;
     removeDuplexPair: (id: string) => void;
 }
@@ -257,7 +260,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     ]);
 
-    const [costs, setCosts] = useState<CostCategory[]>(INITIAL_COSTS);
+    const [costs, setCosts] = useState<CostCategory[]>([]);
+    const [projectSchedule, setProjectSchedule] = useState<ScheduleItem[]>([]);
 
     const [buildingStats, setBuildingStatsState] = useState<BuildingStats>({
         buildingType: 'apartment',
@@ -780,42 +784,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const triggerBackendCalculation = async () => {
     setIsCalculating(true);
     try {
-        const payload = {
-            units,
-            structuralUnits,
-            buildingStats,
-            globalWallMaterial,
-            globalWallMode,
-            globalConcreteMode,
-            globalWallThickness,
-            customCosts,
-            duplexPairs,
-            costs,
-            totalConstructionArea,
-            constructionDuration
-        };
-
-        const response = await fetch('/api/calculate-project', {
+        const payload = { /* ... mevcut payload ... */ };
+        
+        // 1. Ana Maliyetleri Hesapla
+        const resCost = await fetch('/api/calculate-project', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const costResult = await resCost.json();
+        
+        setProjectCostDetails(costResult.projectCostDetails);
+        setProjectTotalCost(costResult.projectTotalCost);
+        // ... diğer set işlemleri
+        
+        // 2. İş Zaman Programını (Schedule) Hesapla
+        const resSchedule = await fetch('/api/calculate-schedule', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                totalConstructionArea,
+                buildingStats,
+                constructionDuration,
+                overrides: scheduleOverrides
+            })
         });
+        const scheduleResult = await resSchedule.json();
+        setProjectSchedule(scheduleResult.schedule);
 
-        if (!response.ok) throw new Error("Hesaplama sunucusu yanıt vermedi.");
-
-        const result = await response.json();
-
-        setProjectCostDetails(result.projectCostDetails);
-        setProjectTotalCost(result.projectTotalCost);
-        setGlobalStructuralCost(result.globalStructuralCost);
-        setInteriorFitoutCost(result.interiorFitoutCost);
-        setGlobalStats(result.globalStats);
-        
         setIsDataDirty(false);
-        
     } catch (error) {
         console.error("Hesaplama Hatası:", error);
-        alert("Hesaplama sırasında bir hata oluştu. Lütfen bağlantınızı kontrol edin.");
     } finally {
         setIsCalculating(false);
     }

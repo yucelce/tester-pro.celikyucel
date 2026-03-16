@@ -1,12 +1,54 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { UnitType, Room, Wall, Column, Beam, Slab, Point } from '../../types';
 import { isPointInPolygon, getPolygonAreaAndPerimeter, distanceToSegment, floodFillRoom } from '../../utils/geometry';
-import { calculateUnitCost } from '../../../api/_utils/calculations';
+
 import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUIStore } from '../../stores/uiStore';
 import { WallModal, RoomModal, ColumnModal, BeamModal, SlabModal, CalibrationModal } from '../Modals/EditorModals';
-import PolyBool from 'polybooljs'; 
+
+
+import PolyBool from 'polybooljs';
+
+const [editorQuantities, setEditorQuantities] = useState<Record<string, number>>({});
+const [editorStats, setEditorStats] = useState<any>({});
+
+useEffect(() => {
+    const fetchLivePreview = async () => {
+        const tempUnit = {
+            id: 'temp', name: 'temp', count: 1,
+            rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams, slabs: editorSlabs,
+            floorType: sourceUnit?.floorType || 'normal',
+            imageData: null, scale: editorScale, lastEdited: 0,
+            structuralWallSource: 'detailed_unit', structuralConcreteSource: 'detailed_unit'
+        };
+
+        const res = await fetch('/api/calculate-unit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                unit: tempUnit,
+                costs,
+                buildingStats,
+                globalWallMaterial,
+                globalWallMode: 'detailed',
+                globalConcreteMode: 'detailed',
+                globalWallThickness: 15,
+                isStructural: editorScope === 'structural'
+            })
+        });
+        const data = await res.json();
+        setEditorQuantities(data.quantities);
+        setEditorStats(data.stats);
+    };
+
+    // Aşırı istek atmasını engellemek için küçük bir debounce eklenebilir
+    const delayDebounceFn = setTimeout(() => {
+        fetchLivePreview();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+}, [editorRooms, editorWalls, editorColumns, editorBeams, editorSlabs, editorScale, costs, buildingStats, globalWallMaterial, editorScope]);
 
 // EditorView now manages its own "editing" state locally, 
 // fetches the initial unit from store, and saves back to store.
@@ -148,105 +190,105 @@ export const EditorView: React.FC = () => {
     };
 
     const handleSyncSlabsToBuilding = () => {
-    if (!sourceUnit || editorScale === 0) {
-        alert("Lütfen önce planı ölçeklendirin ve yapısal eleman (döşeme, kolon vb.) çizin.");
-        return;
-    }
-
-    let totalArea = 0;
-    let manualArea = 0;
-    let manualPerimeter = 0;
-
-    // PolyBool için ana birleştirilmiş poligon nesnesi
-    // Başlangıçta boş bir bölge olarak tanımlıyoruz
-    let combinedPolygon = { regions: [] as number[][][], inverted: false };
-
-    // 1. Döşemeleri (Slabs) Birleştiriciye Ekle
-    editorSlabs.forEach(slab => {
-        if (slab.points && slab.points.length > 2) {
-            totalArea += slab.area_px! / (editorScale * editorScale);
-            
-            // Noktaları doğrudan METRE cinsinden [x, y] dizisine çeviriyoruz
-            const region = slab.points.map(p => [p.x / editorScale, p.y / editorScale]);
-            const slabPoly = { regions: [region], inverted: false };
-
-            // Mevcut birleştirilmiş poligon ile yeni döşemeyi birleştir (UNION)
-            combinedPolygon = PolyBool.union(combinedPolygon, slabPoly);
-            
-        } else if (slab.manualAreaM2 > 0) {
-            manualArea += slab.manualAreaM2;
-            manualPerimeter += Math.sqrt(slab.manualAreaM2) * 4;
+        if (!sourceUnit || editorScale === 0) {
+            alert("Lütfen önce planı ölçeklendirin ve yapısal eleman (döşeme, kolon vb.) çizin.");
+            return;
         }
-    });
 
-    // 2. Kolonları/Perdeleri (Columns) Birleştiriciye Ekle
-    // Dışarı taşan çıkma kolonlar veya perdeler dış cepheyi etkiler
-    editorColumns.forEach(col => {
-        if (col.points && col.points.length > 2) {
-            totalArea += col.area_px! / (editorScale * editorScale);
-            
-            const region = col.points.map(p => [p.x / editorScale, p.y / editorScale]);
-            const colPoly = { regions: [region], inverted: false };
+        let totalArea = 0;
+        let manualArea = 0;
+        let manualPerimeter = 0;
 
-            combinedPolygon = PolyBool.union(combinedPolygon, colPoly);
+        // PolyBool için ana birleştirilmiş poligon nesnesi
+        // Başlangıçta boş bir bölge olarak tanımlıyoruz
+        let combinedPolygon = { regions: [] as number[][][], inverted: false };
+
+        // 1. Döşemeleri (Slabs) Birleştiriciye Ekle
+        editorSlabs.forEach(slab => {
+            if (slab.points && slab.points.length > 2) {
+                totalArea += slab.area_px! / (editorScale * editorScale);
+
+                // Noktaları doğrudan METRE cinsinden [x, y] dizisine çeviriyoruz
+                const region = slab.points.map(p => [p.x / editorScale, p.y / editorScale]);
+                const slabPoly = { regions: [region], inverted: false };
+
+                // Mevcut birleştirilmiş poligon ile yeni döşemeyi birleştir (UNION)
+                combinedPolygon = PolyBool.union(combinedPolygon, slabPoly);
+
+            } else if (slab.manualAreaM2 > 0) {
+                manualArea += slab.manualAreaM2;
+                manualPerimeter += Math.sqrt(slab.manualAreaM2) * 4;
+            }
+        });
+
+        // 2. Kolonları/Perdeleri (Columns) Birleştiriciye Ekle
+        // Dışarı taşan çıkma kolonlar veya perdeler dış cepheyi etkiler
+        editorColumns.forEach(col => {
+            if (col.points && col.points.length > 2) {
+                totalArea += col.area_px! / (editorScale * editorScale);
+
+                const region = col.points.map(p => [p.x / editorScale, p.y / editorScale]);
+                const colPoly = { regions: [region], inverted: false };
+
+                combinedPolygon = PolyBool.union(combinedPolygon, colPoly);
+            }
+        });
+
+        // Kirişler (Beams) için basit alan hesabı
+        editorBeams.forEach(beam => {
+            const widthM = beam.properties.width / 100;
+            const lengthM = beam.length_px / editorScale;
+            totalArea += (widthM * lengthM);
+            // Not: Kirişlerin çizgi şeklinde (start/end point) olması nedeniyle poligon 
+            // union'a katılması için vektörel kalınlaştırma gerekir. Genelde dış cephe 
+            // sınırını döşemeler ve perdeler belirlediği için çevreyi bunlardan almak yeterlidir.
+        });
+
+        if (totalArea === 0 && manualArea === 0) {
+            alert("Geçerli bir çizim alanı bulunamadı.");
+            return;
         }
-    });
 
-    // Kirişler (Beams) için basit alan hesabı
-    editorBeams.forEach(beam => {
-        const widthM = beam.properties.width / 100;
-        const lengthM = beam.length_px / editorScale;
-        totalArea += (widthM * lengthM);
-        // Not: Kirişlerin çizgi şeklinde (start/end point) olması nedeniyle poligon 
-        // union'a katılması için vektörel kalınlaştırma gerekir. Genelde dış cephe 
-        // sınırını döşemeler ve perdeler belirlediği için çevreyi bunlardan almak yeterlidir.
-    });
+        // --- YENİ ÇEVRE HESAPLAMA MANTIĞI (POLYGON UNION) ---
+        let calculatedPerimeter = 0;
 
-    if (totalArea === 0 && manualArea === 0) {
-        alert("Geçerli bir çizim alanı bulunamadı.");
-        return;
-    }
+        // Birleştirilmiş ve tüm iç kesişimleri silinmiş (Sadece Dış Sınırlar) poligonu dönüyoruz
+        combinedPolygon.regions.forEach(region => {
+            for (let i = 0; i < region.length; i++) {
+                const p1 = region[i];
+                const p2 = region[(i + 1) % region.length]; // Son noktayı ilk noktaya bağlayarak kapat
 
-    // --- YENİ ÇEVRE HESAPLAMA MANTIĞI (POLYGON UNION) ---
-    let calculatedPerimeter = 0;
+                // İki nokta arası Öklid mesafesini topla
+                calculatedPerimeter += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+            }
+        });
 
-    // Birleştirilmiş ve tüm iç kesişimleri silinmiş (Sadece Dış Sınırlar) poligonu dönüyoruz
-    combinedPolygon.regions.forEach(region => {
-        for (let i = 0; i < region.length; i++) {
-            const p1 = region[i];
-            const p2 = region[(i + 1) % region.length]; // Son noktayı ilk noktaya bağlayarak kapat
-            
-            // İki nokta arası Öklid mesafesini topla
-            calculatedPerimeter += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+        const finalArea = totalArea + manualArea;
+        const finalPerimeter = calculatedPerimeter + manualPerimeter;
+
+        const floorType = sourceUnit.floorType;
+        let updates: Partial<any> = {};
+
+        // Kat tipine göre BuildingStats verilerini güncelle
+        if (floorType === 'normal') {
+            updates.normalFloorArea = parseFloat(finalArea.toFixed(2));
+            updates.normalFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+            updates.isNormalPerimeterManual = true;
+        } else if (floorType === 'ground') {
+            updates.groundFloorArea = parseFloat(finalArea.toFixed(2));
+            updates.groundFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+            updates.isGroundPerimeterManual = true;
+        } else if (floorType === 'basement') {
+            updates.basementFloorArea = parseFloat(finalArea.toFixed(2));
+            updates.basementFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
+            updates.isBasementPerimeterManual = true;
         }
-    });
 
-    const finalArea = totalArea + manualArea;
-    const finalPerimeter = calculatedPerimeter + manualPerimeter;
+        setBuildingStats(prev => ({ ...prev, ...updates }));
 
-    const floorType = sourceUnit.floorType;
-    let updates: Partial<any> = {};
-
-    // Kat tipine göre BuildingStats verilerini güncelle
-    if (floorType === 'normal') {
-        updates.normalFloorArea = parseFloat(finalArea.toFixed(2));
-        updates.normalFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-        updates.isNormalPerimeterManual = true; 
-    } else if (floorType === 'ground') {
-        updates.groundFloorArea = parseFloat(finalArea.toFixed(2));
-        updates.groundFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-        updates.isGroundPerimeterManual = true;
-    } else if (floorType === 'basement') {
-        updates.basementFloorArea = parseFloat(finalArea.toFixed(2));
-        updates.basementFloorPerimeter = parseFloat(finalPerimeter.toFixed(2));
-        updates.isBasementPerimeterManual = true;
-    }
-
-    setBuildingStats(prev => ({ ...prev, ...updates }));
-
-    const floorName = floorType === 'normal' ? 'Normal Kat' : floorType === 'ground' ? 'Zemin Kat' : 'Bodrum Kat';
-    alert(`${floorName} Sınırları Güncellendi!\n\nToplam Alan: ${finalArea.toFixed(2)} m²\nGerçek Dış Çevre: ${finalPerimeter.toFixed(2)} mt.`);
-};
+        const floorName = floorType === 'normal' ? 'Normal Kat' : floorType === 'ground' ? 'Zemin Kat' : 'Bodrum Kat';
+        alert(`${floorName} Sınırları Güncellendi!\n\nToplam Alan: ${finalArea.toFixed(2)} m²\nGerçek Dış Çevre: ${finalPerimeter.toFixed(2)} mt.`);
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -470,7 +512,7 @@ export const EditorView: React.FC = () => {
             startPoint: start,
             endPoint: end,
             length_px: lengthPx,
-           properties: {
+            properties: {
                 material: globalWallMaterial, // USE GLOBAL MATERIAL
                 thickness: lastWallThickness, // GÜNCELLENDİ: 13.5 yerine son hatırlanan kalınlık kullanılıyor
                 height: lastWallHeight, // Use stored height
@@ -563,12 +605,12 @@ export const EditorView: React.FC = () => {
             ctx.closePath();
             const isActive = editorScope === 'architectural';
             if (room.type) {
-                switch(room.type) {
+                switch (room.type) {
                     case 'living': ctx.fillStyle = 'rgba(59, 130, 246, 0.4)'; break; // blue
                     case 'bedroom': ctx.fillStyle = 'rgba(168, 85, 247, 0.4)'; break; // purple
                     case 'kitchen': ctx.fillStyle = 'rgba(249, 115, 22, 0.4)'; break; // orange
                     case 'bath': ctx.fillStyle = 'rgba(6, 182, 212, 0.4)'; break; // cyan
-case 'wc': ctx.fillStyle = 'rgba(20, 184, 166, 0.4)'; break; // teal
+                    case 'wc': ctx.fillStyle = 'rgba(20, 184, 166, 0.4)'; break; // teal
                     case 'hallway': ctx.fillStyle = 'rgba(99, 102, 241, 0.4)'; break; // indigo
                     case 'dressing': ctx.fillStyle = 'rgba(236, 72, 153, 0.4)'; break; // pink
                     case 'balcony': ctx.fillStyle = 'rgba(34, 197, 94, 0.4)'; break; // green
@@ -819,9 +861,9 @@ case 'wc': ctx.fillStyle = 'rgba(20, 184, 166, 0.4)'; break; // teal
             {modalType === 'wallParams' && selectedWallId && <WallModal wall={editorWalls.find(w => w.id === selectedWallId)!} scale={editorScale}
                 onUpdate={(props) => {
                     if (props.height !== undefined) setLastWallHeight(props.height); // Remember height
-                   if (props.thickness !== undefined) setLastWallThickness(props.thickness); // YENİ EKLENDİ: Kalınlığı hatırla
+                    if (props.thickness !== undefined) setLastWallThickness(props.thickness); // YENİ EKLENDİ: Kalınlığı hatırla
                     setEditorWalls(prev => prev.map(w => w.id === selectedWallId ? { ...w, properties: { ...w.properties, ...props } } : w));
-                   
+
                 }}
                 onDelete={() => { setEditorWalls(prev => prev.filter(w => w.id !== selectedWallId)); setModalType(null); }} onClose={() => setModalType(null)} onSave={() => setModalType(null)} />}
 

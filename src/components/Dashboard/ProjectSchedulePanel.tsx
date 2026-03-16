@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
-import { calculateConstructionSchedule } from '../../../api/_utils/scheduleCalculator';
+
 import { ScheduleDependencyModal } from '../Modals/ScheduleDependencyModal';
 
 export const ProjectSchedulePanel: React.FC = () => {
+    const schedule = projectStore.projectSchedule;
     const {
         totalConstructionArea,
         buildingStats,
