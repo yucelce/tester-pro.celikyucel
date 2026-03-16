@@ -14,7 +14,7 @@ import { ProcurementModal } from '../Modals/ProcurementModal';
 import { TutorialOverlay } from '../Shared/TutorialOverlay';
 import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
 import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
-import { ITEM_DESCRIPTIONS } from '../../../api/_utils/cost_data'; // <-- BUNU EKLEYİN
+import { ITEM_DESCRIPTIONS } from '../../utils/itemDescriptions';
 import { SupplierModal } from '../Modals/SupplierModal';
 import { ArchitectModal } from '../Modals/ArchitectModal';
 

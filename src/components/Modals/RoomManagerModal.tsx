@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { UnitType, Room, RoomType, RoomProperties, BuildingStats } from '../../types';
 import { CostCategory } from '../../../api/_utils/cost_data';
-import { calculateUnitCost } from '../../../api/_utils/calculations';
 import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 
 interface RoomManagerModalProps {
@@ -56,9 +55,34 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
         suspendedCeiling: false
     });
 
-    const { quantities } = useMemo(() => {
-        return calculateUnitCost(unit, costs, buildingStats);
-    }, [unit, costs, buildingStats]);
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+// API Üzerinden Asenkron Metraj Çekme
+React.useEffect(() => {
+    const fetchQuantities = async () => {
+        try {
+            const res = await fetch('/api/calculate-unit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    unit,
+                    costs,
+                    buildingStats,
+                    globalWallMaterial: 'gazbeton',
+                    globalWallMode: 'auto',
+                    globalConcreteMode: 'auto',
+                    globalWallThickness: 15,
+                    isStructural: false
+                })
+            });
+            const data = await res.json();
+            setQuantities(data.quantities || {});
+        } catch (error) {
+            console.error("Daire metrajı çekilirken hata:", error);
+        }
+    };
+    fetchQuantities();
+}, [unit, costs, buildingStats]);
 
     // ODA TİPİ SEÇİM MANTIĞI
     const handleTypeChange = (type: RoomType) => {

@@ -299,12 +299,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         includeRentCost: false
     });
 
-    const [duplexPairs, setDuplexPairs] = useState<import('../types').DuplexPair[]>([]);
+    const [duplexPairs, setDuplexPairs] = useState<DuplexPair[]>([]);
 
-    const addDuplexPair = (pair: Omit<import('../types').DuplexPair, 'id'>) => {
-        setDuplexPairs(prev => [...prev, { ...pair, id: Date.now().toString() }]);
-        setIsDataDirty(true);
-    };
+const addDuplexPair = (pair: Omit<DuplexPair, 'id'>) => {
+    setDuplexPairs(prev => [...prev, { ...pair, id: Date.now().toString() }]);
+    setIsDataDirty(true);
+};
 
     const updateDuplexPair = (id: string, count: number) => {
         setDuplexPairs(prev => prev.map(p => p.id === id ? { ...p, count } : p));
@@ -392,6 +392,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         const fetchPrices = async () => {
             try {
+                // 1. YENİ EKLENEN: Önce Backend'den initial data'yı (COST_DATA iskeletini) çek
+                const initRes = await fetch('/api/get-init-data');
+                if (!initRes.ok) throw new Error("Init data çekilemedi");
+                const initData = await initRes.json();
+                const baseCosts = initData.costs; // api/_utils/cost_data.ts'den gelen ham veri
+
+                // 2. WIX'ten güncel fiyatları çek
                 const WIX_API_URL = 'https://celikyucel.com/_functions/fiyatListesi';
                 const response = await fetch(WIX_API_URL);
                 if (response.ok) {
@@ -431,11 +438,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                             monthlyRentPerUnit: prev.monthlyRentPerUnit ? prev.monthlyRentPerUnit : (aracPaketiFiyati * 0.8),
                             evictionCostPerUnit: prev.evictionCostPerUnit ? prev.evictionCostPerUnit : aracPaketiFiyati
                         }));
+
+
                         setCosts(prevCosts => {
                             // Önce Wix'ten gelen ham fiyatları atıyoruz
-                            const updatedCosts = prevCosts.map(cat => ({
+                            const updatedCosts = baseCosts.map((cat: any) => ({
                                 ...cat,
-                                items: cat.items.map(item => {
+                                items: cat.items.map((item: any) => {
                                     const targetWixId = WIX_PRICE_MAP[item.name];
                                     if (targetWixId && wixPriceLookup.has(targetWixId)) {
                                         return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
@@ -461,14 +470,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 if (laborItem) laborPriceM2 = laborItem.unit_price;
                             }
 
+                            const updatedCosts = baseCosts.map((cat: any) => ({
+                                ...cat,
+                                items: cat.items.map((item: any) => {
+                                    const targetWixId = WIX_PRICE_MAP[item.name];
+                                    if (targetWixId && wixPriceLookup.has(targetWixId)) {
+                                        return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
+                                    }
+                                    return item;
+                                })
+                            }));
 
+                            // BUNU EKLE: Fiyatları yerel olarak bulmak için yardımcı fonksiyon
+                            const getGlobalPriceLocal = (costsArray: any[], itemName: string) => {
+                                for (const cat of costsArray) {
+                                    const item = cat.items.find((i: any) => i.name === itemName);
+                                    if (item) return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
+                                }
+                                return 0;
+                            };
 
 
 
                             // --- YENİ EKLENEN KISIM: Çimento, Kum ve Kireç fiyatlarını bularak harç m3 fiyatlarını hesapla ---
-                            const cementPrice = getGlobalPrice(updatedCosts, "Çimento (kg)") || 3;
-                            const sandPrice = getGlobalPrice(updatedCosts, "Kum (m3)") || 500;
-                            const limePrice = getGlobalPrice(updatedCosts, "Kireç (kg)") || 4;
+                            const cementPrice = getGlobalPriceLocal(updatedCosts, "Çimento (kg)") || 3;
+                            const sandPrice = getGlobalPriceLocal(updatedCosts, "Kum (m3)") || 500;
+                            const limePrice = getGlobalPriceLocal(updatedCosts, "Kireç (kg)") || 4;
 
                             // Duvar Örme Harcı = 1 m3 Kum + 200 kg Çimento + 100 kg Kireç
                             const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
@@ -711,31 +738,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, [buildingStats]);
     // GÜNCELLENEN KISIM: İş Zaman Programı tabanlı süre hesabı
     const autoDuration = useMemo(() => {
-        // 1. İş programını hesapla (override'lar ve bina istatistikleri dahil)
-        // totalDurationMonths parametresi scheduleCalculator içinde 'auto' modda kullanılmadığı için 0 geçiyoruz.
-        const schedule = calculateConstructionSchedule(
-            totalConstructionArea,
-            buildingStats,
-            0,
-            scheduleOverrides
-        );
+    let duration = 0;
 
-        if (!schedule || schedule.length === 0) return 12;
-
-        // 2. En son biten işin bitiş haftasını bul
-        const maxEndWeek = Math.max(...schedule.map(s => s.endWeek));
-
-        // 3. Haftayı aya çevir (4 hafta = 1 ay kabulüyle)
-        const calculatedMonths = Number((maxEndWeek / 4.33).toFixed(2));
-
-        if (buildingStats.buildingType === 'villa') {
-            // Villalar için minimum 6 ay sınırı koyabilir veya doğrudan calculatedMonths'u döndürebilirsiniz.
-            return Math.max(6, calculatedMonths);
+    // Villalar hızlı biter
+    if (buildingStats.buildingType === 'villa') {
+        if (totalConstructionArea <= 250) duration = 6;
+        else if (totalConstructionArea <= 500) duration = 8;
+        else duration = 10;
+        return Math.max(6, duration);
+    } else {
+        // Apartman/Ticari mantığı
+        if (totalConstructionArea <= 1000) {
+            duration = 10;
+        } else if (totalConstructionArea <= 3000) {
+            duration = (0.005 * totalConstructionArea) + 5; 
         } else {
-            // Apartmanlar için 12 ay sınırını koru
-            return Math.max(12, calculatedMonths);
+            duration = Math.sqrt(totalConstructionArea) / 2.7386;
         }
-    }, [totalConstructionArea, buildingStats, scheduleOverrides]);
+        return Math.max(12, Math.round(duration * 100) / 100);
+    }
+}, [totalConstructionArea, buildingStats.buildingType]);
 
 
     const constructionDuration = useMemo(() => {
@@ -745,14 +767,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return autoDuration;
     }, [buildingStats.isDurationManual, buildingStats.constructionDuration, autoDuration]);
 
-    const projectSchedule = useMemo(() => {
-        return calculateConstructionSchedule(
-            totalConstructionArea,
-            buildingStats,
-            0,
-            scheduleOverrides
-        );
-    }, [totalConstructionArea, buildingStats, scheduleOverrides]);
 
     const updateConstructionDuration = (duration: number | undefined) => {
         setBuildingStatsState(prev => ({

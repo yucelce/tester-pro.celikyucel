@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { BuildingStats, UnitType, Point, WallMaterial } from '../../types';
 import { CostCategory } from '../../../api/_utils/cost_data';
-import { estimatePerimeter } from '../../../api/_utils/calculations';
+import { estimatePerimeter } from '../../utils/geometry';
 
 import { useProjectStore } from '../../stores/projectStore';
 import { NumericInput } from '../Shared/NumericInput';
