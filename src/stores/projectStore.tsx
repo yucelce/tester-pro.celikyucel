@@ -1,46 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
     UnitType, BuildingStats, UnitFloorType, WallMaterial, SavedProject, ScheduleTaskOverride,
-    ReportSettings, CustomCostItem, FinancialSettings, SalePlan
+    ReportSettings, CustomCostItem, FinancialSettings, SalePlan, DuplexPair
 } from '../types';
 
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
-
 import { useUIStore } from './uiStore';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/_utils/constants';
 
 import type { CostCategory } from '../../api/_utils/cost_data';
 import type { ScheduleItem } from '../../api/_utils/scheduleCalculator';
+
+// Eksik olan import satırını buraya ekliyoruz:
+import { calculateStairWellArea } from '../../api/_utils/calculations';
 // --- WALL PRICES CONSTANTS ---
-
-// Dinamik Fiyat Tablosu Oluşturucu
-// Labor (İşçilik): ytongisc (247.1 TL/m2) tüm duvar tipleri için ortalama kabul edildi.
-const LABOR_COST_M2 = 269;
-
-// Malzeme (Blok) Fiyatları (TL/m3)
-const RAW_MATERIAL_PRICES_M3: Record<WallMaterial, number> = {
-    'gazbeton': 3600, // gazbetonmalm3mal
-    'tugla': 2800,    // tuglamalm3mal
-    'bims': 3800      // bimsmalm3mal
-};
-
-// Dinamik Fiyat Tablosu Oluşturucu
-const generatePrices = (material: WallMaterial) => {
-    const prices: Record<string, number> = {};
-    const materialPriceM3 = RAW_MATERIAL_PRICES_M3[material];
-
-    ['10', '13.5', '15', '20', '25'].forEach(thickStr => {
-        const thicknessM = parseFloat(thickStr) / 100;
-
-        // Formül: (Malzeme m3 Fiyatı * Kalınlık m) + İşçilik m2 Fiyatı
-        const materialCostM2 = materialPriceM3 * thicknessM;
-        const totalCostM2 = materialCostM2 + LABOR_COST_M2;
-
-        prices[thickStr] = Math.round(totalCostM2);
-    });
-    return prices;
-};
-
 
 interface ProjectCostDetail {
     id: string;
@@ -390,157 +363,117 @@ const addDuplexPair = (pair: Omit<DuplexPair, 'id'>) => {
 
 
     useEffect(() => {
-        const fetchPrices = async () => {
-            try {
-                // 1. YENİ EKLENEN: Önce Backend'den initial data'yı (COST_DATA iskeletini) çek
-                const initRes = await fetch('/api/get-init-data');
-                if (!initRes.ok) throw new Error("Init data çekilemedi");
-                const initData = await initRes.json();
-                const baseCosts = initData.costs; // api/_utils/cost_data.ts'den gelen ham veri
+        // ... (useEffect başlangıcı)
+const fetchPrices = async () => {
+    try {
+        const initRes = await fetch('/api/get-init-data');
+        if (!initRes.ok) throw new Error("Init data çekilemedi");
+        const initData = await initRes.json();
+        const baseCosts = initData.costs;
 
-                // 2. WIX'ten güncel fiyatları çek
-                const WIX_API_URL = 'https://celikyucel.com/_functions/fiyatListesi';
-                const response = await fetch(WIX_API_URL);
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.status === 'success' && Array.isArray(result.data)) {
-                        setIsPriceFetchError(false);
-                        const wixPriceLookup = new Map<string, number>();
+        const WIX_API_URL = 'https://celikyucel.com/_functions/fiyatListesi';
+        const response = await fetch(WIX_API_URL);
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.status === 'success' && Array.isArray(result.data)) {
+                setIsPriceFetchError(false);
+                const wixPriceLookup = new Map<string, number>();
 
-                        result.data.forEach((item: any) => {
-                            if (item._id && item.fiyat) wixPriceLookup.set(item._id, Number(item.fiyat));
-                        });
+                result.data.forEach((item: any) => {
+                    if (item._id && item.fiyat) wixPriceLookup.set(item._id, Number(item.fiyat));
+                });
 
-                        // DÖNGÜ BİTTİKTEN SONRA DEĞERLERİ ALIP TEK SEFERDE STATE'E YAZIYORUZ
-                        const mevduatFaizi = wixPriceLookup.get('mevduat_faiz_aylikpaket');
-                        const insaatEndeksi = wixPriceLookup.get('insaatendeksaylikson12paket');
+                const mevduatFaizi = wixPriceLookup.get('mevduat_faiz_aylikpaket');
+                const insaatEndeksi = wixPriceLookup.get('insaatendeksaylikson12paket');
 
-                        setFinancialSettings(prev => {
-                            const newInterestRate = mevduatFaizi !== undefined ? mevduatFaizi : prev.monthlyInterestRate;
-                            const newInflationRate = insaatEndeksi !== undefined ? insaatEndeksi : (prev.monthlyInflationRate || 3.0);
+                setFinancialSettings(prev => {
+                    const newInterestRate = mevduatFaizi !== undefined ? mevduatFaizi : prev.monthlyInterestRate;
+                    const newInflationRate = insaatEndeksi !== undefined ? insaatEndeksi : (prev.monthlyInflationRate || 3.0);
 
-                            return {
-                                ...prev,
-                                monthlyInterestRate: newInterestRate,
-                                monthlyInflationRate: newInflationRate,
-                                systemMonthlyInterestRate: newInterestRate,
-                                systemMonthlyInflationRate: newInflationRate
-                            };
-                        });
+                    return {
+                        ...prev,
+                        monthlyInterestRate: newInterestRate,
+                        monthlyInflationRate: newInflationRate,
+                        systemMonthlyInterestRate: newInterestRate,
+                        systemMonthlyInflationRate: newInflationRate
+                    };
+                });
 
-                        // --- YENİ EKLENEN: WIX'TEN KİRA VE TAŞINMA BEDELİ ÇEKME ---
-                        // 'santiyearacpaket' ID'sine sahip fiyatı al, bulamazsa varsayılan 25.000 TL kullan
-                        const aracPaketiFiyati = wixPriceLookup.get('santiyearacpaket') || 25000;
+                const aracPaketiFiyati = wixPriceLookup.get('santiyearacpaket') || 25000;
 
-                        setBuildingStatsState(prev => ({
-                            ...prev,
-                            // Sadece değer 0 ise Wix'ten gelenleri yaz (Kullanıcı manuel değiştirdiyse ezme)
-                            monthlyRentPerUnit: prev.monthlyRentPerUnit ? prev.monthlyRentPerUnit : (aracPaketiFiyati * 0.8),
-                            evictionCostPerUnit: prev.evictionCostPerUnit ? prev.evictionCostPerUnit : aracPaketiFiyati
-                        }));
+                setBuildingStatsState(prev => ({
+                    ...prev,
+                    monthlyRentPerUnit: prev.monthlyRentPerUnit ? prev.monthlyRentPerUnit : (aracPaketiFiyati * 0.8),
+                    evictionCostPerUnit: prev.evictionCostPerUnit ? prev.evictionCostPerUnit : aracPaketiFiyati
+                }));
 
-
-                        setCosts(prevCosts => {
-                            // Önce Wix'ten gelen ham fiyatları atıyoruz
-                            const updatedCosts = baseCosts.map((cat: any) => ({
-                                ...cat,
-                                items: cat.items.map((item: any) => {
-                                    const targetWixId = WIX_PRICE_MAP[item.name];
-                                    if (targetWixId && wixPriceLookup.has(targetWixId)) {
-                                        return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
-                                    }
-                                    return item;
-                                })
-                            }));
-
-                            // Şimdi Duvar kalınlıklarına göre malzemeyi ve işçiliği hesaplıyoruz
-                            const wallCat = updatedCosts.find(c => c.id === 'duvar_tavan');
-                            let rawMaterialPriceM3 = 2653;
-                            let laborPriceM2 = 250;
-                            if (wallCat) {
-                                const matItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton Blok (m3)" :
-                                    globalWallMaterial === 'tugla' ? "Tuğla Blok (m3)" : "Bims Blok (m3)";
-                                const laborItemName = globalWallMaterial === 'gazbeton' ? "Gazbeton İşçiliği (m2)" :
-                                    globalWallMaterial === 'tugla' ? "Tuğla İşçiliği (m2)" : "Bims İşçiliği (m2)";
-
-                                const matItem = wallCat.items.find(i => i.name === matItemName);
-                                const laborItem = wallCat.items.find(i => i.name === laborItemName);
-
-                                if (matItem) rawMaterialPriceM3 = matItem.unit_price;
-                                if (laborItem) laborPriceM2 = laborItem.unit_price;
+                setCosts(prevCosts => {
+                    // Sadece BİR KEZ updatedCosts tanımlıyoruz
+                    const updatedCosts = baseCosts.map((cat: any) => ({
+                        ...cat,
+                        items: cat.items.map((item: any) => {
+                            const targetWixId = WIX_PRICE_MAP[item.name];
+                            if (targetWixId && wixPriceLookup.has(targetWixId)) {
+                                return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
                             }
+                            return item;
+                        })
+                    }));
 
-                            const updatedCosts = baseCosts.map((cat: any) => ({
+                    const getGlobalPriceLocal = (costsArray: any[], itemName: string) => {
+                        for (const cat of costsArray) {
+                            const item = cat.items.find((i: any) => i.name === itemName);
+                            if (item) return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
+                        }
+                        return 0;
+                    };
+
+                    const cementPrice = getGlobalPriceLocal(updatedCosts, "Çimento (kg)") || 3;
+                    const sandPrice = getGlobalPriceLocal(updatedCosts, "Kum (m3)") || 500;
+                    const limePrice = getGlobalPriceLocal(updatedCosts, "Kireç (kg)") || 4;
+
+                    const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
+                    const marbleMortarPriceM3 = sandPrice + (cementPrice * 300);
+
+                    return updatedCosts.map(cat => {
+                        if (cat.id === 'duvar_tavan') {
+                            return {
                                 ...cat,
-                                items: cat.items.map((item: any) => {
-                                    const targetWixId = WIX_PRICE_MAP[item.name];
-                                    if (targetWixId && wixPriceLookup.has(targetWixId)) {
-                                        return { ...item, unit_price: wixPriceLookup.get(targetWixId)! };
+                                items: cat.items.map(item => {
+                                    if (item.name === "Duvar Örme Harcı (Kara Harç)") {
+                                        return { ...item, unit_price: Math.round(wallMortarPriceM3) };
                                     }
                                     return item;
                                 })
-                            }));
-
-                            // BUNU EKLE: Fiyatları yerel olarak bulmak için yardımcı fonksiyon
-                            const getGlobalPriceLocal = (costsArray: any[], itemName: string) => {
-                                for (const cat of costsArray) {
-                                    const item = cat.items.find((i: any) => i.name === itemName);
-                                    if (item) return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
-                                }
-                                return 0;
                             };
-
-
-
-                            // --- YENİ EKLENEN KISIM: Çimento, Kum ve Kireç fiyatlarını bularak harç m3 fiyatlarını hesapla ---
-                            const cementPrice = getGlobalPriceLocal(updatedCosts, "Çimento (kg)") || 3;
-                            const sandPrice = getGlobalPriceLocal(updatedCosts, "Kum (m3)") || 500;
-                            const limePrice = getGlobalPriceLocal(updatedCosts, "Kireç (kg)") || 4;
-
-                            // Duvar Örme Harcı = 1 m3 Kum + 200 kg Çimento + 100 kg Kireç
-                            const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
-
-                            // Mermer/Şap Harcı = 1 m3 Kum + 300 kg Çimento (Kireçsiz)
-                            const marbleMortarPriceM3 = sandPrice + (cementPrice * 300);
-
-                            return updatedCosts.map(cat => {
-                                if (cat.id === 'duvar_tavan') {
-                                    return {
-                                        ...cat,
-                                        items: cat.items.map(item => {
-                                            // Duvar örme harcının fiyatını dinamik olarak güncelle
-                                            if (item.name === "Duvar Örme Harcı (Kara Harç)") {
-                                                return { ...item, unit_price: Math.round(wallMortarPriceM3) };
-                                            }
-
-                                            return item;
-                                        })
-                                    };
-                                }
-                                // --- YENİ EKLENEN KISIM: Zemin kaplamalarındaki harç fiyatını güncelle ---
-                                if (cat.id === 'zemin_kaplama') {
-                                    return {
-                                        ...cat,
-                                        items: cat.items.map(item => {
-                                            if (item.name === "Mermer Harcı ve Kumu") {
-                                                return { ...item, unit_price: Math.round(marbleMortarPriceM3) }; // marbleMortarPriceM3 olarak değiştirildi
-                                            }
-                                            return item;
-                                        })
-                                    };
-                                }
-
-                                return cat;
-                            });
-                        });
-                    } else { setIsPriceFetchError(true); }
-                } else {
-                    setIsPriceFetchError(true);
-                }
-            } catch (error) {
-                console.warn("Failed to fetch prices from backend", error);
+                        }
+                        if (cat.id === 'zemin_kaplama') {
+                            return {
+                                ...cat,
+                                items: cat.items.map(item => {
+                                    if (item.name === "Mermer Harcı ve Kumu") {
+                                        return { ...item, unit_price: Math.round(marbleMortarPriceM3) };
+                                    }
+                                    return item;
+                                })
+                            };
+                        }
+                        return cat;
+                    });
+                });
+            } else { 
+                setIsPriceFetchError(true); 
             }
-        };
+        } else {
+            setIsPriceFetchError(true);
+        }
+    } catch (error) {
+        console.warn("Failed to fetch prices from backend", error);
+        setIsPriceFetchError(true);
+    }
+};
+// ... (useEffect sonu)
         fetchPrices();
     }, []);
 
