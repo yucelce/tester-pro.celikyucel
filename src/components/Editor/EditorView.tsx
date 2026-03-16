@@ -10,46 +10,6 @@ import { WallModal, RoomModal, ColumnModal, BeamModal, SlabModal, CalibrationMod
 
 import PolyBool from 'polybooljs';
 
-const [editorQuantities, setEditorQuantities] = useState<Record<string, number>>({});
-const [editorStats, setEditorStats] = useState<any>({});
-
-useEffect(() => {
-    const fetchLivePreview = async () => {
-        const tempUnit = {
-            id: 'temp', name: 'temp', count: 1,
-            rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams, slabs: editorSlabs,
-            floorType: sourceUnit?.floorType || 'normal',
-            imageData: null, scale: editorScale, lastEdited: 0,
-            structuralWallSource: 'detailed_unit', structuralConcreteSource: 'detailed_unit'
-        };
-
-        const res = await fetch('/api/calculate-unit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                unit: tempUnit,
-                costs,
-                buildingStats,
-                globalWallMaterial,
-                globalWallMode: 'detailed',
-                globalConcreteMode: 'detailed',
-                globalWallThickness: 15,
-                isStructural: editorScope === 'structural'
-            })
-        });
-        const data = await res.json();
-        setEditorQuantities(data.quantities);
-        setEditorStats(data.stats);
-    };
-
-    // Aşırı istek atmasını engellemek için küçük bir debounce eklenebilir
-    const delayDebounceFn = setTimeout(() => {
-        fetchLivePreview();
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-}, [editorRooms, editorWalls, editorColumns, editorBeams, editorSlabs, editorScale, costs, buildingStats, globalWallMaterial, editorScope]);
-
 // EditorView now manages its own "editing" state locally, 
 // fetches the initial unit from store, and saves back to store.
 export const EditorView: React.FC = () => {
@@ -70,6 +30,50 @@ export const EditorView: React.FC = () => {
     const [editorSlabs, setEditorSlabs] = useState<Slab[]>([]);
     const [editorScale, setEditorScale] = useState<number>(0);
     const [editorImage, setEditorImage] = useState<HTMLImageElement | null>(null);
+
+    // --- LIVE PREVIEW (BACKEND BAĞLANTISI) ---
+    const [editorQuantities, setEditorQuantities] = useState<Record<string, number>>({});
+    const [editorStats, setEditorStats] = useState<any>({});
+
+    useEffect(() => {
+        const fetchLivePreview = async () => {
+            const tempUnit = {
+                id: 'temp', name: 'temp', count: 1,
+                rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams, slabs: editorSlabs,
+                floorType: sourceUnit?.floorType || 'normal',
+                imageData: null, scale: editorScale, lastEdited: 0,
+                structuralWallSource: 'detailed_unit', structuralConcreteSource: 'detailed_unit'
+            };
+
+            try {
+                const res = await fetch('/api/calculate-unit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        unit: tempUnit,
+                        costs,
+                        buildingStats,
+                        globalWallMaterial,
+                        globalWallMode: 'detailed',
+                        globalConcreteMode: 'detailed',
+                        globalWallThickness: 15,
+                        isStructural: editorScope === 'structural'
+                    })
+                });
+                const data = await res.json();
+                setEditorQuantities(data.quantities || {});
+                setEditorStats(data.stats || {});
+            } catch (error) {
+                console.error("Live preview calculation error:", error);
+            }
+        };
+
+        const delayDebounceFn = setTimeout(() => {
+            fetchLivePreview();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [editorRooms, editorWalls, editorColumns, editorBeams, editorSlabs, editorScale, costs, buildingStats, globalWallMaterial, editorScope, sourceUnit]);
 
     // Canvas State
     const [zoom, setZoom] = useState<number>(1);
@@ -127,32 +131,6 @@ export const EditorView: React.FC = () => {
             }
         }
     }, [sourceUnit]); // Re-sync if source changes (though we usually don't change source while editing)
-
-    // Derived Calculations for Cost Panel
-    const { editorQuantities, editorStats } = useMemo(() => {
-        const tempUnit: UnitType = {
-            id: 'temp', name: 'temp', count: 1,
-            rooms: editorRooms, walls: editorWalls, columns: editorColumns, beams: editorBeams, slabs: editorSlabs,
-            floorType: sourceUnit?.floorType || 'normal',
-            imageData: null, scale: editorScale, lastEdited: 0,
-            structuralWallSource: 'detailed_unit',
-            structuralConcreteSource: 'detailed_unit'
-        };
-        const isStructuralMode = editorScope === 'structural';
-        // FIX: 'detailed' modu zorunlu kılındı çünkü editördeyiz ve anlık çizimin sonucunu görmek istiyoruz
-        const { quantities, stats } = calculateUnitCost(
-            tempUnit,
-            costs,
-            buildingStats,
-            globalWallMaterial,
-            'detailed',
-            'detailed',
-            15, // globalWallThickness fallback
-            isStructuralMode
-        );
-        return { editorQuantities: quantities, editorStats: stats };
-    }, [editorRooms, editorWalls, editorColumns, editorBeams, editorSlabs, editorScale, costs, buildingStats, sourceUnit, globalWallMaterial, editorScope]);
-
 
     // --- ACTIONS ---
 

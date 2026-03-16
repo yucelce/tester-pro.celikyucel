@@ -9,7 +9,7 @@ import { WIX_PRICE_MAP } from '../wix_price_mapping';
 import { useUIStore } from './uiStore';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/_utils/constants';
 
-import type { CostCategory } from '../../api/_utils/cost_data'; 
+import type { CostCategory } from '../../api/_utils/cost_data';
 import type { ScheduleItem } from '../../api/_utils/scheduleCalculator';
 // --- WALL PRICES CONSTANTS ---
 
@@ -782,41 +782,57 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const triggerBackendCalculation = async () => {
-    setIsCalculating(true);
-    try {
-        const payload = { /* ... mevcut payload ... */ };
-        
-        // 1. Ana Maliyetleri Hesapla
-        const resCost = await fetch('/api/calculate-project', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-        const costResult = await resCost.json();
-        
-        setProjectCostDetails(costResult.projectCostDetails);
-        setProjectTotalCost(costResult.projectTotalCost);
-        // ... diğer set işlemleri
-        
-        // 2. İş Zaman Programını (Schedule) Hesapla
-        const resSchedule = await fetch('/api/calculate-schedule', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                totalConstructionArea,
+        setIsCalculating(true);
+        try {
+            // EKSİK OLAN PAYLOAD DOLDURULDU
+            const payload = {
+                units,
+                structuralUnits,
                 buildingStats,
-                constructionDuration,
-                overrides: scheduleOverrides
-            })
-        });
-        const scheduleResult = await resSchedule.json();
-        setProjectSchedule(scheduleResult.schedule);
+                globalWallMaterial,
+                globalWallMode,
+                globalConcreteMode,
+                globalWallThickness,
+                customCosts,
+                duplexPairs,
+                costs,
+                totalConstructionArea,
+                constructionDuration
+            };
 
-        setIsDataDirty(false);
-    } catch (error) {
-        console.error("Hesaplama Hatası:", error);
-    } finally {
-        setIsCalculating(false);
-    }
-};
+            // 1. Ana Maliyetleri Hesapla
+            const resCost = await fetch('/api/calculate-project', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            const costResult = await resCost.json();
+
+            setProjectCostDetails(costResult.projectCostDetails || []);
+            setProjectTotalCost(costResult.projectTotalCost || 0);
+            setGlobalStructuralCost(costResult.globalStructuralCost || 0);
+            setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
+            setGlobalStats(costResult.globalStats || {});
+
+            // 2. İş Zaman Programını (Schedule) Hesapla
+            const resSchedule = await fetch('/api/calculate-schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    totalConstructionArea,
+                    buildingStats,
+                    constructionDuration,
+                    overrides: scheduleOverrides
+                })
+            });
+            const scheduleResult = await resSchedule.json();
+            setProjectSchedule(scheduleResult.schedule || []);
+
+            setIsDataDirty(false);
+        } catch (error) {
+            console.error("Hesaplama Hatası:", error);
+        } finally {
+            setIsCalculating(false);
+        }
+    };
     // --- ACTIONS ---
     const startNewProject = (type: 'apartment' | 'villa') => {
         const isVilla = type === 'villa';
@@ -1304,7 +1320,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale, startNewProject, bulkUpdatePrices, duplexPairs, 
+            removeSale, startNewProject, bulkUpdatePrices, duplexPairs,
             addDuplexPair, updateDuplexPair, removeDuplexPair,
             isCalculating,
             triggerBackendCalculation,
