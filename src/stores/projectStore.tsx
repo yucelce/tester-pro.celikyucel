@@ -731,10 +731,14 @@ const fetchPrices = async () => {
     const triggerBackendCalculation = async () => {
         setIsCalculating(true);
         try {
-            // EKSİK OLAN PAYLOAD DOLDURULDU
+            // GÖRSELLER TEMİZLENDİ (413 Payload Too Large Hatasını Önler)
+            const stripImage = (u: UnitType) => ({ ...u, imageData: null });
+            const safeUnits = units.map(stripImage);
+            const safeStructuralUnits = structuralUnits.map(stripImage);
+
             const payload = {
-                units,
-                structuralUnits,
+                units: safeUnits,
+                structuralUnits: safeStructuralUnits,
                 buildingStats,
                 globalWallMaterial,
                 globalWallMode,
@@ -751,13 +755,17 @@ const fetchPrices = async () => {
             const resCost = await fetch('/api/calculate-project', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
-            const costResult = await resCost.json();
-
-            setProjectCostDetails(costResult.projectCostDetails || []);
-            setProjectTotalCost(costResult.projectTotalCost || 0);
-            setGlobalStructuralCost(costResult.globalStructuralCost || 0);
-            setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
-            setGlobalStats(costResult.globalStats || {});
+            
+            if (resCost.ok) {
+                const costResult = await resCost.json();
+                setProjectCostDetails(costResult.projectCostDetails || []);
+                setProjectTotalCost(costResult.projectTotalCost || 0);
+                setGlobalStructuralCost(costResult.globalStructuralCost || 0);
+                setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
+                setGlobalStats(costResult.globalStats || {});
+            } else {
+                console.error("Backend Maliyet Hesaplama Hatası (HTTP " + resCost.status + ")");
+            }
 
             // 2. İş Zaman Programını (Schedule) Hesapla
             const resSchedule = await fetch('/api/calculate-schedule', {
@@ -770,16 +778,36 @@ const fetchPrices = async () => {
                     overrides: scheduleOverrides
                 })
             });
-            const scheduleResult = await resSchedule.json();
-            setProjectSchedule(scheduleResult.schedule || []);
+            
+            if (resSchedule.ok) {
+                const scheduleResult = await resSchedule.json();
+                setProjectSchedule(scheduleResult.schedule || []);
+            }
 
-            setIsDataDirty(false);
+            // DİKKAT: setIsDataDirty(false) BURADAN SİLİNDİ. 
+            // "Veriler Değişti, Onaylıyor musun?" banner'ının çalışmaya devam etmesi için.
+
         } catch (error) {
             console.error("Hesaplama Hatası:", error);
         } finally {
             setIsCalculating(false);
         }
     };
+
+    useEffect(() => {
+        // Sistem fiyatları API'den çekilmeden (costs boşken) boşuna hesaplama yapma
+        if (costs.length > 0) {
+            const timeoutId = setTimeout(() => {
+                triggerBackendCalculation();
+            }, 600); // 600ms gecikme (Yazarken her harfte tetiklenmemesi için)
+            return () => clearTimeout(timeoutId);
+        }
+    }, [
+        units, structuralUnits, buildingStats, globalWallMaterial,
+        globalWallMode, globalConcreteMode, globalWallThickness,
+        customCosts, duplexPairs, costs, scheduleOverrides,
+        totalConstructionArea, constructionDuration
+    ]);
     // --- ACTIONS ---
     const startNewProject = (type: 'apartment' | 'villa') => {
         const isVilla = type === 'villa';

@@ -61,11 +61,14 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
 React.useEffect(() => {
     const fetchQuantities = async () => {
         try {
+            // YENİ: Vercel Limitini aşmamak için resmi temizliyoruz
+            const safeUnit = { ...unit, imageData: null };
+            
             const res = await fetch('/api/calculate-unit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    unit,
+                    unit: safeUnit, // GÜNCELLENDİ
                     costs,
                     buildingStats,
                     globalWallMaterial: 'gazbeton',
