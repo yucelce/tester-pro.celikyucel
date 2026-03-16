@@ -1526,7 +1526,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight);
         const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight);
         const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight);
-
+        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, avgArea, 3.0);
         let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
 
         // Detaylı çizim yoksa (otomatik moddaysa) katları ayrı ayrı kendi katsayılarıyla topla
