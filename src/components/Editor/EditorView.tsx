@@ -45,13 +45,23 @@ export const EditorView: React.FC = () => {
                 structuralWallSource: 'detailed_unit', structuralConcreteSource: 'detailed_unit'
             };
 
+            const optimizedCosts = costs.map(cat => ({
+                id: cat.id,
+                items: cat.items.map(item => ({
+                    name: item.name,
+                    unit_price: item.unit_price,
+                    manualPrice: item.manualPrice,
+                    manualQuantity: item.manualQuantity
+                }))
+            }));
+
             try {
                 const res = await fetch('/api/calculate-unit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         unit: tempUnit,
-                        costs,
+                        costs: optimizedCosts, // <-- DEĞİŞEN KISIM
                         buildingStats,
                         globalWallMaterial,
                         globalWallMode: 'detailed',

@@ -36,6 +36,8 @@ interface CalculatePayload {
     constructionDuration: number;
 }
 
+import { COST_DATA } from './_utils/cost_data';
+
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -55,10 +57,27 @@ export default async function handler(req: any, res: any) {
             globalWallThickness = 15,
             customCosts = [],
             duplexPairs = [],
-            costs = [],
+            costs: optimizedCosts = [], // Gelen veriyi optimizedCosts olarak adlandırdık
             totalConstructionArea = 0,
             constructionDuration = 0
         } = payload;
+
+        const mergedCosts = COST_DATA.map(baseCat => {
+            const optCat = optimizedCosts.find((c: any) => c.id === baseCat.id);
+            return {
+                ...baseCat,
+                items: baseCat.items.map(baseItem => {
+                    const optItem = optCat?.items?.find((i: any) => i.name === baseItem.name);
+                    return {
+                        ...baseItem,
+                        // Eğer frontend'den bir fiyat gelmişse onu kullan, yoksa orijinalini tut
+                        unit_price: optItem?.unit_price ?? baseItem.unit_price,
+                        manualPrice: optItem?.manualPrice,
+                        manualQuantity: optItem?.manualQuantity
+                    };
+                })
+            };
+        });
 
         let structural = 0;
         let interior = 0;
@@ -82,7 +101,7 @@ export default async function handler(req: any, res: any) {
 
         // --- 1. MİMARİ PLANLARI HESAPLAMA ---
         units.forEach((u: UnitType) => {
-            const { stats, roomBreakdowns } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, false);
+            const { stats, roomBreakdowns } = calculateUnitCost(u, mergedCosts, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, false);
 
             Object.keys(stats).forEach(k => {
                 const totalVal = stats[k] * u.count;
@@ -124,7 +143,7 @@ export default async function handler(req: any, res: any) {
         }
 
         effectiveStructuralUnits.forEach((u: UnitType) => {
-            const { stats } = calculateUnitCost(u, costs, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
+            const { stats } = calculateUnitCost(u, mergedCosts, buildingStats, globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, true);
             Object.keys(stats).forEach(k => {
                 const totalVal = stats[k] * u.count;
                 if (!aggregatedUnitStats[k]) aggregatedUnitStats[k] = 0;
@@ -315,7 +334,7 @@ export default async function handler(req: any, res: any) {
 
         // --- 6. MALİYETLERİ HESAPLAMA (FİYATLANDIRMA) ---
         // TypeScript Düzeltmesi: 'details' bir 'any[]' olarak tanımlanarak push yaparken tip uyumsuzluğu giderildi.
-        const details: any[] = costs.map((cat: CostCategory) => {
+        const details: any[] = mergedCosts.map((cat: CostCategory) => {
             let catTotal = 0;
             const filteredItems = cat.items.filter((item: CostItem) => {
                 if (cat.id === 'mekanik_tesisat') {
@@ -345,7 +364,7 @@ export default async function handler(req: any, res: any) {
                     let calculatedAutoQty = 0;
 
                     let dynamicUnitPrice = calculateDynamicUnitPrice(
-                        item, 0, totalConstructionArea, buildingStats.province, buildingStats.isUrbanTransformation, buildingStats, costs, globalWallMaterial
+                        item, 0, totalConstructionArea, buildingStats.province, buildingStats.isUrbanTransformation, buildingStats, mergedCosts, globalWallMaterial
                     );
 
                     if (item.inputType === 'manual_total') {
@@ -353,7 +372,7 @@ export default async function handler(req: any, res: any) {
                         finalQty = 1;
                         if (item.auto_source.startsWith('calc_')) {
                             dynamicUnitPrice = calculateComplexGlobalQuantity(
-                                item, buildingStats, totalConstructionArea, constructionDuration, aggregatedUnitStats, costs, globalWallMaterial, globalCostBreakdowns, units
+                                item, buildingStats, totalConstructionArea, constructionDuration, aggregatedUnitStats, mergedCosts, globalWallMaterial, globalCostBreakdowns, units
                             );
                         }
                     } else {
@@ -366,7 +385,7 @@ export default async function handler(req: any, res: any) {
                             else if (item.auto_source === 'land_area') calculatedAutoQty = buildingStats.landArea * item.multiplier;
                             else if (item.auto_source.startsWith('wall_')) calculatedAutoQty = Math.max(0, aggregatedUnitStats[item.auto_source] || 0) * item.multiplier;
                             else if (item.auto_source.startsWith('calc_')) {
-                                calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(item, buildingStats, totalConstructionArea, constructionDuration, aggregatedUnitStats, costs, globalWallMaterial, undefined, units));
+                                calculatedAutoQty = Math.max(0, calculateComplexGlobalQuantity(item, buildingStats, totalConstructionArea, constructionDuration, aggregatedUnitStats, mergedCosts, globalWallMaterial, undefined, units));
                             }
                         }
                         finalQty = item.manualQuantity !== undefined ? item.manualQuantity : calculatedAutoQty;
