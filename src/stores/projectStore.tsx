@@ -363,7 +363,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
     useEffect(() => {
-        // ... (useEffect başlangıcı)
         const fetchPrices = async () => {
             try {
                 // 1. Önce backend'den varsayılan (default) verileri çekiyoruz
@@ -485,7 +484,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 setIsPriceFetchError(true);
             }
         };
-        // ... (useEffect sonu)
+
         fetchPrices();
     }, []);
 
@@ -740,10 +739,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDataDirty(true);
     };
 
-    const triggerBackendCalculation = async () => {
+    const triggerBackendCalculation = useCallback(async () => {
+        if (costs.length === 0) return; // Fiyatlar yüklenmeden boşuna istek atma
+        
         setIsCalculating(true);
         try {
-            // GÖRSELLER TEMİZLENDİ (413 Payload Too Large Hatasını Önler)
+            // VERCEL 413 Payload Hatalarını Önlemek İçin Base64 Resimlerini Backend'e Yollamıyoruz
             const stripImage = (u: UnitType) => ({ ...u, imageData: null });
             const safeUnits = units.map(stripImage);
             const safeStructuralUnits = structuralUnits.map(stripImage);
@@ -763,11 +764,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 constructionDuration
             };
 
-            // 1. Ana Maliyetleri Hesapla
             const resCost = await fetch('/api/calculate-project', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
-
+            
             if (resCost.ok) {
                 const costResult = await resCost.json();
                 setProjectCostDetails(costResult.projectCostDetails || []);
@@ -775,11 +775,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 setGlobalStructuralCost(costResult.globalStructuralCost || 0);
                 setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
                 setGlobalStats(costResult.globalStats || {});
-            } else {
-                console.error("Backend Maliyet Hesaplama Hatası (HTTP " + resCost.status + ")");
             }
 
-            // 2. İş Zaman Programını (Schedule) Hesapla
             const resSchedule = await fetch('/api/calculate-schedule', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -796,23 +793,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 setProjectSchedule(scheduleResult.schedule || []);
             }
 
-            // DİKKAT: setIsDataDirty(false) BURADAN SİLİNDİ. 
-            // "Veriler Değişti, Onaylıyor musun?" banner'ının çalışmaya devam etmesi için.
-
         } catch (error) {
             console.error("Hesaplama Hatası:", error);
         } finally {
             setIsCalculating(false);
-        }
-    };
-
-    useEffect(() => {
-        // Sistem fiyatları API'den çekilmeden (costs boşken) boşuna hesaplama yapma
-        if (costs.length > 0) {
-            const timeoutId = setTimeout(() => {
-                triggerBackendCalculation();
-            }, 600); // 600ms gecikme (Yazarken her harfte tetiklenmemesi için)
-            return () => clearTimeout(timeoutId);
         }
     }, [
         units, structuralUnits, buildingStats, globalWallMaterial,
@@ -820,6 +804,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         customCosts, duplexPairs, costs, scheduleOverrides,
         totalConstructionArea, constructionDuration
     ]);
+
+    useEffect(() => {
+        if (costs.length > 0) {
+            const timeoutId = setTimeout(() => {
+                triggerBackendCalculation();
+            }, 600); // 600ms debounce (performans için)
+            return () => clearTimeout(timeoutId);
+        }
+    }, [triggerBackendCalculation, costs.length]);
     // --- ACTIONS ---
     const startNewProject = (type: 'apartment' | 'villa') => {
         const isVilla = type === 'villa';
