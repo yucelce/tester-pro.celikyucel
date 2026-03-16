@@ -20,7 +20,6 @@ import {
     DuplexPair 
 } from '../src/types';
 
-
 // İstek gövdesi (Payload) için Tip Tanımlaması
 interface CalculatePayload {
     units: UnitType[];
@@ -116,7 +115,11 @@ export default async function handler(req: any, res: any) {
             if (buildingStats.normalFloorCount > 0) effectiveStructuralUnits.push({ id: 'auto_n', name: 'Normal Kat (Sanal)', floorType: 'normal', count: buildingStats.normalFloorCount, ...baseUnitProps });
             if (buildingStats.groundFloorArea > 0) effectiveStructuralUnits.push({ id: 'auto_g', name: 'Zemin Kat (Sanal)', floorType: 'ground', count: 1, ...baseUnitProps });
             if (buildingStats.basementFloorCount > 0) effectiveStructuralUnits.push({ id: 'auto_b', name: 'Bodrum Kat (Sanal)', floorType: 'basement', count: buildingStats.basementFloorCount, ...baseUnitProps });
-            if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) effectiveStructuralUnits.push({ id: 'auto_r', name: 'Çatı Katı (Sanal)', floorType: 'roof', count: 1, ...baseUnitProps });
+            
+            // TypeScript Hatası Düzeltmesi: roofFloorArea undefined olabileceğinden (|| 0) eklendi
+            if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
+                effectiveStructuralUnits.push({ id: 'auto_r', name: 'Çatı Katı (Sanal)', floorType: 'roof', count: 1, ...baseUnitProps });
+            }
         }
 
         effectiveStructuralUnits.forEach((u: UnitType) => {
@@ -310,15 +313,22 @@ export default async function handler(req: any, res: any) {
         }
 
         // --- 6. MALİYETLERİ HESAPLAMA (FİYATLANDIRMA) ---
-        const details = costs.map((cat: CostCategory) => {
+        // TypeScript Düzeltmesi: 'details' bir 'any[]' olarak tanımlanarak push yaparken tip uyumsuzluğu giderildi.
+        const details: any[] = costs.map((cat: CostCategory) => {
             let catTotal = 0;
             const filteredItems = cat.items.filter((item: CostItem) => {
                 if (cat.id === 'mekanik_tesisat') {
                     const system = buildingStats.heatingSystem || 'radiator';
                     const radiatorItems = ["Kalorifer Altyapısı (Mobil Sistem)", "Panel Radyatör (DemirDöküm vb.)", "Radyatör Montaj ve Vanalar"];
                     const underfloorItems = ["Yerden Isıtma (Strafor+Boru+İşçilik)", "Yerden Isıtma Kollektörü ve Kutusu"];
-                    if (system === 'radiator' && underfloorItems.includes(item.name)) return false;
-                    if (system === 'underfloor' && radiatorItems.includes(item.name)) return false;
+                    const vrfItems = ["VRF Dış Ünite (Merkezi Sistem)", "VRF İç Ünite (Kaset/Duvar Tipi)", "VRF Bakır Borulama ve Altyapı"];
+                    const heatPumpItems = ["Isı Pompası (Hava Kaynaklı Dış Ünite)"];
+
+                    // Mantıksal Düzeltme: Isı Pompası veya VRF seçildiğinde de diğer sistemlerin listelenmesi engellendi.
+                    if (system === 'radiator' && [...underfloorItems, ...vrfItems, ...heatPumpItems].includes(item.name)) return false;
+                    if (system === 'underfloor' && [...radiatorItems, ...vrfItems, ...heatPumpItems].includes(item.name)) return false;
+                    if (system === 'heat_pump' && [...radiatorItems, ...vrfItems, "Kombi ve Baca Montajı"].includes(item.name)) return false;
+                    if (system === 'vrf' && [...radiatorItems, ...underfloorItems, ...heatPumpItems, "Kombi ve Baca Montajı"].includes(item.name)) return false;
                 }
                 if (cat.id === 'duvar_tavan') {
                     if (globalWallMaterial === 'gazbeton' && item.name === "Duvar Örme Harcı (Kara Harç)") return false;
@@ -387,9 +397,21 @@ export default async function handler(req: any, res: any) {
         const customCostsTotal = customCosts.reduce((sum: number, c: CustomCostItem) => sum + c.price, 0);
         if (customCosts.length > 0) {
             details.push({
-                id: 'ozel_kalemler', title: '11. Özel İlaveler / Ek İşler', totalCategoryCost: customCostsTotal,
+                id: 'ozel_kalemler', 
+                title: '11. Özel İlaveler / Ek İşler', 
+                totalCategoryCost: customCostsTotal,
                 items: customCosts.map((c: CustomCostItem) => ({
-                    name: c.name || 'İsimsiz Ek Kalem', unit: 'Paket', unit_price: c.price, auto_source: 'manual', multiplier: 1, calculatedAutoQty: 1, finalQty: 1, totalPrice: c.price, manualPrice: c.price, inputType: 'manual_total', scope: 'global', id: c.id
+                    name: c.name || 'İsimsiz Ek Kalem', 
+                    unit: 'Paket', 
+                    unit_price: c.price, 
+                    auto_source: 'manual', 
+                    multiplier: 1, 
+                    calculatedAutoQty: 1, 
+                    finalQty: 1, 
+                    totalPrice: c.price, 
+                    manualPrice: c.price, 
+                    inputType: 'manual_total', 
+                    scope: 'global'
                 }))
             });
             total += customCostsTotal;

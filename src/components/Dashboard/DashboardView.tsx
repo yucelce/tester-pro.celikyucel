@@ -52,7 +52,9 @@ export const DashboardView: React.FC = () => {
     };
 
     const {
-        projectTotalCost, buildingStats, totalConstructionArea, constructionDuration, globalStructuralCost, interiorFitoutCost,
+        isCalculating,
+        projectTotalCost, buildingStats, totalConstructionArea, constructionDuration, 
+        globalStructuralCost, interiorFitoutCost,
         projectCostDetails, units, structuralUnits, globalWallMode, globalConcreteMode, globalWallMaterial,
         addUnit, addStructuralUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial, updateCostItem,
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,

@@ -1,14 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useProjectStore } from '../../stores/projectStore';
-
 import { ScheduleDependencyModal } from '../Modals/ScheduleDependencyModal';
 
 export const ProjectSchedulePanel: React.FC = () => {
-    const schedule = projectStore.projectSchedule;
+    // DOĞRUSU: Sadece useProjectStore içinden çekiyoruz. Hatalı projectStore satırı silindi.
     const {
-        totalConstructionArea,
+        projectSchedule: schedule,
         buildingStats,
-        constructionDuration,
         scheduleOverrides,
         updateScheduleOverride,
         setProjectStartDate
@@ -17,26 +15,19 @@ export const ProjectSchedulePanel: React.FC = () => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showDependencies, setShowDependencies] = useState(false);
 
-    // --- YENİ: MOUSE VE HOVER STATE ---
+    // --- MOUSE VE HOVER STATE ---
     const [hoverWeek, setHoverWeek] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const schedule = useMemo(() => {
-        return calculateConstructionSchedule(
-            totalConstructionArea,
-            buildingStats,
-            constructionDuration,
-            scheduleOverrides
-        );
-    }, [totalConstructionArea, buildingStats, constructionDuration, scheduleOverrides]);
-
-    const totalWeeks = Math.max(...schedule.map(s => s.endWeek), 0) + 4; // +4 buffer
+    // schedule array'i boş gelirse diye güvenlik önlemi (fallback) eklendi
+    const safeSchedule = schedule || [];
+    const totalWeeks = Math.max(...safeSchedule.map(s => s.endWeek), 0) + 4; // +4 buffer
 
     const projectEndDate = useMemo(() => {
-        if (schedule.length === 0) return null;
+        if (safeSchedule.length === 0) return null;
         // Schedule içindeki en büyük endDate'i bul
-        return schedule.reduce((max, item) => item.endDate > max ? item.endDate : max, schedule[0].endDate);
-    }, [schedule]);
+        return safeSchedule.reduce((max, item) => item.endDate > max ? item.endDate : max, safeSchedule[0].endDate);
+    }, [safeSchedule]);
 
     const defaultDate = buildingStats.projectStartDate
         ? new Date(buildingStats.projectStartDate).toISOString().split('T')[0]
@@ -55,7 +46,7 @@ export const ProjectSchedulePanel: React.FC = () => {
 
     // Süre Uzatma / Kısaltma (Resize)
     const handleDurationChange = (taskId: string, amount: number) => {
-        const item = schedule.find(s => s.id === taskId);
+        const item = safeSchedule.find(s => s.id === taskId);
         if (!item) return;
         const currentDuration = scheduleOverrides[taskId]?.manualDuration || item.durationWeeks;
         const newDuration = Math.max(1, currentDuration + amount); // Min 1 hafta
@@ -190,7 +181,7 @@ export const ProjectSchedulePanel: React.FC = () => {
                                             // Sadece hesaplanan adıma (step) uyan ayları yazdır. Geri kalanı boş bırak.
                                             if (i % labelStep !== 0) return null;
 
-                                            const rulerDate = new Date(schedule[0]?.startDate || new Date());
+                                            const rulerDate = new Date(safeSchedule[0]?.startDate || new Date());
                                             rulerDate.setMonth(rulerDate.getMonth() + i);
 
                                             return (
@@ -208,7 +199,7 @@ export const ProjectSchedulePanel: React.FC = () => {
 
                             {/* TASKS */}
                             <div className="space-y-4 relative">
-                                {schedule.map((item) => {
+                                {safeSchedule.map((item) => {
                                     const widthPercent = (item.durationWeeks / totalWeeks) * 100;
                                     const leftPercent = (item.startWeek / totalWeeks) * 100;
 
@@ -227,9 +218,9 @@ export const ProjectSchedulePanel: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <div className="text-[9px] md:text-[10px] text-slate-500 flex items-center gap-1 md:gap-2 mt-0.5 truncate">
-                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{item.startDate.toLocaleDateString('tr-TR')}</span>
+                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{new Date(item.startDate).toLocaleDateString('tr-TR')}</span>
                                                     <i className="fas fa-arrow-right text-[7px] md:text-[8px]"></i>
-                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{item.endDate.toLocaleDateString('tr-TR')}</span>
+                                                    <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">{new Date(item.endDate).toLocaleDateString('tr-TR')}</span>
                                                 </div>
 
                                                 {/* KONTROLLER (Sadece Hover'da) */}
@@ -248,7 +239,7 @@ export const ProjectSchedulePanel: React.FC = () => {
 
                                             {/* Timeline Bar */}
                                             <div className="flex-1 relative h-8 rounded-full overflow-visible">
-                                                {item.dependencies.length > 0 && (
+                                                {item.dependencies && item.dependencies.length > 0 && (
                                                     <div
                                                         className="absolute top-1/2 left-0 h-px bg-slate-300 dark:bg-slate-600 border-t border-dashed border-slate-400 z-0"
                                                         style={{ width: `${leftPercent}%` }}
@@ -304,7 +295,7 @@ export const ProjectSchedulePanel: React.FC = () => {
             {/* Dependency Modal */}
             {showDependencies && (
                 <ScheduleDependencyModal
-                    schedule={schedule}
+                    schedule={safeSchedule}
                     onClose={() => setShowDependencies(false)}
                 />
             )}
