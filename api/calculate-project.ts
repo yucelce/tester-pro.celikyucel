@@ -1,23 +1,23 @@
 // api/calculate-project.ts
 
-import { 
-    calculateUnitCost, 
-    calculateComplexGlobalQuantity, 
-    calculateDynamicUnitPrice, 
-    estimatePerimeter 
+import {
+    calculateUnitCost,
+    calculateComplexGlobalQuantity,
+    calculateDynamicUnitPrice,
+    estimatePerimeter
 } from './_utils/calculations';
 
-import { 
-    CostCategory, 
-    CostItem 
+import {
+    CostCategory,
+    CostItem
 } from './_utils/cost_data';
 
-import { 
-    UnitType, 
-    BuildingStats, 
-    WallMaterial, 
-    CustomCostItem, 
-    DuplexPair 
+import {
+    UnitType,
+    BuildingStats,
+    WallMaterial,
+    CustomCostItem,
+    DuplexPair
 } from '../src/types';
 
 // İstek gövdesi (Payload) için Tip Tanımlaması
@@ -42,8 +42,9 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        // Frontend'den gelen ham verileri Type-Safe olarak alıyoruz
-        const payload: CalculatePayload = req.body;
+        // GÜVENLİ JSON PARSE: Vercel bazen body'i string olarak döndürdüğü için çökmesini engelliyoruz
+        const payload: CalculatePayload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
         const {
             units = [],
             structuralUnits = [],
@@ -111,11 +112,11 @@ export default async function handler(req: any, res: any) {
             effectiveStructuralUnits = [];
             // Sanal Kat Planlarını Tam TypeScript Formatında Ekliyoruz
             const baseUnitProps = { scale: 0, rooms: [], walls: [], columns: [], beams: [], slabs: [], structuralWallSource: 'global_calculated' as const, structuralConcreteSource: 'global_calculated' as const, imageData: null, lastEdited: 0 };
-            
+
             if (buildingStats.normalFloorCount > 0) effectiveStructuralUnits.push({ id: 'auto_n', name: 'Normal Kat (Sanal)', floorType: 'normal', count: buildingStats.normalFloorCount, ...baseUnitProps });
             if (buildingStats.groundFloorArea > 0) effectiveStructuralUnits.push({ id: 'auto_g', name: 'Zemin Kat (Sanal)', floorType: 'ground', count: 1, ...baseUnitProps });
             if (buildingStats.basementFloorCount > 0) effectiveStructuralUnits.push({ id: 'auto_b', name: 'Bodrum Kat (Sanal)', floorType: 'basement', count: buildingStats.basementFloorCount, ...baseUnitProps });
-            
+
             // TypeScript Hatası Düzeltmesi: roofFloorArea undefined olabileceğinden (|| 0) eklendi
             if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
                 effectiveStructuralUnits.push({ id: 'auto_r', name: 'Çatı Katı (Sanal)', floorType: 'roof', count: 1, ...baseUnitProps });
@@ -277,7 +278,7 @@ export default async function handler(req: any, res: any) {
                 aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (parkingArea * 0.85));
                 aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (parkingArea * 0.15));
                 aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (parkingArea * 0.15));
-                
+
                 const generatedInnerWalls = parkingArea * 1.1 * (pH / 3.0);
                 aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls);
             }
@@ -295,7 +296,7 @@ export default async function handler(req: any, res: any) {
                 aggregatedUnitStats['dry_area'] = Math.max(0, (aggregatedUnitStats['dry_area'] || 0) - (shelterArea * 0.85));
                 aggregatedUnitStats['wet_area'] = Math.max(0, (aggregatedUnitStats['wet_area'] || 0) - (shelterArea * 0.15));
                 aggregatedUnitStats['net_wet_area'] = Math.max(0, (aggregatedUnitStats['net_wet_area'] || 0) - (shelterArea * 0.15));
-                
+
                 const generatedInnerWalls = shelterArea * 1.1 * (sH / 3.0);
                 aggregatedUnitStats[`wall_${innerThickStr}_area`] = Math.max(0, (aggregatedUnitStats[`wall_${innerThickStr}_area`] || 0) - generatedInnerWalls);
 
@@ -342,7 +343,7 @@ export default async function handler(req: any, res: any) {
                 .map((item: CostItem) => {
                     let finalQty = 0;
                     let calculatedAutoQty = 0;
-                    
+
                     let dynamicUnitPrice = calculateDynamicUnitPrice(
                         item, 0, totalConstructionArea, buildingStats.province, buildingStats.isUrbanTransformation, buildingStats, costs, globalWallMaterial
                     );
@@ -388,7 +389,7 @@ export default async function handler(req: any, res: any) {
 
             if (['kaba_insaat', 'duvar_tavan'].includes(cat.id)) structural += catTotal;
             else if (!['arsa_finansman', 'resmi_idari', 'santiye_hafriyat', 'peyzaj_cevre'].includes(cat.id)) interior += catTotal;
-            
+
             total += catTotal;
 
             return { id: cat.id, title: cat.title, totalCategoryCost: catTotal, items: processedItems };
@@ -397,20 +398,20 @@ export default async function handler(req: any, res: any) {
         const customCostsTotal = customCosts.reduce((sum: number, c: CustomCostItem) => sum + c.price, 0);
         if (customCosts.length > 0) {
             details.push({
-                id: 'ozel_kalemler', 
-                title: '11. Özel İlaveler / Ek İşler', 
+                id: 'ozel_kalemler',
+                title: '11. Özel İlaveler / Ek İşler',
                 totalCategoryCost: customCostsTotal,
                 items: customCosts.map((c: CustomCostItem) => ({
-                    name: c.name || 'İsimsiz Ek Kalem', 
-                    unit: 'Paket', 
-                    unit_price: c.price, 
-                    auto_source: 'manual', 
-                    multiplier: 1, 
-                    calculatedAutoQty: 1, 
-                    finalQty: 1, 
-                    totalPrice: c.price, 
-                    manualPrice: c.price, 
-                    inputType: 'manual_total', 
+                    name: c.name || 'İsimsiz Ek Kalem',
+                    unit: 'Paket',
+                    unit_price: c.price,
+                    auto_source: 'manual',
+                    multiplier: 1,
+                    calculatedAutoQty: 1,
+                    finalQty: 1,
+                    totalPrice: c.price,
+                    manualPrice: c.price,
+                    inputType: 'manual_total',
                     scope: 'global'
                 }))
             });

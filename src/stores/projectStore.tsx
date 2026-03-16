@@ -3,7 +3,7 @@ import {
     UnitType, BuildingStats, UnitFloorType, WallMaterial, SavedProject, ScheduleTaskOverride,
     ReportSettings, CustomCostItem, FinancialSettings, SalePlan, DuplexPair
 } from '../types';
-
+import { COST_DATA } from '../../api/_utils/cost_data';
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
 import { useUIStore } from './uiStore';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/_utils/constants';
@@ -365,21 +365,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         const fetchPrices = async () => {
             try {
-                // 1. Önce backend'den varsayılan (default) verileri çekiyoruz
-                const initRes = await fetch('/api/get-init-data');
-                if (!initRes.ok) throw new Error("Init data çekilemedi");
-                const initData = await initRes.json();
-                const baseCosts = initData.costs;
+                // 1. AĞ HATALARINI ÖNLEMEK İÇİN VARSAYILAN FİYATLARI DOĞRUDAN DOSYADAN ALIYORUZ
+                // (API çökse veya yerel sunucu API'yi bulamasa bile sistem boş kalmaz ve liste ekrana çizilir)
+                const baseCosts = COST_DATA;
 
                 try {
-                    // 2. Wix'ten güncel fiyatları çekmeyi deniyoruz (www eklendi)
+                    // 2. Wix'ten güncel fiyatları çekmeyi deniyoruz
                     const WIX_API_URL = 'https://www.celikyucel.com/_functions/fiyatListesi';
                     const response = await fetch(WIX_API_URL);
                     
                     if (response.ok) {
                         const result = await response.json();
                         
-                        // Şart esnetildi (sadece result.data'nın dizi olması yeterli)
                         if (result && Array.isArray(result.data)) {
                             setIsPriceFetchError(false);
                             const wixPriceLookup = new Map<string, number>();
@@ -412,9 +409,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                 evictionCostPerUnit: prev.evictionCostPerUnit ? prev.evictionCostPerUnit : aracPaketiFiyati
                             }));
 
-                            // GÜNCEL FİYATLARI UYGULA
-                            setCosts(prevCosts => {
-                                const updatedCosts = baseCosts.map((cat: any) => ({
+                            // GÜNCEL FİYATLARI UYGULA VE HESAPLA
+                            setCosts(baseCosts.map((cat: any) => {
+                                const updatedCat = {
                                     ...cat,
                                     items: cat.items.map((item: any) => {
                                         const targetWixId = WIX_PRICE_MAP[item.name];
@@ -423,64 +420,44 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                                         }
                                         return item;
                                     })
-                                }));
-
-                                const getGlobalPriceLocal = (costsArray: any[], itemName: string) => {
-                                    for (const cat of costsArray) {
-                                        const item = cat.items.find((i: any) => i.name === itemName);
-                                        if (item) return item.manualPrice !== undefined ? item.manualPrice : item.unit_price;
-                                    }
-                                    return 0;
                                 };
 
-                                const cementPrice = getGlobalPriceLocal(updatedCosts, "Çimento (kg)") || 3;
-                                const sandPrice = getGlobalPriceLocal(updatedCosts, "Kum (m3)") || 500;
-                                const limePrice = getGlobalPriceLocal(updatedCosts, "Kireç (kg)") || 4;
+                                // Özel Harç Hesaplamaları (Çimento, Kum vb. bileşenlerine göre)
+                                if (cat.id === 'duvar_tavan') {
+                                    const cementPrice = wixPriceLookup.get(WIX_PRICE_MAP["Çimento (kg)"] || '') || 3;
+                                    const sandPrice = wixPriceLookup.get(WIX_PRICE_MAP["Kum (m3)"] || '') || 500;
+                                    const limePrice = wixPriceLookup.get(WIX_PRICE_MAP["Kireç (kg)"] || '') || 4;
+                                    const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
+                                    
+                                    updatedCat.items = updatedCat.items.map((item: any) => 
+                                        item.name === "Duvar Örme Harcı (Kara Harç)" ? { ...item, unit_price: Math.round(wallMortarPriceM3) } : item
+                                    );
+                                }
+                                if (cat.id === 'zemin_kaplama') {
+                                    const cementPrice = wixPriceLookup.get(WIX_PRICE_MAP["Çimento (kg)"] || '') || 3;
+                                    const sandPrice = wixPriceLookup.get(WIX_PRICE_MAP["Kum (m3)"] || '') || 500;
+                                    const marbleMortarPriceM3 = sandPrice + (cementPrice * 300);
 
-                                const wallMortarPriceM3 = sandPrice + (cementPrice * 200) + (limePrice * 100);
-                                const marbleMortarPriceM3 = sandPrice + (cementPrice * 300);
-
-                                return updatedCosts.map((cat: any) => {
-                                    if (cat.id === 'duvar_tavan') {
-                                        return {
-                                            ...cat,
-                                            items: cat.items.map((item: any) => {
-                                                if (item.name === "Duvar Örme Harcı (Kara Harç)") {
-                                                    return { ...item, unit_price: Math.round(wallMortarPriceM3) };
-                                                }
-                                                return item;
-                                            })
-                                        };
-                                    }
-                                    if (cat.id === 'zemin_kaplama') {
-                                        return {
-                                            ...cat,
-                                            items: cat.items.map((item: any) => {
-                                                if (item.name === "Mermer Harcı ve Kumu") {
-                                                    return { ...item, unit_price: Math.round(marbleMortarPriceM3) };
-                                                }
-                                                return item;
-                                            })
-                                        };
-                                    }
-                                    return cat;
-                                });
-                            });
+                                    updatedCat.items = updatedCat.items.map((item: any) => 
+                                        item.name === "Mermer Harcı ve Kumu" ? { ...item, unit_price: Math.round(marbleMortarPriceM3) } : item
+                                    );
+                                }
+                                
+                                return updatedCat;
+                            }));
                             
                             return; // Başarılıysa fonksiyondan çık
                         }
                     }
-                    throw new Error("Wix API'den beklenen formatta veri gelmedi.");
+                    throw new Error("Wix API format hatası.");
                 } catch (wixError) {
                     console.warn("Wix fiyatları çekilemedi, varsayılan değerler yüklenecek:", wixError);
                     setIsPriceFetchError(true);
-                    
-                    // KRİTİK DÜZELTME: WIX ÇÖKERSE UYGULAMA BOŞ KALMASIN DİYE VARSAYILANLARI (baseCosts) YÜKLE
-                    setCosts(baseCosts);
+                    setCosts(baseCosts); // KRİTİK: WIX ÇÖKERSE VEYA AĞ HATASI OLURSA DİREKT VARSAYILANLARI YÜKLE
                 }
 
             } catch (error) {
-                console.error("Kritik Hata: Backend'den varsayılan veriler bile çekilemedi!", error);
+                console.error("Kritik Hata:", error);
                 setIsPriceFetchError(true);
             }
         };
