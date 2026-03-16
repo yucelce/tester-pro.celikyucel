@@ -1,7 +1,7 @@
 // Dosya: src/components/Modals/ScheduleDependencyModal.tsx
 
 import React, { useState } from 'react';
-import { ScheduleItem } from '../../utils/scheduleCalculator';
+import { ScheduleItem } from '../../../api/scheduleCalculator';
 import { useProjectStore } from '../../stores/projectStore';
 
 interface ScheduleDependencyModalProps {

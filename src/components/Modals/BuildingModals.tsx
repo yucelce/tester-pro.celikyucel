@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { BuildingStats, UnitType, Point, WallMaterial } from '../../types';
-import { CostCategory } from '../../cost_data';
-import { estimatePerimeter } from '../../utils/calculations';
+import { CostCategory } from '../../../api/cost_data';
+import { estimatePerimeter } from '../../../api/calculations';
 
 import { useProjectStore } from '../../stores/projectStore';
 import { NumericInput } from '../Shared/NumericInput';
-import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../constants';
+import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../../api/constants';
 
 // ... (StructureModal bileşeni aynı kalacak) ...
 

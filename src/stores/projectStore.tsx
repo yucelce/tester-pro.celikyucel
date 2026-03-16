@@ -4,9 +4,9 @@ import {
     ReportSettings, CustomCostItem, FinancialSettings, SalePlan
 } from '../types';
 
-import { calculateConstructionSchedule } from '../utils/scheduleCalculator'; // YENİ IMPORT
-import { estimatePerimeter } from '../utils/calculations';
-import { CostCategory, COST_DATA as INITIAL_COSTS } from '../cost_data';
+import { calculateConstructionSchedule } from '../../api/scheduleCalculator'; // YENİ IMPORT
+import { estimatePerimeter } from '../../api/calculations';
+import { CostCategory, COST_DATA as INITIAL_COSTS } from '../../api/cost_data';
 import {
     calculateUnitCost,
     calculateConstructionDuration,
@@ -14,12 +14,12 @@ import {
     calculateDynamicUnitPrice,
     calculateStairWellArea,
     getGlobalPrice
-} from '../utils/calculations';
-import { ScheduleItem } from '../utils/scheduleCalculator'; // Üste ekleyin
+} from '../../api/calculations';
+import { ScheduleItem } from '../../api/scheduleCalculator'; // Üste ekleyin
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
 
 import { useUIStore } from './uiStore';
-import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../constants';
+import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/constants';
 // --- WALL PRICES CONSTANTS ---
 
 // Dinamik Fiyat Tablosu Oluşturucu
@@ -68,6 +68,8 @@ interface AreaValidationResult {
 }
 
 interface ProjectContextType {
+    isCalculating: boolean;
+    triggerBackendCalculation: () => Promise<void>;
     units: UnitType[];
     structuralUnits: UnitType[];
     costs: CostCategory[];
@@ -185,6 +187,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
     const [isDataDirty, setIsDataDirty] = useState(false);
+    const [isCalculating, setIsCalculating] = useState(false);
+    const [projectCostDetails, setProjectCostDetails] = useState<any[]>([]);
+    const [projectTotalCost, setProjectTotalCost] = useState(0);
+    const [globalStructuralCost, setGlobalStructuralCost] = useState(0);
+    const [interiorFitoutCost, setInteriorFitoutCost] = useState(0);
+    const [globalStats, setGlobalStats] = useState<Record<string, number>>({});
 
     const updateFinancialSettings = (settings: Partial<FinancialSettings>) => {
         setFinancialSettings(prev => ({ ...prev, ...settings }));
@@ -1859,7 +1867,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             financialSettings,
             updateFinancialSettings,
             addSale, isPriceFetchError,
-            removeSale, startNewProject, bulkUpdatePrices, duplexPairs, addDuplexPair, updateDuplexPair, removeDuplexPair,
+            removeSale, startNewProject, bulkUpdatePrices, duplexPairs, 
+            addDuplexPair, updateDuplexPair, removeDuplexPair,
+            isCalculating,
+            triggerBackendCalculation,
         }}>
             {children}
         </ProjectContext.Provider>

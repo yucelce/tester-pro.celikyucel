@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { UnitType, Room, Wall, Column, Beam, Slab, Point } from '../../types';
 import { isPointInPolygon, getPolygonAreaAndPerimeter, distanceToSegment, floodFillRoom } from '../../utils/geometry';
-import { calculateUnitCost } from '../../utils/calculations';
+import { calculateUnitCost } from '../../../api/calculations';
 import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUIStore } from '../../stores/uiStore';

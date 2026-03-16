@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { UnitType, Room, RoomType, RoomProperties, BuildingStats } from '../../types';
-import { CostCategory } from '../../cost_data';
-import { calculateUnitCost } from '../../utils/calculations';
+import { CostCategory } from '../../../api/cost_data';
+import { calculateUnitCost } from '../../../api/calculations';
 import { CostSummaryPanel } from '../Shared/CostSummaryPanel';
 
 interface RoomManagerModalProps {

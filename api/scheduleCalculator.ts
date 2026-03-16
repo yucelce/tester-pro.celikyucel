@@ -1,5 +1,5 @@
 
-import { BuildingStats, ScheduleTaskOverride } from '../types';
+import { BuildingStats, ScheduleTaskOverride } from '../src/types';
 
 export interface ScheduleItem {
     id: string;

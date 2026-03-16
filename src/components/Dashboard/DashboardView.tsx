@@ -14,7 +14,7 @@ import { ProcurementModal } from '../Modals/ProcurementModal';
 import { TutorialOverlay } from '../Shared/TutorialOverlay';
 import { exportCostsToExcel, importPricesFromExcel } from '../../utils/excelUtils';
 import { DuplexManagerModal } from '../Modals/DuplexManagerModal';
-import { ITEM_DESCRIPTIONS } from '../../cost_data'; // <-- BUNU EKLEYİN
+import { ITEM_DESCRIPTIONS } from '../../../api/cost_data'; // <-- BUNU EKLEYİN
 import { SupplierModal } from '../Modals/SupplierModal';
 import { ArchitectModal } from '../Modals/ArchitectModal';
 
@@ -168,12 +168,15 @@ export const DashboardView: React.FC = () => {
                         </div>
 
                         {/* FİYAT KISMI */}
-                        <div id="tour-total-cost" className="text-right pl-2 sm:pl-4 md:pl-6 border-l border-slate-200 dark:border-slate-800 shrink-0">
-                            <div className="text-[8px] sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider leading-none mb-1">Toplam Maliyet</div>
-                            <div className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
-                                {projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
-                            </div>
-                        </div>
+                        <div className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
+    {isCalculating ? (
+        <span className="flex items-center gap-2 text-blue-500 text-lg md:text-2xl animate-pulse">
+            <i className="fas fa-circle-notch fa-spin"></i> Hesaplanıyor...
+        </span>
+    ) : (
+        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+    )}
+</div>
                     </div>
                 </div>
             </header>
