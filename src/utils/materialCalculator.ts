@@ -1,7 +1,7 @@
 // src/utils/materialCalculator.ts
-import { ScheduleItem } from '../../api/scheduleCalculator';
-import { CostCategory } from '../../api/cost_data';
-import { getGlobalPrice } from '../../api/calculations';
+import { ScheduleItem } from '../../api/_utils/scheduleCalculator';
+import { CostCategory } from '../../api/_utils/cost_data';
+import { getGlobalPrice } from '../../api/_utils/calculations';
 
 export interface ProcurementItem {
     id: string;

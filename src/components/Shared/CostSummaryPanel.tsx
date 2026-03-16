@@ -1,6 +1,6 @@
 // src/components/Shared/CostSummaryPanel.tsx
 import React, { useMemo } from 'react';
-import { CostCategory } from '../../../api/cost_data';
+import { CostCategory } from '../../../api/_utils/cost_data';
 import { UnitType } from '../../types';
 import { NumericInput } from './NumericInput';
 import { useProjectStore } from '../../stores/projectStore';

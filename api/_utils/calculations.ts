@@ -1,6 +1,6 @@
-import { UnitType, BuildingStats, WallMaterial } from '../src/types';
+import { UnitType, BuildingStats, WallMaterial } from '../../src/types';
 import { CostCategory, CostItem } from './cost_data';
-import { calculateWasteFactor } from '../src/utils/geometry';
+import { calculateWasteFactor } from '../../src/utils/geometry';
 import { DEFAULT_PRICES } from './constants';
 
 export const getGlobalPrice = (

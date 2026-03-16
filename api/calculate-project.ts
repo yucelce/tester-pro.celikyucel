@@ -5,7 +5,12 @@ import {
     calculateComplexGlobalQuantity, 
     calculateDynamicUnitPrice, 
     estimatePerimeter 
-} from './calculations';
+} from './_utils/calculations';
+
+import { 
+    CostCategory, 
+    CostItem 
+} from './_utils/cost_data';
 
 import { 
     UnitType, 
@@ -15,10 +20,6 @@ import {
     DuplexPair 
 } from '../src/types';
 
-import { 
-    CostCategory, 
-    CostItem 
-} from './cost_data';
 
 // İstek gövdesi (Payload) için Tip Tanımlaması
 interface CalculatePayload {

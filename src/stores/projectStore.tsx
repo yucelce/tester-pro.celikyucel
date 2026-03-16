@@ -4,22 +4,10 @@ import {
     ReportSettings, CustomCostItem, FinancialSettings, SalePlan
 } from '../types';
 
-import { calculateConstructionSchedule } from '../../api/scheduleCalculator'; // YENİ IMPORT
-import { estimatePerimeter } from '../../api/calculations';
-import { CostCategory, COST_DATA as INITIAL_COSTS } from '../../api/cost_data';
-import {
-    calculateUnitCost,
-    calculateConstructionDuration,
-    calculateComplexGlobalQuantity,
-    calculateDynamicUnitPrice,
-    calculateStairWellArea,
-    getGlobalPrice
-} from '../../api/calculations';
-import { ScheduleItem } from '../../api/scheduleCalculator'; // Üste ekleyin
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
 
 import { useUIStore } from './uiStore';
-import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/constants';
+import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../api/_utils/constants';
 // --- WALL PRICES CONSTANTS ---
 
 // Dinamik Fiyat Tablosu Oluşturucu
