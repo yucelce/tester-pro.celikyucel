@@ -116,8 +116,14 @@ export const DashboardView: React.FC = () => {
             <div className={`fixed bottom-0 md:bottom-auto md:top-4 left-0 md:left-auto md:right-4 w-full md:w-auto z-[40] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md md:shadow-lg border-t md:border border-slate-200 dark:border-slate-700 md:rounded-xl py-1.5 px-3 md:p-2 transition-all duration-300 transform md:pointer-events-none flex justify-between md:flex-col items-center md:items-end ${isHeaderPinned ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 md:-translate-y-12 opacity-0 md:scale-95'}`}>
                 <div className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
                 <div className="text-base md:text-lg font-extrabold text-green-600 dark:text-green-500 tracking-tight leading-tight">
-                    {projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
-                </div>
+    {isCalculating ? (
+        <span className="flex items-center gap-2 animate-pulse text-blue-500">
+            <i className="fas fa-circle-notch fa-spin"></i> İşleniyor...
+        </span>
+    ) : (
+        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+    )}
+</div>
             </div>
 
             <header id="dashboard-header" className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6 shadow-sm dark:shadow-md z-30 transition-colors duration-300">
