@@ -717,70 +717,78 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const triggerBackendCalculation = useCallback(async () => {
-        if (costs.length === 0) return; // Fiyatlar yüklenmeden boşuna istek atma
+    if (costs.length === 0) return; // Fiyatlar yüklenmeden boşuna istek atma
+    
+    setIsCalculating(true);
+    try {
+        // VERCEL 413 Payload Hatalarını Önlemek İçin Base64 Resimlerini Backend'e Yollamıyoruz
+        const stripImage = (u: UnitType) => ({ ...u, imageData: null });
+        const safeUnits = units.map(stripImage);
+        const safeStructuralUnits = structuralUnits.map(stripImage);
+
+        const payload = {
+            units: safeUnits,
+            structuralUnits: safeStructuralUnits,
+            buildingStats,
+            globalWallMaterial,
+            globalWallMode,
+            globalConcreteMode,
+            globalWallThickness,
+            customCosts,
+            duplexPairs,
+            costs,
+            totalConstructionArea,
+            constructionDuration
+        };
+
+        const resCost = await fetch('/api/calculate-project', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
         
-        setIsCalculating(true);
-        try {
-            // VERCEL 413 Payload Hatalarını Önlemek İçin Base64 Resimlerini Backend'e Yollamıyoruz
-            const stripImage = (u: UnitType) => ({ ...u, imageData: null });
-            const safeUnits = units.map(stripImage);
-            const safeStructuralUnits = structuralUnits.map(stripImage);
-
-            const payload = {
-                units: safeUnits,
-                structuralUnits: safeStructuralUnits,
-                buildingStats,
-                globalWallMaterial,
-                globalWallMode,
-                globalConcreteMode,
-                globalWallThickness,
-                customCosts,
-                duplexPairs,
-                costs,
-                totalConstructionArea,
-                constructionDuration
-            };
-
-            const resCost = await fetch('/api/calculate-project', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            });
-            
-            if (resCost.ok) {
-                const costResult = await resCost.json();
-                setProjectCostDetails(costResult.projectCostDetails || []);
-                setProjectTotalCost(costResult.projectTotalCost || 0);
-                setGlobalStructuralCost(costResult.globalStructuralCost || 0);
-                setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
-                setGlobalStats(costResult.globalStats || {});
-            }
-
-            const resSchedule = await fetch('/api/calculate-schedule', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    totalConstructionArea,
-                    buildingStats,
-                    constructionDuration,
-                    overrides: scheduleOverrides
-                })
-            });
-
-            if (resSchedule.ok) {
-                const scheduleResult = await resSchedule.json();
-                setProjectSchedule(scheduleResult.schedule || []);
-            }
-
-        } catch (error) {
-            console.error("Hesaplama Hatası:", error);
-        } finally {
-            setIsCalculating(false);
+        if (resCost.ok) {
+            const costResult = await resCost.json();
+            setProjectCostDetails(costResult.projectCostDetails || []);
+            setProjectTotalCost(costResult.projectTotalCost || 0);
+            setGlobalStructuralCost(costResult.globalStructuralCost || 0);
+            setInteriorFitoutCost(costResult.interiorFitoutCost || 0);
+            setGlobalStats(costResult.globalStats || {});
+        } else {
+            // YENİ EKLENEN HATA YAKALAMA BLOĞU
+            const errText = await resCost.text();
+            console.error("Backend Maliyet Hesaplama Hatası (HTTP " + resCost.status + "):", errText);
         }
-    }, [
-        units, structuralUnits, buildingStats, globalWallMaterial,
-        globalWallMode, globalConcreteMode, globalWallThickness,
-        customCosts, duplexPairs, costs, scheduleOverrides,
-        totalConstructionArea, constructionDuration
-    ]);
+
+        const resSchedule = await fetch('/api/calculate-schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                totalConstructionArea,
+                buildingStats,
+                constructionDuration,
+                overrides: scheduleOverrides
+            })
+        });
+
+        if (resSchedule.ok) {
+            const scheduleResult = await resSchedule.json();
+            setProjectSchedule(scheduleResult.schedule || []);
+        } else {
+            // YENİ EKLENEN HATA YAKALAMA BLOĞU
+            const errText = await resSchedule.text();
+            console.error("Backend Takvim Hesaplama Hatası:", errText);
+        }
+
+    } catch (error) {
+        console.error("Kritik İstek/Ağ Hatası:", error);
+    } finally {
+        setIsCalculating(false);
+    }
+}, [
+    units, structuralUnits, buildingStats, globalWallMaterial,
+    globalWallMode, globalConcreteMode, globalWallThickness,
+    customCosts, duplexPairs, costs, scheduleOverrides,
+    totalConstructionArea, constructionDuration
+]);
 
     useEffect(() => {
         if (costs.length > 0) {
