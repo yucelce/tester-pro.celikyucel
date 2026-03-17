@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "esModuleInterop": true,  // <--- BU SATIRI EKLEYİN
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "CommonJS",

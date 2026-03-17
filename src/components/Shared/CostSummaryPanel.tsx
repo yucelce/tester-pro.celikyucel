@@ -32,12 +32,12 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
         archUnits.forEach(u => {
             u.rooms.forEach(r => {
                 const wArea = r.properties.windowArea || 0;
-                const wThick = r.properties.windowWallThickness || 20; 
+                const wThick = r.properties.windowWallThickness || 20;
                 const wKey = wThick <= 10 ? '10' : wThick <= 13.5 ? '13.5' : wThick <= 15 ? '15' : wThick <= 20 ? '20' : '25';
                 deds[wKey] += (wArea * u.count);
 
                 const dArea = (r.properties.doorCount || 0) * 1.89;
-                const dThick = r.properties.doorWallThickness || 13.5; 
+                const dThick = r.properties.doorWallThickness || 13.5;
                 const dKey = dThick <= 10 ? '10' : dThick <= 13.5 ? '13.5' : dThick <= 15 ? '15' : dThick <= 20 ? '20' : '25';
                 deds[dKey] += (dArea * u.count);
             });
@@ -133,7 +133,7 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                             <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50 pb-1">
                                 <span><i className="fas fa-vector-square mr-1 text-slate-400"></i>Net Süpürülebilir Alan</span>
                                 <span className="text-slate-900 dark:text-white font-mono font-bold">
-                                    {unit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (r.area_px > 0 && unit.scale > 0 ? r.area_px/(unit.scale**2) : 0)), 0).toFixed(2)} m²
+                                    {unit.rooms.reduce((acc, r) => acc + (r.manualAreaM2 || (r.area_px > 0 && unit.scale > 0 ? r.area_px / (unit.scale ** 2) : 0)), 0).toFixed(2)} m²
                                 </span>
                             </div>
                             <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700/50 pb-1">
@@ -157,8 +157,8 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                     // Filter Logic based on Scope
                     if (scope === 'architectural') {
                         // DEĞİŞİKLİK BURADA: Mobilya (Kapı) ve Dış Cephe (Pencere) kalemlerinin gizlenmesi iptal edildi.
-                        if (['arsa_finansman', 'resmi_idari', 'santiye_hafriyat', 'kaba_insaat', 'peyzaj_cevre'].includes(category.id)) return null; 
-                        
+                        if (['arsa_finansman', 'resmi_idari', 'santiye_hafriyat', 'kaba_insaat', 'peyzaj_cevre'].includes(category.id)) return null;
+
                         const hasUnitItems = category.items.some(i => i.scope === 'unit');
                         if (!hasUnitItems) return null;
                     }
@@ -169,16 +169,16 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                         if (scope === 'architectural') {
                             // 1. Sadece daire/birim (unit) bazlı hesaplananları al
                             if (item.scope !== 'unit') return false;
-                            
+
                             // 2. Sadece istenen temel kalem gruplarını göster, diğerlerini gizle
                             const allowedKeywords = [
                                 "Şap Malzemesi",
-                                "Şap İşçiliği", 
-                                "Sıva", 
-                                "Boya", 
-                                "Seramik", 
-                                "Derz", 
-                                "Parke", 
+                                "Şap İşçiliği",
+                                "Sıva",
+                                "Boya",
+                                "Seramik",
+                                "Derz",
+                                "Parke",
                                 "Süpürgelik", // Parke ile takım olduğu için dahil edildi
                                 "Pencere", // Cam
                                 "Denizlik", // Cam ile takım olduğu için dahil edildi
@@ -186,11 +186,11 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                                 "Pencere",
                                 "Yalıtım"
                             ];
-                            
+
                             // Öğenin adı bu kelimelerden herhangi birini içeriyorsa göster
                             return allowedKeywords.some(kw => item.name.includes(kw));
                         }
-                        
+
                         if (scope === 'structural') {
                             const excludedItems = [
                                 "İç Sıva (Kara Sıva)",
@@ -204,7 +204,7 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                             if (['Betonarme Betonu', 'İnşaat Demiri', 'Kalıp İşçiliği & Malzeme'].includes(item.name)) return true;
                             return false;
                         }
-                        
+
                         return true;
                     });
 
@@ -225,7 +225,7 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
                                     const finalPrice = isManualPrice ? item.manualPrice! : item.unit_price;
                                     const totalCost = totalQty * finalPrice;
 
-                                    if (unitQty === 0 && !isStructural) return null; 
+                                    if (unitQty === 0 && !isStructural) return null;
 
                                     return (
                                         <div key={item.name} className="flex flex-col text-[10px] border-b border-slate-200 dark:border-slate-700/50 pb-2 last:border-0 last:pb-0">
@@ -235,7 +235,10 @@ export const CostSummaryPanel: React.FC<CostSummaryPanelProps> = ({
 
                                             <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/50 p-1 rounded border border-slate-200 dark:border-slate-700/30 mb-1">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-blue-500 dark:text-blue-400 font-mono">{Number(unitQty).toFixed(2)}</span>
+                                                    {/* YENİ: DÜZELTİLMİŞ KISIM. */}
+                                                    <span className="text-blue-500 dark:text-blue-400 font-mono">
+                                                        {item.manualQuantity !== undefined ? Number(item.manualQuantity).toFixed(2) : Number(unitQty).toFixed(2)}
+                                                    </span>
                                                     <span>x</span>
                                                     <span className="text-slate-600 dark:text-slate-500">{unitCount} {isStructural ? 'Kat' : 'Adet'}</span>
                                                 </div>

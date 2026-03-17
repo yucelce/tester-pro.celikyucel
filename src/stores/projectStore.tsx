@@ -993,6 +993,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDataDirty(true);
     };
 
+    // --- OPTIMISTIC UI GÜNCELLEMELERİ (DONMAYI ÖNLEYEN KISIM) ---
     const updateCostItemAction = (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => {
         setCosts(prevCosts => prevCosts.map(cat => {
             if (cat.id !== catId) return cat;
@@ -1004,11 +1005,45 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 })
             };
         }));
-        setIsDataDirty(false);
+
+        // YENİ EKLENEN KISIM: Arayüzü bekletmeden anında güncelle
+        setProjectCostDetails(prevDetails => {
+            let totalDiff = 0;
+            const newDetails = prevDetails.map(cat => {
+                if (cat.id !== catId) return cat;
+                
+                let categoryTotalDiff = 0;
+                const newItems = cat.items.map(item => {
+                    if (item.name !== itemName) return item;
+                    
+                    const oldTotal = item.totalPrice || 0;
+                    const updatedItem = { ...item, [field]: value };
+                    
+                    const finalQty = updatedItem.manualQuantity !== undefined ? updatedItem.manualQuantity : (updatedItem.calculatedAutoQty || 0);
+                    const finalPrice = updatedItem.manualPrice !== undefined ? updatedItem.manualPrice : (updatedItem.unit_price || 0);
+                    
+                    updatedItem.finalQty = finalQty;
+                    updatedItem.totalPrice = finalQty * finalPrice;
+                    
+                    categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
+                    return updatedItem;
+                });
+                totalDiff += categoryTotalDiff;
+                return {
+                    ...cat,
+                    items: newItems,
+                    totalCategoryCost: cat.totalCategoryCost + categoryTotalDiff
+                };
+            });
+
+            setProjectTotalCost(prev => prev + totalDiff);
+            return newDetails;
+        });
+
+        setIsDataDirty(false); 
     };
 
     const bulkUpdatePrices = (newPrices: { itemName: string, price: number }[]) => {
-        // 1. Standart maliyet kalemlerini (cost_data.ts'den gelen) güncelle
         setCosts(prevCosts => prevCosts.map(cat => ({
             ...cat,
             items: cat.items.map(item => {
@@ -1020,7 +1055,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             })
         })));
 
-        // 2. Kullanıcının sonradan girdiği "Özel Kalemleri" de kontrol et ve güncelle
         setCustomCosts(prev => prev.map(c => {
             const importedItem = newPrices.find(p => p.itemName === c.name);
             if (importedItem) {
@@ -1029,7 +1063,37 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return c;
         }));
 
-        setIsDataDirty(true); // Sistemi kaydedilebilir hale getir ve maliyetleri yeniden hesaplat
+        // YENİ EKLENEN KISIM: Excel'den yüklenen fiyatları anında yansıt
+        setProjectCostDetails(prevDetails => {
+            let totalDiff = 0;
+            const newDetails = prevDetails.map(cat => {
+                let categoryTotalDiff = 0;
+                const newItems = cat.items.map(item => {
+                    const importedItem = newPrices.find(p => p.itemName === item.name);
+                    if (importedItem) {
+                        const oldTotal = item.totalPrice || 0;
+                        const updatedItem = { ...item, manualPrice: importedItem.price };
+                        
+                        const finalQty = updatedItem.finalQty || 0;
+                        updatedItem.totalPrice = finalQty * importedItem.price;
+                        
+                        categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
+                        return updatedItem;
+                    }
+                    return item;
+                });
+                totalDiff += categoryTotalDiff;
+                return {
+                    ...cat,
+                    items: newItems,
+                    totalCategoryCost: cat.totalCategoryCost + categoryTotalDiff
+                };
+            });
+            setProjectTotalCost(prev => prev + totalDiff);
+            return newDetails;
+        });
+
+        setIsDataDirty(true);
     };
 
     const dismissDataDirty = () => setIsDataDirty(false);
@@ -1040,21 +1104,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             items: cat.items.map(item => {
                 let newQty = item.manualQuantity;
                 let newPrice = item.manualPrice;
-
-                if (mode === 'quantities' || mode === 'both') {
-                    newQty = undefined;
-                }
-                if (mode === 'prices' || mode === 'both') {
-                    newPrice = undefined;
-                }
-
-                return {
-                    ...item,
-                    manualQuantity: newQty,
-                    manualPrice: newPrice
-                };
+                if (mode === 'quantities' || mode === 'both') newQty = undefined;
+                if (mode === 'prices' || mode === 'both') newPrice = undefined;
+                return { ...item, manualQuantity: newQty, manualPrice: newPrice };
             })
         })));
+
+        // YENİ EKLENEN KISIM: Sıfırla butonuna basılınca tüm projeyi anında sıfırla
+        setProjectCostDetails(prevDetails => {
+            let totalDiff = 0;
+            const newDetails = prevDetails.map(cat => {
+                let categoryTotalDiff = 0;
+                const newItems = cat.items.map(item => {
+                    let newQty = item.manualQuantity;
+                    let newPrice = item.manualPrice;
+                    if (mode === 'quantities' || mode === 'both') newQty = undefined;
+                    if (mode === 'prices' || mode === 'both') newPrice = undefined;
+
+                    const oldTotal = item.totalPrice || 0;
+                    const updatedItem = { ...item, manualQuantity: newQty, manualPrice: newPrice };
+
+                    const finalQty = updatedItem.manualQuantity !== undefined ? updatedItem.manualQuantity : (updatedItem.calculatedAutoQty || 0);
+                    const finalPrice = updatedItem.manualPrice !== undefined ? updatedItem.manualPrice : (updatedItem.unit_price || 0);
+
+                    updatedItem.finalQty = finalQty;
+                    updatedItem.totalPrice = finalQty * finalPrice;
+
+                    categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
+                    return updatedItem;
+                });
+                totalDiff += categoryTotalDiff;
+                return {
+                    ...cat,
+                    items: newItems,
+                    totalCategoryCost: cat.totalCategoryCost + categoryTotalDiff
+                };
+            });
+            setProjectTotalCost(prev => prev + totalDiff);
+            return newDetails;
+        });
+
         setIsDataDirty(false);
     };
 
