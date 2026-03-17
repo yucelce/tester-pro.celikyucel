@@ -155,6 +155,7 @@ export interface BuildingStats {
     visitedTabs?: string[];
     concreteClass?: ConcreteClass; // <-- BU SATIR EKSİKTİ
     slabType?: GlobalSlabType;     // <-- BU SATIR EKSİKTİ
+    slabThickness?: number;
     outerWallThickness?: number;
     innerWallThickness?: number;
 

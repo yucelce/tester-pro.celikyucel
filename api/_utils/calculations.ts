@@ -490,27 +490,38 @@ export class QuantityTakeoffService {
                 const refArea = stats.total_area > 0 ? stats.total_area : metrics.defaultFloorArea;
                 const heightRatio = metrics.defaultFloorHeight / 3.0;
 
-                // --- YENİ: DÖŞEME TİPİNE GÖRE OTO-METRAJ ÇARPANLARI ---
-                let concreteMult = 1.0;
                 let ironMult = 1.0;
                 let formMult = 1.0;
 
                 if (buildingStats.slabType === 'asmolen') {
-                    concreteMult = 1.15; // Beton hacmi ~%15 artar
                     ironMult = 1.10;     // Demir ~%10 artar
                     formMult = 0.90;     // Kiriş yanakları olmadığı için kalıp ~%10 azalır
                 } else if (buildingStats.slabType === 'mantar') {
-                    concreteMult = 1.20; // Beton hacmi ~%20 artar
                     ironMult = 1.20;     // Zımbalama donatıları yüzünden demir ~%20 artar
                     formMult = 0.85;     // Dümdüz tavan olduğu için kalıp ~%15 azalır
                 }
 
-                // 1. Beton Hesabı
+                // 1. Beton Hesabı (Kalınlık Bazlı)
                 const baseConcrete = refArea * 0.35 * heightRatio;
-                const totalConcrete = baseConcrete * concreteMult;
-                stats.slab_concrete_volume = totalConcrete * 0.65;
-                stats.column_concrete_volume = totalConcrete * 0.20;
-                stats.beam_concrete_volume = totalConcrete * 0.15;
+                
+                // Müşterinin girdiği döşeme kalınlığı üzerinden net döşeme hacmi (metre cinsinden)
+                const thicknessM = (buildingStats.slabThickness || 15) / 100;
+                let slabVol = refArea * thicknessM;
+                
+                // Asmolende döşeme içi boşluklu olduğundan brüt hacmin sadece %65'i betondur
+                if (buildingStats.slabType === 'asmolen') {
+                    slabVol *= 0.65;
+                }
+
+                stats.slab_concrete_volume = slabVol;
+                stats.column_concrete_volume = baseConcrete * 0.20;
+                
+                // Mantar döşemede kiriş sarkmaları çok azdır/yoktur, oran küçültülür
+                let beamVol = baseConcrete * 0.15;
+                if (buildingStats.slabType === 'mantar') {
+                    beamVol *= 0.2; 
+                }
+                stats.beam_concrete_volume = beamVol;
 
                 // 2. Kalıp Hesabı
                 const baseForm = refArea * 2.8 * heightRatio;

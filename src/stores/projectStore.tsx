@@ -240,6 +240,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         buildingType: 'apartment',
         concreteClass: 'C30',  // <--- EKLENDİ
         slabType: 'plak',      // <--- EKLENDİ
+        slabThickness: 15,
         visitedTabs: ['general'],
         province: 'İstanbul', district: 'Kadıköy', landArea: 500, heatZone: 2, earthquakeZone: 1,
         normalFloorCount: 5, basementFloorCount: 1,
@@ -825,6 +826,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             buildingType: type,
             concreteClass: 'C30',  // <--- EKLENDİ
             slabType: 'plak',      // <--- EKLENDİ
+            slabThickness: 15,
             normalFloorCount: isVilla ? 1 : 5,
             basementFloorCount: isVilla ? 0 : 1,
             groundFloorHeight: isVilla ? 3.2 : 3.0,
