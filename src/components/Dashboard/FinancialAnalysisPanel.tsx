@@ -536,7 +536,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
             let saleMonthsDiff = Math.max(0, (saleDateObj.getFullYear() - projectStartObj.getFullYear()) * 12 + (saleDateObj.getMonth() - projectStartObj.getMonth()));
             let inflatedSaleAmount = sale.amount * Math.pow(1 + (financialSettings.monthlyInflationRate || 0) / 100, saleMonthsDiff);
 
-            estimatedSalesVat += inflatedSaleAmount * rate;
+            estimatedSalesVat += inflatedSaleAmount - (inflatedSaleAmount / (1 + rate));
         });
     }
 
