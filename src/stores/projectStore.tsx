@@ -780,7 +780,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             if (resSchedule.ok) {
                 const scheduleResult = await resSchedule.json();
-                setProjectSchedule(scheduleResult.schedule || []);
+                
+                // TARİH DÜZELTMESİ (String olarak gelen tarihleri Date objesine çeviriyoruz)
+                const parsedSchedule = (scheduleResult.schedule || []).map((task: any) => ({
+                    ...task,
+                    startDate: new Date(task.startDate),
+                    endDate: new Date(task.endDate)
+                }));
+                
+                setProjectSchedule(parsedSchedule);
             } else {
                 // YENİ EKLENEN HATA YAKALAMA BLOĞU
                 const errText = await resSchedule.text();
