@@ -8,7 +8,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { WallModal, RoomModal, ColumnModal, BeamModal, SlabModal, CalibrationModal } from '../Modals/EditorModals';
 
 
-import PolyBool from 'polybooljs';
+import * as PolyBool from 'polybooljs'
 
 // EditorView now manages its own "editing" state locally, 
 // fetches the initial unit from store, and saves back to store.
