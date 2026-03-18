@@ -21,7 +21,7 @@ import { ArchitectModal } from '../Modals/ArchitectModal';
 
 export const DashboardView: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
-    const [showAreaErrorModal, setShowAreaErrorModal] = React.useState(false);
+    const [showWarningsModal, setShowWarningsModal] = React.useState(false);
     const { startTutorial } = useUIStore();
     const [showDetailedModeInfo, setShowDetailedModeInfo] = useState(false);
     const [isHeaderPinned, setIsHeaderPinned] = useState(false);
@@ -53,11 +53,12 @@ export const DashboardView: React.FC = () => {
 
     const {
         isCalculating,
-        projectTotalCost, buildingStats, totalConstructionArea, constructionDuration, 
+        projectTotalCost, buildingStats, totalConstructionArea, constructionDuration,
         globalStructuralCost, interiorFitoutCost,
         projectCostDetails, units, structuralUnits, globalWallMode, globalConcreteMode, globalWallMaterial,
         addUnit, addStructuralUnit, deleteUnit, updateUnitCount, updateUnitName, updateUnitFloorType, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial, updateCostItem,
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
+        systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
         globalStats, costs, bulkUpdatePrices, duplexPairs
     } = useProjectStore();
@@ -118,14 +119,14 @@ export const DashboardView: React.FC = () => {
             <div className={`fixed bottom-0 md:bottom-auto md:top-4 left-0 md:left-auto md:right-4 w-full md:w-auto z-[40] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md md:shadow-lg border-t md:border border-slate-200 dark:border-slate-700 md:rounded-xl py-1.5 px-3 md:p-2 transition-all duration-300 transform md:pointer-events-none flex justify-between md:flex-col items-center md:items-end ${isHeaderPinned ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 md:-translate-y-12 opacity-0 md:scale-95'}`}>
                 <div className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Toplam Maliyet</div>
                 <div className="text-base md:text-lg font-extrabold text-green-600 dark:text-green-500 tracking-tight leading-tight">
-    {isCalculating ? (
-        <span className="flex items-center gap-2 animate-pulse text-blue-500">
-            <i className="fas fa-circle-notch fa-spin"></i> İşleniyor...
-        </span>
-    ) : (
-        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
-    )}
-</div>
+                    {isCalculating ? (
+                        <span className="flex items-center gap-2 animate-pulse text-blue-500">
+                            <i className="fas fa-circle-notch fa-spin"></i> İşleniyor...
+                        </span>
+                    ) : (
+                        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+                    )}
+                </div>
             </div>
 
             <header id="dashboard-header" className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6 shadow-sm dark:shadow-md z-30 transition-colors duration-300">
@@ -177,14 +178,14 @@ export const DashboardView: React.FC = () => {
 
                         {/* FİYAT KISMI */}
                         <div id="tour-total-cost" className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
-    {isCalculating ? (
-        <span className="flex items-center gap-2 text-blue-500 text-lg md:text-2xl animate-pulse">
-            <i className="fas fa-circle-notch fa-spin"></i> Hesaplanıyor...
-        </span>
-    ) : (
-        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
-    )}
-</div>
+                            {isCalculating ? (
+                                <span className="flex items-center gap-2 text-blue-500 text-lg md:text-2xl animate-pulse">
+                                    <i className="fas fa-circle-notch fa-spin"></i> Hesaplanıyor...
+                                </span>
+                            ) : (
+                                projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+                            )}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -383,22 +384,29 @@ export const DashboardView: React.FC = () => {
                                 <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                             </div>
 
-                            {areaValidation && areaValidation.hasError && (
+                            {systemWarnings && systemWarnings.length > 0 && (
                                 <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/50">
                                     <button
-                                        onClick={() => setShowAreaErrorModal(true)}
-                                        className="group w-full flex items-center justify-between px-3 py-2 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded transition duration-200"
+                                        onClick={() => setShowWarningsModal(true)}
+                                        className={`group w-full flex items-center justify-between px-3 py-2 border rounded transition duration-200 shadow-sm ${systemWarnings.some(w => w.type === 'critical')
+                                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/30'
+                                            : 'bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/30'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-800 flex items-center justify-center shrink-0">
-                                                <i className="fas fa-exclamation text-[10px] text-red-600 dark:text-red-200 animate-pulse"></i>
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${systemWarnings.some(w => w.type === 'critical') ? 'bg-red-100 dark:bg-red-800' : 'bg-orange-100 dark:bg-orange-800'
+                                                }`}>
+                                                <i className={`fas fa-exclamation-triangle text-[10px] animate-pulse ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-600 dark:text-red-200' : 'text-orange-600 dark:text-orange-200'
+                                                    }`}></i>
                                             </div>
-                                            <span className="text-xs font-bold text-red-700 dark:text-red-300">
-                                                Alan Tutarsızlığı
+                                            <span className={`text-xs font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-700 dark:text-red-300' : 'text-orange-700 dark:text-orange-300'
+                                                }`}>
+                                                {systemWarnings.length} Sistem Uyarısı Bulundu
                                             </span>
                                         </div>
-                                        <span className="text-[10px] font-mono text-red-600/70 dark:text-red-400/70 group-hover:text-red-600">
-                                            Detay <i className="fas fa-chevron-right ml-1"></i>
+                                        <span className={`text-[10px] font-mono group-hover:underline ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-600/70 dark:text-red-400/70 group-hover:text-red-600' : 'text-orange-600/70 dark:text-orange-400/70 group-hover:text-orange-600'
+                                            }`}>
+                                            Detayı İncele <i className="fas fa-chevron-right ml-1"></i>
                                         </span>
                                     </button>
                                 </div>
@@ -1254,69 +1262,76 @@ export const DashboardView: React.FC = () => {
 
             </main>
 
-            {/* ALAN HATASI DETAY MODALI */}
-            {showAreaErrorModal && areaValidation && (
+            {/* YENİ SİSTEM VE YÖNETMELİK UYARILARI MODALI */}
+            {showWarningsModal && systemWarnings.length > 0 && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
 
                         {/* Modal Header */}
-                        <div className="bg-red-50 dark:bg-red-900/20 p-4 border-b border-red-100 dark:border-red-900/30 flex justify-between items-start">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-start shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="bg-red-100 dark:bg-red-800 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
-                                    <i className="fas fa-exclamation-triangle text-red-600 dark:text-red-200 text-lg"></i>
+                                <div className="bg-orange-100 dark:bg-orange-900/30 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-800/50">
+                                    <i className="fas fa-balance-scale text-orange-600 dark:text-orange-400 text-lg"></i>
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-900 dark:text-white">Alan Tutarsızlığı Tespit Edildi</h3>
-                                    <p className="text-xs text-red-600 dark:text-red-300 font-bold">
-                                        Sapma Oranı: {areaValidation.ratio === 0 ? '%100.0 (Eksik Kat Planı)' : `%${Math.abs((areaValidation.ratio - 1) * 100).toFixed(1)}`}
+                                    <h3 className="font-bold text-slate-900 dark:text-white">Proje ve Yönetmelik Uyarıları</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Projenizdeki eksiklikleri ve yasal uyumsuzlukları inceleyin.
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowAreaErrorModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition">
+                            <button onClick={() => setShowWarningsModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition">
                                 <i className="fas fa-times text-xl"></i>
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                                {areaValidation.message}
-                            </p>
+                        <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                            {systemWarnings.map(warning => (
+                                <div key={warning.id} className={`p-4 rounded-xl border flex flex-col md:flex-row gap-4 justify-between items-start transition-all ${warning.type === 'critical'
+                                        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30'
+                                        : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800/50'
+                                    }`}>
+                                    <div className="flex items-start gap-3">
+                                        <div className={`p-2 rounded-full mt-1 shrink-0 ${warning.type === 'critical' ? 'bg-red-100 dark:bg-red-800/50 text-red-600 dark:text-red-400' : 'bg-orange-100 dark:bg-orange-800/50 text-orange-600 dark:text-orange-400'
+                                            }`}>
+                                            <i className={`fas ${warning.category === 'area' ? 'fa-ruler-combined' : 'fa-balance-scale'}`}></i>
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-bold text-sm ${warning.type === 'critical' ? 'text-red-800 dark:text-red-300' : 'text-slate-800 dark:text-white'
+                                                }`}>
+                                                {warning.title}
+                                            </h4>
+                                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                                                <span dangerouslySetInnerHTML={{ __html: warning.message.replace('Kentsel Dönüşüm', '<strong>Kentsel Dönüşüm</strong>') }}></span>
+                                            </p>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 italic mt-2 bg-white/50 dark:bg-slate-900/30 p-2 rounded border border-slate-200/50 dark:border-slate-700/50">
+                                                <i className="fas fa-lightbulb text-yellow-500 mr-1"></i> {warning.suggestion}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-950 rounded-lg p-4 border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="block text-[10px] uppercase text-slate-400 font-bold mb-1">Hesaplanan Alan</span>
-                                    <span className="text-lg font-mono font-bold text-blue-600 dark:text-blue-400">
-                                        {areaValidation.calculatedArea.toFixed(1)} m²
-                                    </span>
+                                    {/* Oto-Düzelt Butonu */}
+                                    {warning.autoFix && (
+                                        <button
+                                            onClick={() => applyAutoFix(warning.autoFix!)}
+                                            className="shrink-0 w-full md:w-auto bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:border-blue-500 hover:text-blue-600 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center gap-2 active:scale-95"
+                                        >
+                                            <i className="fas fa-magic text-blue-500"></i>
+                                            {warning.autoFix.buttonText}
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="text-right">
-                                    <span className="block text-[10px] uppercase text-slate-400 font-bold mb-1">Tanımlanan Alan</span>
-                                    <span className="text-lg font-mono font-bold text-slate-700 dark:text-slate-200">
-                                        {areaValidation.declaredArea} m²
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="text-xs text-slate-500 dark:text-slate-400 italic bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-100 dark:border-yellow-900/30">
-                                <i className="fas fa-lightbulb text-yellow-500 mr-2"></i>
-                                <strong>Öneri:</strong> {
-                                    areaValidation.ratio === 0
-                                        ? '"Bağımsız Bölüm Tipleri" paneline giderek yeni bir tip ekleyin ve "Kat Bilgisi" ayarından eksik olan katı seçin.'
-                                        : areaValidation.ratio > 1
-                                            ? '"Yapı Genel Bilgileri"nden kat alanını büyütün veya çizimdeki oda metrajlarını küçültün.'
-                                            : '"Yapı Genel Bilgileri"nden kat alanını küçültün veya eksik odaları/duvarları çizin.'
-                                }
-                            </div>
+                            ))}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 text-right">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 text-right shrink-0">
                             <button
-                                onClick={() => setShowAreaErrorModal(false)}
-                                className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition"
+                                onClick={() => setShowWarningsModal(false)}
+                                className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition active:scale-95"
                             >
-                                Anlaşıldı
+                                Tamam
                             </button>
                         </div>
                     </div>

@@ -17,6 +17,22 @@ export interface RoomProperties {
     wallFinish: 'boya' | 'seramik' | 'unknown';
 }
 
+export interface AutoFixAction {
+    type: 'UPDATE_QUANTITY' | 'UPDATE_BUILDING_STATS';
+    payload: any;
+    buttonText: string;
+}
+
+export interface SystemWarning {
+    id: string;
+    type: 'critical' | 'warning' | 'info';
+    category: 'area' | 'regulation' | 'cost';
+    title: string;
+    message: string;
+    suggestion: string;
+    autoFix?: AutoFixAction;
+}
+
 export interface WallProperties {
     material: WallMaterial;
     thickness: number; // cm

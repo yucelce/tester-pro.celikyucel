@@ -41,6 +41,8 @@ interface ProjectContextType {
     projectSchedule: ScheduleItem[];
 
     areaValidation: AreaValidationResult | null;
+    systemWarnings: SystemWarning[];
+    applyAutoFix: (action: AutoFixAction) => void;
 
     // Global Modes
     globalWallMode: 'auto' | 'detailed';
@@ -224,6 +226,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]);
 
     const [areaValidation, setAreaValidation] = useState<AreaValidationResult | null>(null);
+
+    const [systemWarnings, setSystemWarnings] = useState<SystemWarning[]>([]);
+
+    const applyAutoFix = (action: AutoFixAction) => {
+        if (action.type === 'UPDATE_QUANTITY') {
+            updateCostItemAction(action.payload.catId, action.payload.itemName, 'manualQuantity', action.payload.value);
+        } else if (action.type === 'UPDATE_BUILDING_STATS') {
+            setBuildingStatsState(prev => ({ ...prev, ...action.payload }));
+        }
+        setIsDataDirty(true);
+    };
 
     const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([
         {
@@ -624,6 +637,90 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setAreaValidation(validationResult);
 
     }, [units, buildingStats, globalWallMode]);
+
+    useEffect(() => {
+        const warnings: SystemWarning[] = [];
+
+        // 1. MEVCUT ALAN TUTARSIZLIĞINI BURAYA AKTARIYORUZ
+        if (areaValidation && areaValidation.hasError) {
+            warnings.push({
+                id: 'area_error',
+                type: 'critical',
+                category: 'area',
+                title: 'Alan Tutarsızlığı Tespit Edildi',
+                message: areaValidation.message,
+                suggestion: areaValidation.ratio === 0
+                    ? '"Bağımsız Bölüm Tipleri" paneline giderek yeni bir tip ekleyin ve "Kat Bilgisi" ayarından eksik olan katı seçin.'
+                    : areaValidation.ratio > 1
+                        ? '"Yapı Genel Bilgileri"nden kat alanını büyütün veya çizimdeki oda metrajlarını küçültün.'
+                        : '"Yapı Genel Bilgileri"nden kat alanını küçültün veya eksik odaları/duvarları çizin.'
+            });
+        }
+
+        const totalFloors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
+
+        // 2. ASANSÖR ZORUNLULUĞU KONTROLÜ
+        if (buildingStats.buildingType !== 'villa' && (totalFloors > 3 || totalConstructionArea > 800)) {
+            const isElevatorZero = projectCostDetails.some(cat => 
+                cat.items.some((i: any) => i.name === "Asansör (Paket)" && i.finalQty === 0)
+            );
+            
+            if (isElevatorZero) {
+                 warnings.push({
+                    id: 'elevator_rule',
+                    type: 'warning',
+                    category: 'regulation',
+                    title: 'Asansör Zorunluluğu İhlali',
+                    message: 'Kat sayısı 3\'ten veya toplam alan 800 m²\'den büyük binalarda asansör yasal zorunluluktur.' + 
+                             (buildingStats.isUrbanTransformation ? ' Ancak Kentsel Dönüşüm projelerinde idare müsamaha gösterebilir.' : ''),
+                    suggestion: 'Maliyet detaylarından Asansör miktarını düzeltin.',
+                    autoFix: {
+                        type: 'UPDATE_QUANTITY',
+                        payload: { catId: 'mekanik_tesisat', itemName: 'Asansör (Paket)', value: undefined },
+                        buttonText: 'Asansörü Oto Hesapla'
+                    }
+                });
+            }
+        }
+
+        // 3. SIĞINAK ZORUNLULUĞU KONTROLÜ
+        if (totalConstructionArea > 1500 && (!buildingStats.shelterArea || buildingStats.shelterArea === 0)) {
+            warnings.push({
+                id: 'shelter_rule',
+                type: 'warning',
+                category: 'regulation',
+                title: 'Sığınak Zorunluluğu',
+                message: 'Toplam inşaat alanı 1500 m²\'yi geçen binalarda sığınak ayrılması zorunludur.' + 
+                         (buildingStats.isUrbanTransformation ? ' Kentsel Dönüşüm projelerinde otopark vb. alanlar sığınak sayılabilir.' : ''),
+                suggestion: 'Yapı Genel Bilgileri > Statik panelinden sığınak alanı tanımlayın.',
+                autoFix: {
+                    type: 'UPDATE_BUILDING_STATS',
+                    payload: { shelterArea: parseFloat((totalConstructionArea * 0.05).toFixed(2)), shelterFloor: 'basement' },
+                    buttonText: 'Tahmini Sığınak Ekle (%5)'
+                }
+            });
+        }
+
+        // 4. ŞANTİYE ŞEFİ ZORUNLULUĞU KONTROLÜ
+        const siteChiefItem = projectCostDetails.some(cat => cat.items.some((i: any) => i.name === "Şantiye Şefi (Aylık)" && i.finalQty === 0));
+        if (siteChiefItem) {
+             warnings.push({
+                id: 'site_chief_rule',
+                type: 'critical',
+                category: 'regulation',
+                title: 'Şantiye Şefi Atanmamış',
+                message: 'İnşaat süresince yasal olarak bir şantiye şefi atanması (istihdamı) zorunludur.',
+                suggestion: 'Maliyet detaylarından Şantiye Şefi miktarını (ay) düzeltin.',
+                autoFix: {
+                    type: 'UPDATE_QUANTITY',
+                    payload: { catId: 'santiye_hafriyat', itemName: 'Şantiye Şefi (Aylık)', value: undefined },
+                    buttonText: 'Şefi Tekrar Ekle'
+                }
+            });
+        }
+
+        setSystemWarnings(warnings);
+    }, [areaValidation, buildingStats, totalConstructionArea, projectCostDetails]);
 
     const updateWallPrices = useCallback((material: WallMaterial) => {
         setCosts(prevCosts => {
@@ -1395,12 +1492,62 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addSale, isPriceFetchError,
             removeSale, startNewProject, bulkUpdatePrices, duplexPairs,
             addDuplexPair, updateDuplexPair, removeDuplexPair,
-            isCalculating,
+            isCalculating,systemWarnings, applyAutoFix,
             triggerBackendCalculation,
         }}>
             {children}
         </ProjectContext.Provider>
     );
+};
+
+const calculateWarnings = () => {
+    const warnings: SystemWarning[] = [];
+    const totalFloors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
+    
+    // --- 1. ASANSÖR YÖNETMELİĞİ ---
+    if (buildingStats.buildingType !== 'villa' && (totalFloors > 3 || totalConstructionArea > 800)) {
+        const elevatorItem = projectCostDetails.find(c => c.id === 'mekanik_tesisat')
+                               ?.items.find(i => i.name === "Asansör (Paket)");
+                               
+        // Eğer kullanıcı asansörü manuel olarak silmişse (miktarı 0 yapmışsa)
+        if (elevatorItem && elevatorItem.manualQuantity === 0) {
+            let msg = 'Kat sayısı 3\'ten veya toplam inşaat alanı 800 m²\'den büyük binalarda asansör yasal bir zorunluluktur.';
+            
+            // Kentsel Dönüşüm Kontrolü
+            if (buildingStats.isUrbanTransformation) {
+                msg += ' Ancak projeniz Kentsel Dönüşüm kapsamında olduğu için, mevcut arsa ve gabari kısıtlamalarından dolayı yerel idare (belediye) bu zorunlulukta müsamaha veya esneklik gösterebilir.';
+            }
+
+            warnings.push({
+                id: 'elevator_rule',
+                type: 'warning',
+                category: 'regulation',
+                title: 'Asansör Zorunluluğu İhlali',
+                message: msg,
+                suggestion: 'Maliyet detaylarından Asansör miktarını düzeltin veya yandaki butonu kullanın.',
+                autoFix: {
+                    type: 'ADD_COST_ITEM',
+                    payload: { catId: 'mekanik_tesisat', itemName: 'Asansör (Paket)', value: undefined }, // undefined yaparak sistem otomatiğine döndürüyoruz
+                    buttonText: 'Asansörü Tekrar Ekle'
+                }
+            });
+        }
+    }
+    
+    // ... Sığınak, Yangın Merdiveni vb. diğer kurallar ...
+
+    return warnings;
+};
+
+// Oto-düzelt fonksiyonu
+const applyAutoFix = (action: AutoFixAction) => {
+    if (action.type === 'ADD_COST_ITEM') {
+        const { catId, itemName, value } = action.payload;
+        updateCostItem(catId, itemName, 'manualQuantity', value);
+    } else if (action.type === 'UPDATE_BUILDING_STATS') {
+        setBuildingStats(prev => ({ ...prev, ...action.payload }));
+    }
+    // Veriler değiştiği için hesaplamayı tetikleyecek mekanizma çalışır
 };
 
 export const useProjectStore = () => {
