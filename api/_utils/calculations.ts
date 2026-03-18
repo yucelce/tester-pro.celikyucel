@@ -570,12 +570,23 @@ export class QuantityTakeoffService {
 
             stats.calc_rough_plaster_area = fArea * 2.8;
             stats.calc_paint_wall_area = fArea * 2.5;
-            stats.calc_plaster_area = fArea * 3.5; // (Duvar 2.5 + Tavan 1.0)
-            stats.calc_ceiling_paint_area = fArea;
+            
+            // YENİ MANTIK: Islak ve Kuru alan ayrımı
+            const dryCeilingArea = fArea * 0.85; // %85 Kuru Hacim (Salon, Oda vb.)
+            const wetCeilingArea = fArea * 0.15; // %15 Islak Hacim (Banyo, WC vb.)
+
+            // Tavan boyası sadece kuru alanlara yapılır
+            stats.calc_ceiling_paint_area = dryCeilingArea;
+            
+            // Islak hacimlere varsayılan olarak asma tavan eklenir
+            stats.calc_suspended_ceiling_area = (stats.calc_suspended_ceiling_area || 0) + wetCeilingArea;
+            
+            // Alçı sıva = Duvarlar (2.5) + Sadece Asma Tavan OLMAYAN tavanlar (Kuru Alanlar)
+            stats.calc_plaster_area = (fArea * 2.5) + dryCeilingArea;
 
             stats.cornice_length = estimatePerimeter(fArea) * 1.5;
-            if (stats.wet_area === 0) { stats.wet_area = fArea * 0.15 * 1.05; stats.net_wet_area = fArea * 0.15; }
-            if (stats.dry_area === 0) stats.dry_area = fArea * 0.85 * 1.05;
+            if (stats.wet_area === 0) { stats.wet_area = wetCeilingArea * 1.05; stats.net_wet_area = wetCeilingArea; }
+            if (stats.dry_area === 0) stats.dry_area = dryCeilingArea * 1.05;
         }
     }
 }
