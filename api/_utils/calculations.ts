@@ -36,7 +36,8 @@ export const calculateEstimatedRaftHeight = (totalFloors: number): number => {
 export const getIronCoefficient = (
     zone?: number,
     averageFloorArea: number = 200,
-    floorHeight: number = 3.0 // <-- Tüm bina değil, o an hesaplanan katın kendi yüksekliği
+    floorHeight: number = 3.0,
+    totalBuildingHeight: number = 9.0 // <-- ZEKİCE PARAMETREMİZ EKLENDİ
 ): number => {
     // 1. Temel katsayı (Deprem bölgesine göre)
     let baseCoeff = 0.125;
@@ -48,23 +49,32 @@ export const getIronCoefficient = (
         default: baseCoeff = 0.125;
     }
 
-    // 2. Açıklık/Alan Çarpanı
+    // 2. Açıklık/Alan Çarpanı (Kiriş açıklıkları büyüdükçe demir artar)
     let spanMultiplier = 1.0;
     if (averageFloorArea > 200) {
         const extraArea = averageFloorArea - 200;
         spanMultiplier += Math.min(0.15, (extraArea / 100) * 0.02);
     }
 
-    // 3. Yükseklik Çarpanı (Narinlik ve Kesme Kuvveti Etkisi) - GERÇEKÇİ ORAN
-    // Sadece yüksekliği 3.5 metreyi geçen katın kendi demir yoğunluğu çok hafif artar.
-    let heightMultiplier = 1.0;
+    // 3. Kat Yüksekliği Çarpanı (Kat Narinliği - Individual Floor Slenderness)
+    let localHeightMultiplier = 1.0;
     if (floorHeight > 3.5) {
         const extraHeight = floorHeight - 3.5;
-        // Her 1 metrelik fazlalık için donatı yoğunluğunu sadece %2 artır (Maksimum %5)
-        heightMultiplier += Math.min(0.05, extraHeight * 0.02);
+        localHeightMultiplier += Math.min(0.05, extraHeight * 0.02);
     }
 
-    return baseCoeff * spanMultiplier * heightMultiplier;
+    // 4. ZEKİCE KURGU: Toplam Bina Yüksekliği Çarpanı (Devrilme Momenti ve Perde İhtiyacı)
+    // TBDY 2018'e göre binalar ~21.5m'den sonra daha rijit perde sistemlerine ihtiyaç duyar.
+    let globalHeightMultiplier = 1.0;
+    if (totalBuildingHeight > 21.5) {
+        const extraBuildingHeight = totalBuildingHeight - 21.5;
+
+        // Her 1 metrelik ekstra yükseklik için demir yoğunluğu %1.2 artar.
+        // Maksimum %60 artış ile sınırlandırıyoruz (Çok yüksek binalar zaten çelik veya kompozite döner)
+        globalHeightMultiplier += Math.min(0.60, extraBuildingHeight * 0.012);
+    }
+
+    return baseCoeff * spanMultiplier * localHeightMultiplier * globalHeightMultiplier;
 };
 
 // ============================================================================
@@ -471,17 +481,31 @@ export class QuantityTakeoffService {
                 (unit.slabs || []).forEach(slab => {
                     let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
                     let thicknessM = slab.properties.thickness / 100;
-                    let concreteVolume = area * thicknessM;
-                    let ironDensity = 0.085;
+                    
+                    // 1. Brüt Hacmi Hesapla
+                    let grossVolume = area * thicknessM;
+                    let concreteVolume = grossVolume;
+                    
+                    // ZEKİCE MANTIK: Demir hesabı net betondan değil, brüt hacimden yapılır.
+                    // Plak döşeme için baz yoğunluk: 85 kg/m³ (Brüt hacim başına)
+                    let ironDensityPerGrossVolume = 0.085; 
+
                     if (slab.properties.type === 'asmolen') {
-                        concreteVolume = concreteVolume * 0.65;
-                        ironDensity = 0.115;
+                        // Asmolen dolguları (köpük/tuğla) beton hacmini %35 azaltır
+                        concreteVolume = grossVolume * 0.65; 
+                        
+                        // Ancak sık nervürler ve etriyeler toplam demiri plak döşemeye göre ~%15 artırır
+                        ironDensityPerGrossVolume = 0.085 * 1.15; 
                     } else if (slab.properties.type === 'mantar') {
-                        ironDensity = 0.125;
+                        // Zımbalama (punching) donatıları ve ilave pilyeler toplam demiri ~%25 artırır
+                        ironDensityPerGrossVolume = 0.085 * 1.25; 
                     }
+
                     stats.slab_concrete_volume += concreteVolume;
                     stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor);
-                    totalSlabIronBase += concreteVolume * ironDensity;
+                    
+                    // 2. Demiri Doğrudan Brüt Hacim Üzerinden Çarp
+                    totalSlabIronBase += grossVolume * ironDensityPerGrossVolume;
                 });
                 const dynamicMultiplier = ironCoeff / 0.125;
                 stats.calc_iron_unit = (stats.column_concrete_volume * 0.140 * dynamicMultiplier) +
@@ -746,9 +770,14 @@ export const calculateUnitCost = (
     if (unit.floorType === 'ground') currentFloorHeight = buildingStats.groundFloorHeight;
     else if (unit.floorType === 'basement') currentFloorHeight = buildingStats.basementFloorHeight;
 
-    // Fonksiyona o katın kendi yüksekliğini gönder
-    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, currentFloorHeight); const isSoftStory = isGroundFloor && (buildingStats.groundFloorHeight >= 4.0);
+    // YENİ: Binanın TOPLAM yüksekliğini hesaplıyoruz (Devrilme Momenti için)
+    const totalBuildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
+        buildingStats.groundFloorHeight +
+        (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) +
+        (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0);
 
+    // Fonksiyona o katın kendi yüksekliğini ve TOPLAM BİNA YÜKSEKLİĞİNİ gönder
+    const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, currentFloorArea, currentFloorHeight, totalBuildingHeight);
     const settings = { globalWallMaterial, globalWallMode, globalConcreteMode, globalWallThickness, isStructural, ironCoeff };
 
     // 1. Geometriyi Ayrıştır
@@ -1095,8 +1124,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         // 2. Yapı Genel Bilgilerinden girilen Açık Teras alanı (Villa veya Apartman fark etmeksizin)
         if (buildingStats.roofTerraceArea && buildingStats.roofTerraceArea > 0) {
-            // Teras alanına parapet dönüşleri için %15 pay ekleyelim
-            totalTerraceAndBalcony += buildingStats.roofTerraceArea * 1.15;
+            const terraceArea = buildingStats.roofTerraceArea;
+            // Terasın çevresini tahmini olarak buluyoruz
+            const terracePerimeter = estimatePerimeter(terraceArea); 
+            
+            // Teras alanı + (Çevre x 30 cm Parapet Dönüşü)
+            totalTerraceAndBalcony += terraceArea + (terracePerimeter * 0.30);
         }
 
         // 3. FALLBACK (Yedek Güvenlik): Eğer kullanıcı hiç balkon tanımlamamışsa ve teras girmemişse,
@@ -1154,7 +1187,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_concrete_global': ({ buildingStats, totalFloors, aggregatedUnitStats, totalConstructionArea, item }) => {
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        const ampatman = Math.min(raftHeight * 1.5, 1.00);
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
         const vTemel = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * raftHeight;
 
         let vBodrumPerde = 0;
@@ -1270,7 +1303,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_grobeton': ({ buildingStats, totalFloors }) => {
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        const ampatman = Math.min(raftHeight * 1.5, 1.00);
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
 
         // Sadece Temel Altı Grobetonu (10 cm) hesaplanır
         let totalGrobeton = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * 0.10;
@@ -1283,7 +1316,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_foundation_xps': ({ buildingStats, totalFloors }) => {
         const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        let xpsArea = (perimeter + (8 * Math.min(raftHeight * 1.5, 1.00))) * raftHeight;
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
+        let xpsArea = (perimeter + (8 * ampatman)) * raftHeight;
         if (buildingStats.basementFloorCount > 0) {
             xpsArea += perimeter * (buildingStats.basementFloorCount * buildingStats.basementFloorHeight);
         }
@@ -1506,15 +1540,20 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.ceil(totalDays * areaFactor);
     },
 
-    'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
+'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const avgArea = totalConstructionArea / Math.max(1, totalFloors);
 
-        // Her kat tipi için KENDİ yüksekliğine göre gerçekçi katsayıları al
-        const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight);
-        const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight);
-        const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight);
-        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, avgArea, 3.0);
-        let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
+        // Binanın TOPLAM yüksekliğini hesapla
+        const totalBuildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
+            buildingStats.groundFloorHeight +
+            (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) +
+            (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0);
+
+        // Her kat tipi için KENDİ yüksekliğine ve TOPLAM BİNA YÜKSEKLİĞİNE göre katsayıları al
+        const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight, totalBuildingHeight);
+        const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight, totalBuildingHeight);
+        const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight, totalBuildingHeight);
+        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, avgArea, 3.0, totalBuildingHeight);        let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
 
         // Detaylı çizim yoksa (otomatik moddaysa) katları ayrı ayrı kendi katsayılarıyla topla
         if (ironKatlar === undefined) {
@@ -1527,7 +1566,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const { area, perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        const ampatman = Math.min(raftHeight * 1.5, 1.00);
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
         const vTemel = (area + (ampatman * perimeter) + (4 * Math.pow(ampatman, 2))) * raftHeight;
 
         let vBodrumPerde = 0;
@@ -1708,7 +1747,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        const formTemel = (perimeter + (8 * Math.min(raftHeight * 1.5, 1.00))) * raftHeight;
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
+        const formTemel = (perimeter + (8 * ampatman)) * raftHeight;
 
         let formBodrumPerde = 0;
         if (buildingStats.basementFloorCount > 0) {
@@ -1861,21 +1901,21 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const landArea = buildingStats.landArea || 0;
         const footprintArea = buildingStats.groundFloorArea || 0;
         if (landArea <= 0 || footprintArea <= 0) return 0;
-        
+
         const pool = buildingStats.poolArea || 0;
         const parking = buildingStats.parkingArea || 0;
         const veranda = buildingStats.verandaArea || 0;
-        
+
         // Bina, havuz, otopark ve veranda gibi yapısal alanları topluyoruz
         const totalHardscape = footprintArea + pool + parking + veranda;
-        
+
         // Arsadan arta kalan net peyzaj (boş) alanını buluyoruz
         const openArea = Math.max(0, landArea - totalHardscape);
-        
+
         // Kalan boş alanın %30'unu yürüyüş yolu / sert zemin olarak kabul ediyoruz.
         // (Not: Kalan %70'lik kısım 'calc_grass_and_irrigation' içinde çim olarak hesaplanıyor)
         const hardGroundArea = openArea * 0.30;
-        
+
         return hardGroundArea * (item.multiplier || 1);
     },
 
@@ -2131,7 +2171,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_drainage': ({ buildingStats, totalFloors }) => {
         const { perimeter } = getFoundationMetrics(buildingStats);
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        return perimeter + (8 * Math.min(raftHeight * 1.5, 1.00)) + 5;
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
+        return perimeter + (8 * ampatman) + 5;
     },
 
     'calc_duration_months': ({ constructionDuration }) => constructionDuration,
@@ -2143,7 +2184,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         // Radye temel kalınlığı ve ampatman (çıkma) uzunluğu hesabı
         const raftHeight = calculateEstimatedRaftHeight(totalFloors);
-        const ampatman = Math.min(raftHeight * 1.5, 1.00);
+        const ampatman = buildingStats.hasWellFoundation ? 0 : Math.min(raftHeight * 1.5, 1.00);
         const { perimeter: basePerim } = getFoundationMetrics(buildingStats);
 
         // Saf Ampatman (Çıkma) Alanı: Çevre x Çıkma Payı + Köşe Dönüşleri (4 x a²)
