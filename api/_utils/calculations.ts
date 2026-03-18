@@ -1585,7 +1585,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             totalIron += (buildingStats.groundFloorArea || 0) * 0.004;
         }
 
-        return totalIron * (item.multiplier || 1);
+        return totalIron * 1.04 * (item.multiplier || 1);
     },
 
     'calc_rainwater_system': ({ buildingStats, item }) => {
@@ -2155,11 +2155,46 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return getTotalHallArea(buildingStats) * (item.multiplier || 1);
     },
 
-    'calc_jcb': ({ totalFloors, totalConstructionArea }) => {
+    'calc_jcb': ({ buildingStats, totalFloors, totalConstructionArea }) => {
         const baseHours = 40;
         const floorHours = totalFloors * 4;
         const landscapeHours = totalConstructionArea * 0.02;
-        return baseHours + floorHours + landscapeHours;
+
+        // --- ZEKİCE EKLENTİ: GERİ DOLGU MESAİSİ ---
+        const excavationBaseArea = buildingStats.basementFloorCount > 0
+            ? buildingStats.basementFloorArea
+            : buildingStats.groundFloorArea;
+
+        const basePerim = buildingStats.basementFloorCount > 0
+            ? (buildingStats.basementFloorPerimeter || estimatePerimeter(excavationBaseArea))
+            : (buildingStats.groundFloorPerimeter || estimatePerimeter(excavationBaseArea));
+
+        const totalFloorsForExc = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
+        const raftHeightExc = calculateEstimatedRaftHeight(totalFloorsForExc);
+        
+        // Kazı Derinliği (Bodrum + Radye + Çalışma Payı)
+        const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
+
+        // Çalışma payı genişliği
+        let extensionBase = Math.max(0.50, Math.min(raftHeightExc * 1.5, 1.00));
+        let isSloped = excavationDepth > 6.0 && !buildingStats.hasWellFoundation;
+
+        // 1. Standart çalışma payı (Perde ile dik toprak arası) dolgusu: Çevre x Genişlik x Derinlik
+        let backfillVolume = basePerim * extensionBase * excavationDepth;
+
+        // 2. Eğer şevli kazı yapılmışsa (6m'den derin), devasa bir kama (üçgen) boşluk oluşur.
+        // calc_excavation formülüne göre her 6 metrede 2 metre dışarı açılıyor.
+        if (isSloped) {
+            const extraWidthAtTop = Math.floor(excavationDepth / 6.0) * 2.0;
+            // Üçgen Kama Hacmi: (Taban x Yükseklik / 2) * Çevre
+            const extraWedgeVolume = basePerim * (extraWidthAtTop / 2) * excavationDepth;
+            backfillVolume += extraWedgeVolume;
+        }
+
+        // Bir JCB / Ekskavatör'ün ortalama geri dolgu yapıp serme hızı ~35 m³/saattir.
+        const backfillMachineHours = Math.ceil(backfillVolume / 35);
+
+        return baseHours + floorHours + landscapeHours + backfillMachineHours;
     },
 
     'calc_container_complex': ({ totalConstructionArea }) => {

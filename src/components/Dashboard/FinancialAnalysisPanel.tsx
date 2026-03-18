@@ -519,18 +519,17 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const currentTotalBrut = totals.actualTotalCostWithInflation;
     const netTotalCost = currentTotalBrut / (1 + kdvRate);
     const includedVatAmount = currentTotalBrut - netTotalCost;
+    
 
-    let estimatedSalesVat = 0;
+let estimatedSalesVat = 0;
+    let landownerVatBurden = 0; // YENİ: Arsa Sahibi KDV Yükü
 
     if (financialSettings.revenueModel === 'taahhut') {
-        // Taahhüt/Hakediş kesintilerinde fatura genelde %20 kesilir
         estimatedSalesVat = totals.totalSales * 0.20;
     } else {
-        // Satış modelinde, oluşturulan satışların (enflasyonlu) KDV oranları toplanır
+        // 1. Müteahhidin kendi sattığı dairelerin KDV'si
         financialSettings.sales.forEach(sale => {
             const rate = sale.vatRate !== undefined ? sale.vatRate : 0.20;
-
-            // Enflasyonlu satış değerini bul (Cashflow ile birebir tutması için)
             let saleDateObj = new Date((sale.saleDate || formatMonth(startDate)) + '-01');
             let projectStartObj = new Date(formatMonth(startDate) + '-01');
             let saleMonthsDiff = Math.max(0, (saleDateObj.getFullYear() - projectStartObj.getFullYear()) * 12 + (saleDateObj.getMonth() - projectStartObj.getMonth()));
@@ -538,9 +537,28 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
             estimatedSalesVat += inflatedSaleAmount - (inflatedSaleAmount / (1 + rate));
         });
+
+        // 2. YENİ: Arsa Sahibine Verilen Dairelerin KDV Yükü (Kat Karşılığı ise)
+        if (buildingStats.constructionModel === 'kat_karsiligi') {
+            const contractorShare = buildingStats.contractorShare || 50;
+            const landownerShare = 100 - contractorShare;
+            
+            if (landownerShare > 0) {
+                // Arsa sahibine düşen dairelerin maliyet bedeli
+                // Toplam maliyetin, arsa sahibinin yüzdesine denk gelen kısmı
+                const landownerCost = totals.actualTotalCostWithInflation * (landownerShare / 100);
+                
+                // Maliyet bedeli üzerinden KDV hesaplanır (Kentsel dönüşümse %1, değilse alan büyüklüğüne göre genelde %20 veya %10)
+                // Basitleştirilmiş güvenli yaklaşım: Kentsel dönüşümde %1, standartta %20 vergi yükü
+                const vatRateForLandowner = buildingStats.isUrbanTransformation ? 0.01 : 0.20;
+                
+                landownerVatBurden = landownerCost * vatRateForLandowner;
+            }
+        }
     }
 
-    const potentialVatRefund = includedVatAmount - estimatedSalesVat;
+    // Toplam Vergi İadesi = Alınan Malzemelerdeki KDV - (Satış KDV'si + Arsa Sahibi KDV Yükü)
+    const potentialVatRefund = includedVatAmount - (estimatedSalesVat + landownerVatBurden);
 
     const drawChart = () => {
         if (tableData.length === 0) return null;
