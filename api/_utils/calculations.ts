@@ -185,7 +185,9 @@ export class QuantityTakeoffService {
                 });
             }
         });
-
+        if (!settings.isStructural && stats.calc_vrf_infrastructure > 0) {
+            stats.calc_vrf_indoor = Math.ceil(stats.calc_vrf_infrastructure / 35);
+        }
         if (!settings.isStructural) {
             // Süpürgelik düşümü için de snapshot alalım
             const statsBefore = { ...stats };
@@ -241,7 +243,6 @@ export class QuantityTakeoffService {
                 stats.calc_underfloor_collector += (portsNeeded / 10.0);
             } else if (heatingSystem === 'vrf') {
                 stats.calc_vrf_infrastructure += heatedArea;
-                stats.calc_vrf_indoor += Math.ceil(heatedArea / 35);
             }
         }
     }
@@ -503,11 +504,11 @@ export class QuantityTakeoffService {
 
                 // 1. Beton Hesabı (Kalınlık Bazlı)
                 const baseConcrete = refArea * 0.35 * heightRatio;
-                
+
                 // Müşterinin girdiği döşeme kalınlığı üzerinden net döşeme hacmi (metre cinsinden)
                 const thicknessM = (buildingStats.slabThickness || 15) / 100;
                 let slabVol = refArea * thicknessM;
-                
+
                 // Asmolende döşeme içi boşluklu olduğundan brüt hacmin sadece %65'i betondur
                 if (buildingStats.slabType === 'asmolen') {
                     slabVol *= 0.65;
@@ -515,11 +516,11 @@ export class QuantityTakeoffService {
 
                 stats.slab_concrete_volume = slabVol;
                 stats.column_concrete_volume = baseConcrete * 0.20;
-                
+
                 // Mantar döşemede kiriş sarkmaları çok azdır/yoktur, oran küçültülür
                 let beamVol = baseConcrete * 0.15;
                 if (buildingStats.slabType === 'mantar') {
-                    beamVol *= 0.2; 
+                    beamVol *= 0.2;
                 }
                 stats.beam_concrete_volume = beamVol;
 
@@ -638,7 +639,7 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
     const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
 
     // 3. YENİ: Bodrum Kat Hacmi
-    const volB = buildingStats.basementFloorCount * buildingStats.basementFloorArea * (buildingStats.basementFloorHeight - 0.12);
+    const volB = buildingStats.basementFloorCount * buildingStats.basementFloorArea * (Math.max(0, buildingStats.basementFloorHeight - 0.12) - 0.12);
 
     // 4. YENİ: Çatı Katı Hacmi
     let volR = 0;
