@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
     UnitType, BuildingStats, UnitFloorType, WallMaterial, SavedProject, ScheduleTaskOverride,
-    ReportSettings, CustomCostItem, FinancialSettings, SalePlan, DuplexPair
+    ReportSettings, CustomCostItem, FinancialSettings, SalePlan, DuplexPair,
+    AutoFixAction, SystemWarning
 } from '../types';
 import { COST_DATA } from '../../api/_utils/cost_data';
 import { WIX_PRICE_MAP } from '../wix_price_mapping';
@@ -229,14 +230,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const [systemWarnings, setSystemWarnings] = useState<SystemWarning[]>([]);
 
-    const applyAutoFix = (action: AutoFixAction) => {
-        if (action.type === 'UPDATE_QUANTITY') {
-            updateCostItemAction(action.payload.catId, action.payload.itemName, 'manualQuantity', action.payload.value);
-        } else if (action.type === 'UPDATE_BUILDING_STATS') {
-            setBuildingStatsState(prev => ({ ...prev, ...action.payload }));
-        }
-        setIsDataDirty(true);
-    };
+   
 
     const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([
         {
@@ -638,6 +632,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     }, [units, buildingStats, globalWallMode]);
 
+    const totalConstructionArea = useMemo(() => {
+        let area = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
+            buildingStats.groundFloorArea +
+            (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
+
+        // Çatı katı varsa toplama dahil et
+        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea) {
+            area += buildingStats.roofFloorArea;
+        }
+        return area;
+    }, [buildingStats]);
+
     useEffect(() => {
         const warnings: SystemWarning[] = [];
 
@@ -744,17 +750,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, []);
 
     // --- CALCULATIONS (Automatic) ---
-    const totalConstructionArea = useMemo(() => {
-        let area = (buildingStats.normalFloorCount * buildingStats.normalFloorArea) +
-            buildingStats.groundFloorArea +
-            (buildingStats.basementFloorCount * buildingStats.basementFloorArea);
-
-        // Çatı katı varsa toplama dahil et
-        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea) {
-            area += buildingStats.roofFloorArea;
-        }
-        return area;
-    }, [buildingStats]);
+    
     // GÜNCELLENEN KISIM: İş Zaman Programı tabanlı süre hesabı
     const autoDuration = useMemo(() => {
         let duration = 0;
@@ -1467,6 +1463,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     };
 
+    const applyAutoFix = (action: AutoFixAction) => {
+        if (action.type === 'UPDATE_QUANTITY') {
+            // Fonksiyon artık yukarıda tanımlandığı için güvenle kullanılabilir
+            updateCostItemAction(action.payload.catId, action.payload.itemName, 'manualQuantity', action.payload.value);
+            setIsDataDirty(true);
+        } else if (action.type === 'UPDATE_BUILDING_STATS') {
+            // Güvenli State Güncelleyici kullanımı
+            setBuildingStats(prev => ({ ...prev, ...action.payload }));
+        }
+    };
+
     return (
         <ProjectContext.Provider value={{
             units, structuralUnits, costs, buildingStats,
@@ -1500,55 +1507,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 };
 
-const calculateWarnings = () => {
-    const warnings: SystemWarning[] = [];
-    const totalFloors = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
-    
-    // --- 1. ASANSÖR YÖNETMELİĞİ ---
-    if (buildingStats.buildingType !== 'villa' && (totalFloors > 3 || totalConstructionArea > 800)) {
-        const elevatorItem = projectCostDetails.find(c => c.id === 'mekanik_tesisat')
-                               ?.items.find(i => i.name === "Asansör (Paket)");
-                               
-        // Eğer kullanıcı asansörü manuel olarak silmişse (miktarı 0 yapmışsa)
-        if (elevatorItem && elevatorItem.manualQuantity === 0) {
-            let msg = 'Kat sayısı 3\'ten veya toplam inşaat alanı 800 m²\'den büyük binalarda asansör yasal bir zorunluluktur.';
-            
-            // Kentsel Dönüşüm Kontrolü
-            if (buildingStats.isUrbanTransformation) {
-                msg += ' Ancak projeniz Kentsel Dönüşüm kapsamında olduğu için, mevcut arsa ve gabari kısıtlamalarından dolayı yerel idare (belediye) bu zorunlulukta müsamaha veya esneklik gösterebilir.';
-            }
-
-            warnings.push({
-                id: 'elevator_rule',
-                type: 'warning',
-                category: 'regulation',
-                title: 'Asansör Zorunluluğu İhlali',
-                message: msg,
-                suggestion: 'Maliyet detaylarından Asansör miktarını düzeltin veya yandaki butonu kullanın.',
-                autoFix: {
-                    type: 'ADD_COST_ITEM',
-                    payload: { catId: 'mekanik_tesisat', itemName: 'Asansör (Paket)', value: undefined }, // undefined yaparak sistem otomatiğine döndürüyoruz
-                    buttonText: 'Asansörü Tekrar Ekle'
-                }
-            });
-        }
-    }
-    
-    // ... Sığınak, Yangın Merdiveni vb. diğer kurallar ...
-
-    return warnings;
-};
-
-// Oto-düzelt fonksiyonu
-const applyAutoFix = (action: AutoFixAction) => {
-    if (action.type === 'ADD_COST_ITEM') {
-        const { catId, itemName, value } = action.payload;
-        updateCostItem(catId, itemName, 'manualQuantity', value);
-    } else if (action.type === 'UPDATE_BUILDING_STATS') {
-        setBuildingStats(prev => ({ ...prev, ...action.payload }));
-    }
-    // Veriler değiştiği için hesaplamayı tetikleyecek mekanizma çalışır
-};
 
 export const useProjectStore = () => {
     const context = useContext(ProjectContext);
