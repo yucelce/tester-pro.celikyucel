@@ -176,7 +176,7 @@ export const DashboardView: React.FC = () => {
                         </div>
 
                         {/* FİYAT KISMI */}
-                        <div className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
+                        <div id="tour-total-cost" className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
     {isCalculating ? (
         <span className="flex items-center gap-2 text-blue-500 text-lg md:text-2xl animate-pulse">
             <i className="fas fa-circle-notch fa-spin"></i> Hesaplanıyor...
