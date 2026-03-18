@@ -230,7 +230,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const [systemWarnings, setSystemWarnings] = useState<SystemWarning[]>([]);
 
-   
+
 
     const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([
         {
@@ -667,18 +667,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // 2. ASANSÖR ZORUNLULUĞU KONTROLÜ
         if (buildingStats.buildingType !== 'villa' && (totalFloors > 3 || totalConstructionArea > 800)) {
-            const isElevatorZero = projectCostDetails.some(cat => 
+            const isElevatorZero = projectCostDetails.some(cat =>
                 cat.items.some((i: any) => i.name === "Asansör (Paket)" && i.finalQty === 0)
             );
-            
+
             if (isElevatorZero) {
-                 warnings.push({
+                warnings.push({
                     id: 'elevator_rule',
                     type: 'warning',
                     category: 'regulation',
                     title: 'Asansör Zorunluluğu İhlali',
-                    message: 'Kat sayısı 3\'ten veya toplam alan 800 m²\'den büyük binalarda asansör yasal zorunluluktur.' + 
-                             (buildingStats.isUrbanTransformation ? ' Ancak Kentsel Dönüşüm projelerinde idare müsamaha gösterebilir.' : ''),
+                    message: 'Kat sayısı 3\'ten veya toplam alan 800 m²\'den büyük binalarda asansör yasal zorunluluktur.' +
+                        (buildingStats.isUrbanTransformation ? ' Ancak Kentsel Dönüşüm projelerinde idare müsamaha gösterebilir.' : ''),
                     suggestion: 'Maliyet detaylarından Asansör miktarını düzeltin.',
                     autoFix: {
                         type: 'UPDATE_QUANTITY',
@@ -696,8 +696,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 type: 'warning',
                 category: 'regulation',
                 title: 'Sığınak Zorunluluğu',
-                message: 'Toplam inşaat alanı 1500 m²\'yi geçen binalarda sığınak ayrılması zorunludur.' + 
-                         (buildingStats.isUrbanTransformation ? ' Kentsel Dönüşüm projelerinde otopark vb. alanlar sığınak sayılabilir.' : ''),
+                message: 'Toplam inşaat alanı 1500 m²\'yi geçen binalarda sığınak ayrılması zorunludur.' +
+                    (buildingStats.isUrbanTransformation ? ' Kentsel Dönüşüm projelerinde otopark vb. alanlar sığınak sayılabilir.' : ''),
                 suggestion: 'Yapı Genel Bilgileri > Statik panelinden sığınak alanı tanımlayın.',
                 autoFix: {
                     type: 'UPDATE_BUILDING_STATS',
@@ -710,7 +710,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // 4. ŞANTİYE ŞEFİ ZORUNLULUĞU KONTROLÜ
         const siteChiefItem = projectCostDetails.some(cat => cat.items.some((i: any) => i.name === "Şantiye Şefi (Aylık)" && i.finalQty === 0));
         if (siteChiefItem) {
-             warnings.push({
+            warnings.push({
                 id: 'site_chief_rule',
                 type: 'critical',
                 category: 'regulation',
@@ -721,6 +721,64 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     type: 'UPDATE_QUANTITY',
                     payload: { catId: 'santiye_hafriyat', itemName: 'Şantiye Şefi (Aylık)', value: undefined },
                     buttonText: 'Şefi Tekrar Ekle'
+                }
+            });
+        }
+
+        // --- 5. OTOPARK YÖNETMELİĞİ ---
+        const totalUnits = units.reduce((acc, u) => acc + u.count, 0);
+        const totalParking = (buildingStats.parkingArea || 0) + (buildingStats.indoorParkingArea || 0);
+        if (buildingStats.buildingType !== 'villa' && totalUnits > 3 && totalParking === 0) {
+            warnings.push({
+                id: 'parking_rule',
+                type: 'warning',
+                category: 'regulation',
+                title: 'Otopark Alanı Ayrılmamış',
+                message: 'Otopark Yönetmeliği gereği projenizdeki bağımsız bölüm sayısına oranla açık veya kapalı otopark alanı ayrılması zorunludur.',
+                suggestion: 'Yapı Genel Bilgileri panelinden Açık veya Kapalı Otopark alanı tanımlayın.',
+                autoFix: {
+                    type: 'UPDATE_BUILDING_STATS',
+                    payload: { parkingArea: totalUnits * 15 }, // Her daireye tahmini 15m2 açık otopark
+                    buttonText: 'Açık Otopark Ekle'
+                }
+            });
+        }
+
+        // --- 6. YANGIN MERDİVENİ ZORUNLULUĞU ---
+        const buildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight;
+        if (buildingHeight > 21.5) {
+            const fireEscapeItem = projectCostDetails.some(cat => cat.items.some((i: any) => i.name === "Yangın Merdiveni (Çelik)" && i.finalQty === 0));
+            if (fireEscapeItem) {
+                warnings.push({
+                    id: 'fire_escape_rule',
+                    type: 'critical',
+                    category: 'regulation',
+                    title: 'Yangın Merdiveni İhlali',
+                    message: 'Bina yüksekliği 21.50 metreyi aşan yapılarda Binaların Yangından Korunması Hakkında Yönetmelik gereği yangın merdiveni zorunludur.',
+                    suggestion: 'Maliyet detaylarından Yangın Merdiveni miktarını düzeltin.',
+                    autoFix: {
+                        type: 'UPDATE_QUANTITY',
+                        payload: { catId: 'kaba_insaat', itemName: 'Yangın Merdiveni (Çelik)', value: undefined },
+                        buttonText: 'Merdiveni Geri Getir'
+                    }
+                });
+            }
+        }
+
+        // --- 7. YAPI DENETİM ZORUNLULUĞU ---
+        const inspectionItem = projectCostDetails.some(cat => cat.items.some((i: any) => i.name === "Yapı Denetim Hizmet Bedeli" && i.finalQty === 0));
+        if (inspectionItem) {
+            warnings.push({
+                id: 'inspection_rule',
+                type: 'critical',
+                category: 'regulation',
+                title: 'Yapı Denetim Atanmamış',
+                message: 'Ruhsatlı tüm inşaatlarda (kırsal alan istisnaları hariç) Yapı Denetim firması ile çalışılması yasal zorunluluktur.',
+                suggestion: 'Maliyet detaylarından Yapı Denetim kalemini tekrar aktif edin.',
+                autoFix: {
+                    type: 'UPDATE_QUANTITY',
+                    payload: { catId: 'resmi_idari', itemName: 'Yapı Denetim Hizmet Bedeli', value: undefined },
+                    buttonText: 'Denetimi Tekrar Ekle'
                 }
             });
         }
@@ -750,7 +808,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, []);
 
     // --- CALCULATIONS (Automatic) ---
-    
+
     // GÜNCELLENEN KISIM: İş Zaman Programı tabanlı süre hesabı
     const autoDuration = useMemo(() => {
         let duration = 0;
@@ -874,14 +932,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             if (resSchedule.ok) {
                 const scheduleResult = await resSchedule.json();
-                
+
                 // TARİH DÜZELTMESİ (String olarak gelen tarihleri Date objesine çeviriyoruz)
                 const parsedSchedule = (scheduleResult.schedule || []).map((task: any) => ({
                     ...task,
                     startDate: new Date(task.startDate),
                     endDate: new Date(task.endDate)
                 }));
-                
+
                 setProjectSchedule(parsedSchedule);
             } else {
                 // YENİ EKLENEN HATA YAKALAMA BLOĞU
@@ -1106,20 +1164,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             let totalDiff = 0;
             const newDetails = prevDetails.map(cat => {
                 if (cat.id !== catId) return cat;
-                
+
                 let categoryTotalDiff = 0;
                 const newItems = cat.items.map(item => {
                     if (item.name !== itemName) return item;
-                    
+
                     const oldTotal = item.totalPrice || 0;
                     const updatedItem = { ...item, [field]: value };
-                    
+
                     const finalQty = updatedItem.manualQuantity !== undefined ? updatedItem.manualQuantity : (updatedItem.calculatedAutoQty || 0);
                     const finalPrice = updatedItem.manualPrice !== undefined ? updatedItem.manualPrice : (updatedItem.unit_price || 0);
-                    
+
                     updatedItem.finalQty = finalQty;
                     updatedItem.totalPrice = finalQty * finalPrice;
-                    
+
                     categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
                     return updatedItem;
                 });
@@ -1135,7 +1193,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return newDetails;
         });
 
-        setIsDataDirty(false); 
+        setIsDataDirty(false);
     };
 
     const bulkUpdatePrices = (newPrices: { itemName: string, price: number }[]) => {
@@ -1168,10 +1226,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     if (importedItem) {
                         const oldTotal = item.totalPrice || 0;
                         const updatedItem = { ...item, manualPrice: importedItem.price };
-                        
+
                         const finalQty = updatedItem.finalQty || 0;
                         updatedItem.totalPrice = finalQty * importedItem.price;
-                        
+
                         categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
                         return updatedItem;
                     }
@@ -1499,7 +1557,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addSale, isPriceFetchError,
             removeSale, startNewProject, bulkUpdatePrices, duplexPairs,
             addDuplexPair, updateDuplexPair, removeDuplexPair,
-            isCalculating,systemWarnings, applyAutoFix,
+            isCalculating, systemWarnings, applyAutoFix,
             triggerBackendCalculation,
         }}>
             {children}
