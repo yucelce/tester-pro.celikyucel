@@ -299,116 +299,120 @@ export const DashboardView: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700/50">
-                            <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Konum</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
-                                {buildingStats.province}, {buildingStats.district}
-                            </div>
+                
 
-                            {/* BİNA TİPİ ROZETİ (VİLLA / APARTMAN) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                        {/* KART 1: Konum ve Tip */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+                            <div>
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
+                                    <i className="fas fa-map-marker-alt text-blue-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Konum</span>
+                                </div>
+                                <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                                    {buildingStats.province}, {buildingStats.district}
+                                </div>
+                            </div>
                             {buildingStats.buildingType === 'villa' ? (
-                                <div className="mt-2 inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[10px] font-bold px-2 py-1 rounded-full">
-                                    <i className="fas fa-home text-[9px]"></i> VİLLA MODU
+                                <div className="mt-4 w-max inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-bold px-2.5 py-1 rounded-md">
+                                    <i className="fas fa-home"></i> VİLLA MODU
                                 </div>
                             ) : (
-                                <div className="mt-2 inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full">
-                                    <i className="fas fa-building text-[9px]"></i> APARTMAN MODU
+                                <div className="mt-4 w-max inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-md">
+                                    <i className="fas fa-building"></i> APARTMAN MODU
                                 </div>
                             )}
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-0 rounded-lg border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between overflow-hidden group">
-                            <div className="p-4 pb-2">
-                                <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Toplam İnşaat Alanı</div>
-                                <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {totalConstructionArea.toLocaleString()} m²
+
+                        {/* KART 2: Alan ve Süre */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3">
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                                    <i className="fas fa-ruler-combined text-indigo-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Top. İnşaat Alanı</span>
                                 </div>
-                                <div className="text-[10px] text-slate-500 mt-1">Emsal Dahil</div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none tracking-tight">
+                                        {totalConstructionArea.toLocaleString()}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-medium">m² (Emsal Dahil)</span>
+                                </div>
                             </div>
-                            <div className="bg-slate-100 dark:bg-slate-800/50 p-3 px-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between transition-colors hover:bg-slate-200 dark:hover:bg-slate-800">
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Yapım Süresi</span>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                        <i className={`far fa-clock text-xs ${buildingStats.isDurationManual ? 'text-orange-500' : 'text-blue-500'}`}></i>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                value={constructionDuration}
-                                                onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                                className={`bg-transparent w-16 font-bold text-sm outline-none border-b border-transparent hover:border-slate-400 focus:border-blue-500 transition-all p-0 
-                        ${buildingStats.isDurationManual ? 'text-orange-600 dark:text-orange-400' : 'text-slate-700 dark:text-slate-300'}`}
-                                            />
-                                            <span className="text-xs font-medium text-slate-500 ml-1">Ay</span>
-                                        </div>
-                                    </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                    <i className="far fa-clock text-indigo-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Süre:</span>
                                 </div>
-                                <div className="flex items-center">
+                                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5">
+                                    <div className="relative flex items-center">
+                                        <input
+                                            type="number"
+                                            value={constructionDuration}
+                                            onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
+                                            className={`w-10 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.isDurationManual ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
+                                        />
+                                        <span className="text-[10px] text-slate-500 ml-1">Ay</span>
+                                    </div>
                                     {buildingStats.isDurationManual ? (
-                                        <button
-                                            onClick={() => updateConstructionDuration(undefined)}
-                                            className="w-7 h-7 flex items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:scale-110 transition shadow-sm"
-                                            title="Otomatik Hesaplamaya Dön"
-                                        >
-                                            <i className="fas fa-magic text-xs"></i>
-                                        </button>
+                                        <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
                                     ) : (
-                                        <div className="px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
-                                            OTO
-                                        </div>
+                                        <span className="ml-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[9px] font-bold px-1.5 py-0.5 rounded">OTO</span>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700/50">
-                            <div className="text-slate-500 dark:text-slate-400 text-xs uppercase font-bold mb-1">Kat Bilgisi</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white">
-                                {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal
+                        {/* KART 3: Kat Bilgisi */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
+                            <div>
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
+                                    <i className="fas fa-layer-group text-emerald-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Kat Bilgisi</span>
+                                </div>
+                                <div className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
+                                    {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal
+                                </div>
                             </div>
-                            <div className="text-[10px] text-slate-600 dark:text-slate-500 mt-1">
-                                Toplam Yükseklik: {(
-                                    (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
-                                    buildingStats.groundFloorHeight +
-                                    (buildingStats.basementFloorCount * buildingStats.basementFloorHeight)
-                                ).toFixed(1)} m
+                            <div className="mt-4 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <span>Top. Yükseklik:</span>
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                    {((buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight + (buildingStats.basementFloorCount * buildingStats.basementFloorHeight)).toFixed(1)} m
+                                </span>
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700/50 flex flex-col justify-center relative">
-                            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 pb-2 mb-2">
-                                <span className="text-xs text-slate-500 dark:text-slate-400">Kaba Yapı</span>
-                                <span className="text-sm font-bold text-yellow-600 dark:text-yellow-500">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-500 dark:text-slate-400">İnce İşler</span>
-                                <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                        {/* KART 4: Maliyet Özeti & Uyarılar */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-red-300 dark:hover:border-red-700 transition-colors">
+                            <div className="space-y-2.5 mb-3">
+                                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 pb-2">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i className="fas fa-cubes w-3 text-yellow-500"></i> Kaba Yapı</span>
+                                    <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i className="fas fa-paint-roller w-3 text-purple-500"></i> İnce İşler</span>
+                                    <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                </div>
                             </div>
 
-                            {systemWarnings && systemWarnings.length > 0 && (
-                                <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/50">
-                                    <button
-                                        onClick={() => setShowWarningsModal(true)}
-                                        className={`group w-full flex items-center justify-between px-3 py-2 border rounded transition duration-200 shadow-sm ${systemWarnings.some(w => w.type === 'critical')
-                                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900/30'
-                                            : 'bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100 dark:hover:bg-orange-900/20 border-orange-200 dark:border-orange-900/30'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${systemWarnings.some(w => w.type === 'critical') ? 'bg-red-100 dark:bg-red-800' : 'bg-orange-100 dark:bg-orange-800'
-                                                }`}>
-                                                <i className={`fas fa-exclamation-triangle text-[10px] animate-pulse ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-600 dark:text-red-200' : 'text-orange-600 dark:text-orange-200'
-                                                    }`}></i>
-                                            </div>
-                                            <span className={`text-xs font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-700 dark:text-red-300' : 'text-orange-700 dark:text-orange-300'
-                                                }`}>
-                                                {systemWarnings.length} Sistem Uyarısı Bulundu
-                                            </span>
-                                        </div>
-                                        <span className={`text-[10px] font-mono group-hover:underline ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-600/70 dark:text-red-400/70 group-hover:text-red-600' : 'text-orange-600/70 dark:text-orange-400/70 group-hover:text-orange-600'
-                                            }`}>
-                                            Detayı İncele <i className="fas fa-chevron-right ml-1"></i>
+                            {systemWarnings && systemWarnings.length > 0 ? (
+                                <button
+                                    onClick={() => setShowWarningsModal(true)}
+                                    className={`mt-2 w-full flex items-center justify-between px-3 py-2 rounded-lg border shadow-sm transition-all ${systemWarnings.some(w => w.type === 'critical') ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 border-red-200 dark:border-red-800' : 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 border-orange-200 dark:border-orange-800'}`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <i className={`fas fa-exclamation-triangle animate-pulse ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-500' : 'text-orange-500'}`}></i>
+                                        <span className={`text-[10px] font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                                            {systemWarnings.length} Sistem Uyarısı
                                         </span>
-                                    </button>
+                                    </div>
+                                    <span className={`text-[9px] underline ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-400' : 'text-orange-400'}`}>İncele</span>
+                                </button>
+                            ) : (
+                                <div className="mt-2 w-full flex items-center justify-center px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20">
+                                    <div className="flex items-center gap-1.5">
+                                        <i className="fas fa-check-circle text-emerald-500"></i>
+                                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">Tüm Kontroller Başarılı</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1289,8 +1293,8 @@ export const DashboardView: React.FC = () => {
                         <div className="p-4 md:p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
                             {systemWarnings.map(warning => (
                                 <div key={warning.id} className={`p-4 rounded-xl border flex flex-col md:flex-row gap-4 justify-between items-start transition-all ${warning.type === 'critical'
-                                        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30'
-                                        : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800/50'
+                                    ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30'
+                                    : 'bg-orange-50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800/50'
                                     }`}>
                                     <div className="flex items-start gap-3">
                                         <div className={`p-2 rounded-full mt-1 shrink-0 ${warning.type === 'critical' ? 'bg-red-100 dark:bg-red-800/50 text-red-600 dark:text-red-400' : 'bg-orange-100 dark:bg-orange-800/50 text-orange-600 dark:text-orange-400'
