@@ -570,17 +570,17 @@ export class QuantityTakeoffService {
 
             stats.calc_rough_plaster_area = fArea * 2.8;
             stats.calc_paint_wall_area = fArea * 2.5;
-            
+
             // YENİ MANTIK: Islak ve Kuru alan ayrımı
             const dryCeilingArea = fArea * 0.85; // %85 Kuru Hacim (Salon, Oda vb.)
             const wetCeilingArea = fArea * 0.15; // %15 Islak Hacim (Banyo, WC vb.)
 
             // Tavan boyası sadece kuru alanlara yapılır
             stats.calc_ceiling_paint_area = dryCeilingArea;
-            
+
             // Islak hacimlere varsayılan olarak asma tavan eklenir
             stats.calc_suspended_ceiling_area = (stats.calc_suspended_ceiling_area || 0) + wetCeilingArea;
-            
+
             // Alçı sıva = Duvarlar (2.5) + Sadece Asma Tavan OLMAYAN tavanlar (Kuru Alanlar)
             stats.calc_plaster_area = (fArea * 2.5) + dryCeilingArea;
 
@@ -771,42 +771,6 @@ const needsTowerCrane = (totalArea: number, groundArea: number, floors: number) 
     return totalArea > 5000 || (groundArea > 650 && floors > 6);
 };
 
-export const calculateSoilInvestigationPackage = (
-    groundArea: number,
-    prices: {
-        sondaj_mt: number,
-        spt_adet: number,
-        presiyometre_adet: number,
-        laboratuvar_paket: number
-    }
-): number => {
-    // 1. TBDY 2018'e Göre Minimum Kuyu Sayısı: 300m2'ye kadar 3 adet, sonrası için her 300m2'ye +1
-    const boreholeCount = 3 + Math.floor(Math.max(0, groundArea - 300) / 300);
-
-    // 2. Minimum Sondaj Derinliği: Sığ temeller ve standart yapılar için yönetmelik alt sınırı kuyu başı 10-15 metredir.
-    // Maliyeti asgaride tutmak için kuyu başı 10 metre (sert/standart zemin kabulü) alıyoruz.
-    const minDepthPerBorehole = 10;
-    const totalMeters = boreholeCount * minDepthPerBorehole;
-
-    // 3. Deney Sayıları (Yönetmelik Alt Sınırları)
-    // SPT: Yönetmelikte genelde 1.5m istenir ancak alt sınır olarak 3 metrede bir kabul edilebilir.
-    const sptCount = Math.floor(totalMeters / 3.0);
-
-    // Presiyometre: Her kuyu için asgari 1 adet kritik derinlik testi.
-    const pressuremeterCount = boreholeCount;
-
-    // 4. Laboratuvar Paketi: Proje başına asgari 1 tam set yeterlidir.
-    const labTestPackageCount = 1;
-
-    // 5. Toplam Maliyet Hesabı (Wix'ten gelen birim fiyatlar ile minimum metrajların çarpımı)
-    const totalCost =
-        (totalMeters * prices.sondaj_mt) +
-        (sptCount * prices.spt_adet) +
-        (pressuremeterCount * prices.presiyometre_adet) +
-        (labTestPackageCount * prices.laboratuvar_paket);
-
-    return Math.round(totalCost);
-};
 
 
 // ---------------------------------------------------------
@@ -1662,11 +1626,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const basePerim = buildingStats.basementFloorCount > 0
             ? (buildingStats.basementFloorPerimeter || estimatePerimeter(excavationBaseArea))
             : (buildingStats.groundFloorPerimeter || estimatePerimeter(excavationBaseArea));
+
         const totalFloorsForExc = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
-        let raftHeightExc = 0.30;
-        if (totalFloorsForExc >= 20) raftHeightExc = 2.00;
-        else if (totalFloorsForExc >= 4) raftHeightExc = 0.40 + (totalFloorsForExc - 4) * 0.10;
-        else if (totalFloorsForExc >= 3) raftHeightExc = 0.40;
+        const raftHeightExc = calculateEstimatedRaftHeight(totalFloorsForExc);
 
         // Hafriyat Derinliği = Bodrumlar + Radye Temel Kalınlığı + 40 cm Grobeton/Yalıtım ve Çalışma Payı
         const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
@@ -1899,10 +1861,21 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const landArea = buildingStats.landArea || 0;
         const footprintArea = buildingStats.groundFloorArea || 0;
         if (landArea <= 0 || footprintArea <= 0) return 0;
-        const landSide = Math.sqrt(landArea);
-        const footprintSide = Math.sqrt(footprintArea);
-        const pathLength = Math.max(0, landSide - footprintSide);
-        const hardGroundArea = pathLength * 2;
+        
+        const pool = buildingStats.poolArea || 0;
+        const parking = buildingStats.parkingArea || 0;
+        const veranda = buildingStats.verandaArea || 0;
+        
+        // Bina, havuz, otopark ve veranda gibi yapısal alanları topluyoruz
+        const totalHardscape = footprintArea + pool + parking + veranda;
+        
+        // Arsadan arta kalan net peyzaj (boş) alanını buluyoruz
+        const openArea = Math.max(0, landArea - totalHardscape);
+        
+        // Kalan boş alanın %30'unu yürüyüş yolu / sert zemin olarak kabul ediyoruz.
+        // (Not: Kalan %70'lik kısım 'calc_grass_and_irrigation' içinde çim olarak hesaplanıyor)
+        const hardGroundArea = openArea * 0.30;
+        
         return hardGroundArea * (item.multiplier || 1);
     },
 

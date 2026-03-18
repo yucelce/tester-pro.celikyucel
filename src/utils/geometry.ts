@@ -251,8 +251,3 @@ export const floodFillRoom = (ctx: CanvasRenderingContext2D, startX: number, sta
 
   return simplifiedPolygon;
 };
-
-export const estimatePerimeter = (area: number): number => {
-    if (!area || area <= 0) return 0;
-    return 10 * Math.sqrt(area / 6);
-};

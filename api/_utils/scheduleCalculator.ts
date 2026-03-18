@@ -233,7 +233,9 @@ export const calculateConstructionSchedule = (
         if (!task) return { ls: projectEndDay, lf: projectEndDay };
 
         if (visitedForBackwardPass.has(taskId)) {
-            return { ls: projectEndDay - task.durationDays, lf: projectEndDay };
+            // DÖNGÜ TESPİTİ: Projenin sonuna itmek yerine kendi erken başlama/bitiş tarihlerini veriyoruz.
+            // Böylece kritik yol analizi (float = 0) bozulmamış oluyor.
+            return { ls: task.startDay, lf: task.endDay };
         }
         visitedForBackwardPass.add(taskId);
 
