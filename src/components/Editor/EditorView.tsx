@@ -360,7 +360,9 @@ export const EditorView: React.FC = () => {
             }
         }
         else if (mode === 'draw' || mode === 'draw_column' || mode === 'draw_slab') {
-            if (drawingPoints.length > 2 && Math.hypot(x - drawingPoints[0].x, y - drawingPoints[0].y) < 20) {
+            // Toleransı 20'den (10 / zoom) değerine çeviriyoruz. 
+            // Böylece zoom yapıldıkça daha küçük alanları, kapanma sorunu yaşamadan rahatça çizebileceksiniz.
+            if (drawingPoints.length > 2 && Math.hypot(x - drawingPoints[0].x, y - drawingPoints[0].y) < (10 / zoom)) {
                 if (mode === 'draw') finishPolygon();
                 if (mode === 'draw_column') finishColumnPolygon();
                 if (mode === 'draw_slab') finishSlabPolygon();
