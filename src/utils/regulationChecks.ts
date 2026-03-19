@@ -70,7 +70,7 @@ export const generateSystemWarnings = ({
             title: 'Sığınak Zorunluluğu',
             message: 'Toplam inşaat alanı 1500 m²\'yi geçen binalarda sığınak ayrılması zorunludur.' +
                 (buildingStats.isUrbanTransformation ? ' Kentsel Dönüşüm projelerinde otopark vb. alanlar sığınak sayılabilir.' : ''),
-            suggestion: 'Yapı Genel Bilgileri > Statik panelinden sığınak alanı tanımlayın.',
+            suggestion: 'Yapı Genel Bilgileri panelinden sığınak alanı tanımlayın.',
             autoFix: {
                 type: 'UPDATE_BUILDING_STATS',
                 payload: { shelterArea: parseFloat((totalConstructionArea * 0.05).toFixed(2)), shelterFloor: 'basement' },
