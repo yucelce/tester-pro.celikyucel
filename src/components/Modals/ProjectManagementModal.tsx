@@ -100,7 +100,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                         ${newProjectType === 'apartment' ? 'border-blue-500 bg-blue-900/20' : 'border-slate-700'}`}
                                 >
                                     <i className="fas fa-building text-2xl text-blue-400"></i>
-                                    <span className="text-xs font-bold text-white">Apartman / Site</span>
+                                    <span className="text-xs font-bold text-white">Apartman</span>
                                 </button>
                                 <button
                                     onClick={() => setNewProjectType('villa')}

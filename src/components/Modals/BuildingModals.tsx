@@ -259,7 +259,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
             className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType !== 'villa' ? 'bg-blue-500/20 border-blue-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
         >
             <i className={`fas fa-building text-2xl sm:text-3xl ${buildingStats.buildingType !== 'villa' ? 'text-blue-400' : 'text-slate-500'}`}></i>
-            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType !== 'villa' ? 'text-white' : 'text-slate-400'}`}>Apartman / Site</span>
+            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType !== 'villa' ? 'text-white' : 'text-slate-400'}`}>Apartman</span>
         </button>
         <button
             onClick={() => handleBuildingTypeChange('villa')}
