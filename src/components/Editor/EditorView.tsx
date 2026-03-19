@@ -104,6 +104,8 @@ export const EditorView: React.FC = () => {
     const [lastWallHeight, setLastWallHeight] = useState<number | undefined>(undefined);
     const [lastSlabThickness, setLastSlabThickness] = useState<number>(15);
     const [lastWallThickness, setLastWallThickness] = useState<number>(13.5);
+    const [lastIsUnderBeam, setLastIsUnderBeam] = useState<boolean>(false);
+    const [lastBeamHeight, setLastBeamHeight] = useState<number>(50);
 
     // Selection & Modals State (Local to Editor)
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -506,8 +508,8 @@ export const EditorView: React.FC = () => {
                 material: globalWallMaterial, // USE GLOBAL MATERIAL
                 thickness: lastWallThickness, // GÜNCELLENDİ: 13.5 yerine son hatırlanan kalınlık kullanılıyor
                 height: lastWallHeight, // Use stored height
-                isUnderBeam: false,
-                beamHeight: 50
+                isUnderBeam: lastIsUnderBeam, // <-- DEĞİŞTİRİLDİ (Eskiden false idi)
+                beamHeight: lastBeamHeight    // <-- DEĞİŞTİRİLDİ (Eskiden 50 idi)
             }
         };
         setEditorWalls([...editorWalls, newWall]); setSelectedWallId(newWall.id); setModalType('wallParams');
@@ -859,13 +861,16 @@ export const EditorView: React.FC = () => {
 
             {modalType === 'wallParams' && selectedWallId && <WallModal wall={editorWalls.find(w => w.id === selectedWallId)!} scale={editorScale}
                 onUpdate={(props) => {
-                    if (props.height !== undefined) setLastWallHeight(props.height); // Remember height
-                    if (props.thickness !== undefined) setLastWallThickness(props.thickness); // YENİ EKLENDİ: Kalınlığı hatırla
-                    setEditorWalls(prev => prev.map(w => w.id === selectedWallId ? { ...w, properties: { ...w.properties, ...props } } : w));
+                    if (props.height !== undefined) setLastWallHeight(props.height);
+                    if (props.thickness !== undefined) setLastWallThickness(props.thickness);
 
+                    // YENİ EKLENEN HAFIZA GÜNCELLEMELERİ
+                    if (props.isUnderBeam !== undefined) setLastIsUnderBeam(props.isUnderBeam);
+                    if (props.beamHeight !== undefined) setLastBeamHeight(props.beamHeight);
+
+                    setEditorWalls(prev => prev.map(w => w.id === selectedWallId ? { ...w, properties: { ...w.properties, ...props } } : w));
                 }}
                 onDelete={() => { setEditorWalls(prev => prev.filter(w => w.id !== selectedWallId)); setModalType(null); }} onClose={() => setModalType(null)} onSave={() => setModalType(null)} />}
-
             {modalType === 'columnParams' && selectedColumnId && <ColumnModal column={editorColumns.find(c => c.id === selectedColumnId)!} scale={editorScale}
                 onUpdate={(props) => setEditorColumns(prev => prev.map(c => c.id === selectedColumnId ? { ...c, properties: { ...c.properties, ...props } } : c))}
                 onDelete={() => { setEditorColumns(prev => prev.filter(c => c.id !== selectedColumnId)); setModalType(null); }} onClose={() => setModalType(null)} onSave={() => setModalType(null)} />}
