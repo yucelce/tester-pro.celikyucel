@@ -748,14 +748,23 @@ export const EditorView: React.FC = () => {
                     </div>
 
                     {editorScope === 'structural' && (
-                        <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
+                        <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 flex flex-col gap-2">
                             <button
                                 onClick={handleSyncSlabsToBuilding}
-                                disabled={!editorImage || editorScale === 0 || (editorSlabs.length === 0 && editorBeams.length === 0 && editorColumns.length === 0)} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-lg text-[11px] md:text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm border border-indigo-500"
-                                title="Çizilen döşemelerin toplam alan ve kırıklı çevresini yapı genel hesaplamalarına aktarır (Mantolama, iskele vb. için)"
+                                // SADECE döşeme çizildiyse aktif olsun
+                                disabled={!editorImage || editorScale === 0 || editorSlabs.length === 0}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-lg text-[11px] md:text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm border border-indigo-500"
+                                title="Çizdiğiniz döşemelerin toplam alanını ve dış çevresini bütüne aktararak; ana metrajları bu gerçek çizime göre günceller. Yapı Genel Bilgileri bölümünde yeniden düzenleyebilirsiniz."
                             >
-                                <i className="fas fa-compress-arrows-alt"></i> Sınırları Projeye Aktar
+                                <i className="fas fa-compress-arrows-alt"></i> Alanı ve Çevreyi Projeye Aktar
                             </button>
+
+                            {/* Kullanıcıyı yönlendiren bilgilendirme metni (Döşeme çizilmediğinde görünür) */}
+                            {editorSlabs.length === 0 && editorScale > 0 && (
+                                <div className="text-[9px] text-orange-600 dark:text-orange-400 font-medium leading-tight text-center bg-orange-50 dark:bg-orange-900/20 p-1.5 rounded border border-orange-200 dark:border-orange-800/30">
+                                    <i className="fas fa-info-circle"></i> Bina dış sınırlarını projeye aktarabilmek için önce <b>Döşeme</b> çizmelisiniz.
+                                </div>
+                            )}
                         </div>
                     )}
 
