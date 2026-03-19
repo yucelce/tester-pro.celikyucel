@@ -971,8 +971,7 @@ export const DashboardView: React.FC = () => {
                                                                                             <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
 
                                                                                             {/* ANA TOOLTIP BALONU */}
-                                                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
-
+<div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
                                                                                                 {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
                                                                                                 {item.costBreakdown && item.costBreakdown.length > 0 && (
                                                                                                     <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
