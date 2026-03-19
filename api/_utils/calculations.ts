@@ -943,24 +943,23 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return totalConstructionArea * classUnitPrice * (serviceRate / 100) * 1.20;
     },
 
-    'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts, totalFloors, regulationHeight }) => {
+    'calc_tapu_noter': ({ aggregatedUnitStats, totalConstructionArea, buildingStats, currentCosts, totalFloors, regulationHeight, item, costBreakdowns }) => {
         const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
 
-        // ÇÖZÜM: Döngüsel bağımlılığı aşmak için binanın resmi yapı sınıfını (Örn: 3B, 4A) buluyoruz.
-        // Daha sonra sistemdeki güncel ÇŞB metrekare fiyatını çekip gerçekçi bir toplam maliyet tahmini oluşturuyoruz.
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         const currentM2Price = getGlobalPrice(currentCosts, buildingClass);
 
         const estimatedTotalCost = totalConstructionArea * currentM2Price;
 
-        // Bulduğumuz bu güncel ve dinamik toplam maliyeti (0 yerine) fonksiyona gönderiyoruz
         return calculateTapuNoterFees(
             totalUnits,
             buildingStats.province,
             buildingStats.constructionModel,
             buildingStats.isUrbanTransformation,
-            estimatedTotalCost, // <-- 0 yerine bunu koyduk
-            currentCosts
+            estimatedTotalCost, 
+            currentCosts,
+            costBreakdowns, // YENİ: Kırılım objesini pasla
+            item.name       // YENİ: Kalem adını pasla
         );
     },
 
@@ -1440,23 +1439,36 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(landValue * annualRate * durationYears);
     },
 
-    'calc_fire_escape': ({ currentCosts, regulationHeight, buildingStats }) => {
+    'calc_fire_escape': ({ currentCosts, regulationHeight, buildingStats, item, costBreakdowns }) => {
         if (regulationHeight <= 21.50) return 0;
 
-        const ironPricePerTon = getGlobalPrice(currentCosts, "İnşaat Demiri")
-        const fireDoorPrice = getGlobalPrice(currentCosts, "Yangın Kapısı (Adet)")
+        const ironPricePerTon = getGlobalPrice(currentCosts, "İnşaat Demiri");
+        const fireDoorPrice = getGlobalPrice(currentCosts, "Yangın Kapısı (Adet)");
 
         const steelWeightPerFloor = 1.5;
         const workmanshipFactor = 1.45;
-        const costPerFloor = (ironPricePerTon * steelWeightPerFloor * workmanshipFactor) + fireDoorPrice;
         const totalFloorsForEscape = buildingStats.normalFloorCount + 1;
 
-        let totalEscapeCost = totalFloorsForEscape * costPerFloor;
+        const totalSteelCost = (ironPricePerTon * steelWeightPerFloor * workmanshipFactor) * totalFloorsForEscape;
+        const totalDoorCost = fireDoorPrice * totalFloorsForEscape;
+
+        let totalEscapeCost = totalSteelCost + totalDoorCost;
+        let heightMultiplier = 1.0;
+
         if (regulationHeight > 30.50) {
-            totalEscapeCost *= 1.25;
+            heightMultiplier = 1.25;
+            totalEscapeCost *= heightMultiplier;
         }
 
-        return totalEscapeCost;
+        // ---> YENİ EKLENEN KIRILIM KISMI <---
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `${totalFloorsForEscape} Katlık Çelik Konstrüksiyon ve İşçilik`, value: Math.round(totalSteelCost * heightMultiplier) },
+                { label: `${totalFloorsForEscape} Adet Yangın Kapısı`, value: Math.round(totalDoorCost * heightMultiplier) }
+            ];
+        }
+
+        return Math.round(totalEscapeCost);
     },
 
     'calc_foundation_grounding': ({ buildingStats }) => {
@@ -1501,13 +1513,24 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(totalConstructionArea * classUnitPrice * 0.002);
     },
 
-    'calc_sgk_premium': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts }) => {
+    'calc_sgk_premium': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts, item, costBreakdowns }) => {
         const totalUnits = buildingStats.buildingType === 'villa' ? 1 : getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
         const totalEstimatedCost = totalConstructionArea * classUnitPrice;
+        
         const laborBase = totalEstimatedCost * 0.0675;
-        return Math.round(laborBase * 0.375);
+        const premium = Math.round(laborBase * 0.375);
+
+        // ---> YENİ EKLENEN KIRILIM KISMI <---
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `Bakanlık Asgari İşçilik Matrahı (%6.75)`, value: Math.round(laborBase) },
+                { label: `Ödenecek Net Prim Tutarı (%37.5)`, value: premium }
+            ];
+        }
+
+        return premium;
     },
 
     'calc_demolition_area': ({ buildingStats, totalConstructionArea, item }) => {
@@ -2757,58 +2780,67 @@ export const calculateDynamicUnitPrice = (
     // Diğer tüm kalemler için orijinal fiyatı döndür
     return item.unit_price;
 };
+
 export const calculateTapuNoterFees = (
     unitCount: number,
     province: string,
     constructionModel: 'standard' | 'kat_karsiligi' = 'standard',
     isUrbanTransformation: boolean = false,
-    totalConstructionCost: number = 0, // Kritik: Toplam inşaat maliyeti parametre olarak eklenmeli
-    currentCosts?: CostCategory[]
+    totalConstructionCost: number = 0, 
+    currentCosts?: CostCategory[],
+    costBreakdowns?: Record<string, { label: string; value: number }[]>, // YENİ
+    itemName?: string // YENİ
 ): number => {
-    // 1. ŞEHİR KATSAYISI (Döner sermaye vb. maktu giderler için)
     const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
     let cityMultiplier = highCostCities.includes(province) ? 2.5 : 1.5;
 
     const baseTapuDoner = getGlobalPrice(currentCosts, "Tapu Döner Sermaye") * cityMultiplier;
     const baseNoterPaperFee = getGlobalPrice(currentCosts, "Noter Yazı Ücreti");
 
-    // SENARYO 1: KENTSEL DÖNÜŞÜM (6306 Sayılı Kanun)
     if (isUrbanTransformation) {
-        // Kentsel Dönüşüm maktu evrak tahmini bedelini sistemden çek, bulamazsa 950 kullan
         const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti") / 2;
-
-        // MUAFİYET: Damga Vergisi, Noter Harcı ve Tapu Harcı alınmaz.
-        // Sadece maktu kağıt ücreti ve cüzi işlem masrafı.
-        return baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
+        const totalCost = baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
+        
+        if (costBreakdowns && itemName) {
+            costBreakdowns[itemName] = [
+                { label: `Maktu Noter Giderleri (Kentsel Dönüşüm)`, value: Math.round(totalCost) },
+                { label: `Harç ve Damga Vergisi (Muafiyet)`, value: 0 }
+            ];
+        }
+        return totalCost;
     }
 
-    // SENARYO 2: KAT KARŞILIĞI İNŞAAT SÖZLEŞMESİ (Kentsel Dönüşüm YOKSA)
     if (constructionModel === 'kat_karsiligi') {
-        /**
-         * GERÇEK DÜNYA MANTIĞI:
-         * Nispi Harçlar (Büyük meblağlar buradan gelir):
-         * - Damga Vergisi: %0.948 (Binde 9.48)
-         * - Noter Harcı: %0.113 (Binde 1.13)
-         * Toplam yaklaşık: %1.06 (İnşaat Maliyeti üzerinden)
-         */
-        const stampDutyRate = 0.00948; // Binde 9.48
-        const notaryProportionalRate = 0.00113; // Binde 1.13
+        const stampDutyRate = 0.00948; 
+        const notaryProportionalRate = 0.00113; 
 
-        // Eğer toplam maliyet gelmemişse (fallback), metrekare bazlı kaba bir tahmin yap (Örn: 25.000 TL/m2)
         const referenceValue = totalConstructionCost > 0 ? totalConstructionCost : (unitCount * 100 * 25000);
 
         const nispiHarclar = referenceValue * (stampDutyRate + notaryProportionalRate);
-        const maktuGiderler = baseNoterPaperFee * cityMultiplier; // Kağıt, imza, onay ücretleri
-
+        const maktuGiderler = baseNoterPaperFee * cityMultiplier; 
         const tapuTotal = unitCount * baseTapuDoner;
+
+        if (costBreakdowns && itemName) {
+            costBreakdowns[itemName] = [
+                { label: `Nispi Harçlar (Damga Vergisi + Noter Harcı)`, value: Math.round(nispiHarclar) },
+                { label: `Maktu Noter Giderleri (Kağıt, İmza)`, value: Math.round(maktuGiderler) },
+                { label: `${unitCount} Daire Tapu Döner Sermaye`, value: Math.round(tapuTotal) }
+            ];
+        }
 
         return Math.round(nispiHarclar + maktuGiderler + tapuTotal);
     }
 
-    // SENARYO 3: STANDART TAAHHÜT
     const baseStandardContract = getGlobalPrice(currentCosts, "Standart Sözleşme Harcı");
     const standardContractFee = baseStandardContract * cityMultiplier;
     const tapuTotal = unitCount * baseTapuDoner;
+
+    if (costBreakdowns && itemName) {
+        costBreakdowns[itemName] = [
+            { label: `Standart Sözleşme ve Noter Giderleri`, value: Math.round(standardContractFee) },
+            { label: `${unitCount} Daire Tapu Döner Sermaye`, value: Math.round(tapuTotal) }
+        ];
+    }
 
     return standardContractFee + tapuTotal;
 };
