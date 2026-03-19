@@ -252,22 +252,24 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {activeTab === 'general' && (
                         <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
                             <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
-                                <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
-                                <div className="flex gap-2 bg-slate-900 p-1.5 rounded-lg border border-slate-700">
-                                    <button
-                                        onClick={() => handleBuildingTypeChange('apartment')}
-                                        className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType !== 'villa' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                                    >
-                                        <i className="fas fa-building mr-2"></i>Apartman / Çok Katlı
-                                    </button>
-                                    <button
-                                        onClick={() => handleBuildingTypeChange('villa')}
-                                        className={`flex-1 py-2.5 text-sm font-bold rounded-md transition ${buildingStats.buildingType === 'villa' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                                    >
-                                        <i className="fas fa-home mr-2"></i>Müstakil Villa
-                                    </button>
-                                </div>
-                            </div>
+    <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
+    <div className="grid grid-cols-2 gap-3">
+        <button
+            onClick={() => handleBuildingTypeChange('apartment')}
+            className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType !== 'villa' ? 'bg-blue-500/20 border-blue-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
+        >
+            <i className={`fas fa-building text-2xl sm:text-3xl ${buildingStats.buildingType !== 'villa' ? 'text-blue-400' : 'text-slate-500'}`}></i>
+            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType !== 'villa' ? 'text-white' : 'text-slate-400'}`}>Apartman / Site</span>
+        </button>
+        <button
+            onClick={() => handleBuildingTypeChange('villa')}
+            className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType === 'villa' ? 'bg-orange-500/20 border-orange-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
+        >
+            <i className={`fas fa-home text-2xl sm:text-3xl ${buildingStats.buildingType === 'villa' ? 'text-orange-400' : 'text-slate-500'}`}></i>
+            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType === 'villa' ? 'text-white' : 'text-slate-400'}`}>Müstakil Villa</span>
+        </button>
+    </div>
+</div>
                             <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
                                 <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Konum Bilgileri</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
