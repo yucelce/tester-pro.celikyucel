@@ -397,10 +397,10 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
 
   // --- 6. Zemin ve Merdiven ---
   "Şap Malzemesi": "Döşeme üzerindeki tesisat borularını örtmek ve zemin kaplaması (parke/seramik) döşenmeden önce teraziye (su mastarına) alınmış dümdüz bir satıh elde etmek için dökülen kum-çimento harcıdır.",
-"Seramik Malzemesi": "Banyo, wc, mutfak tezgah arası, balkon gibi suya maruz kalan alanların zemin ve duvarlarına uygulanan fayans/granit malzemedir (fire payı dahildir).",
-"Seramik İşçiliği": "Seramik ve fayansların yüzeye yapıştırılması, mastarlanması ve derz dolgu işlemlerinin ustalık bedelidir.",
-"Laminat Parke Malzemesi": "Salon ve yatak odaları gibi kuru hacimlerin zeminlerine uygulanan kilitli parke panelleri ve alt şilte (kapron) malzemesidir.",
-"Laminat Parke İşçiliği": "Laminat parkelerin kesilmesi, kilitlenerek döşenmesi ve süpürgeliklerin montaj ustalık bedelidir.",
+  "Seramik Malzemesi": "Banyo, wc, mutfak tezgah arası, balkon gibi suya maruz kalan alanların zemin ve duvarlarına uygulanan fayans/granit malzemedir (fire payı dahildir).",
+  "Seramik İşçiliği": "Seramik ve fayansların yüzeye yapıştırılması, mastarlanması ve derz dolgu işlemlerinin ustalık bedelidir.",
+  "Laminat Parke Malzemesi": "Salon ve yatak odaları gibi kuru hacimlerin zeminlerine uygulanan kilitli parke panelleri ve alt şilte (kapron) malzemesidir.",
+  "Laminat Parke İşçiliği": "Laminat parkelerin kesilmesi, kilitlenerek döşenmesi ve süpürgeliklerin montaj ustalık bedelidir.",
   // --- 7. İnce İşler ve Mobilya ---
   "Bina Giriş Kapısı (Ana)": "Apartman veya site bloklarının ana girişinde kullanılan, estetik, korozyona ve dış hava şartlarına dayanıklı, şifreli/kartlı veya görüntülü otomat sistemine sahip büyük bina kapısıdır.",
   "Çelik Kapı (Daire Giriş)": "Bağımsız bölümlerin (dairelerin) girişlerinde kullanılan, ahşap görünümlü giydirmeye sahip, levye/kriko zorlamalarına ve hırsızlığa karşı dayanıklı çok kilitli ağır çelik kapıların maliyetidir.",
@@ -423,6 +423,29 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
   "Sığınak Kapısı ve Havalandırma Paketi": "Sığınak yönetmeliğine uygun çelik sığınak kapıları ve radyoaktif/biyolojik partikül tutucu karbon filtreli havalandırma (santral) sistemidir.",
   "Otopark Yangın ve Jet Fan Sistemi": "Kapalı otoparklarda egzoz dumanını tahliye etmek (jet fan) ve olası araç yangınlarına müdahale etmek için kurulan sulu söndürme (sprinkler) altyapısıdır.",
 
+  // --- EKSİK KALEMLER İÇİN EKLENENLER ---
+  "Zemin Etüdü": "Arsanın jeolojik yapısını, depremselliğini ve taşıma kapasitesini belirlemek için yapılan sondaj, SPT, presiyometre deneyleri ve laboratuvar raporunu kapsayan paket fiyattır.",
+  "Akustik Rapor": "Binaların Gürültüye Karşı Korunması Yönetmeliği gereğince, ruhsat aşamasında istenen ve binanın ses yalıtım projelerinin hesaplandığı rapordur.",
+  "Arsa Rayiç Bedeli (Maliyet)": "İlgili belediyeden alınan arsa metrekare birim değeridir. Noter, tapu ve ruhsat harçlarının hesaplanmasında alt sınır olarak kullanılır.",
+  "Yıkım Teknik Sorumlu Ücreti": "Mevcut eski binanın yıkımı sırasında iş güvenliği ve fenni mesuliyeti üstlenen mühendise ödenen yasal bedeldir.",
+  "Mevcut Bina Yıkım Ruhsat Bedeli": "Eski yapının yıkılabilmesi için belediyeye ödenen harçlar ile hafriyat/moloz döküm sahası ücretlerini kapsar.",
+  "Asansör (Paket)": "Kuyu dibi tamponlarından, kabin, motor, ray ve halat sistemine kadar asansörün anahtar teslim kurulum maliyetidir (Durak sayısına göre fiyatı otomatik artar).",
+  "Doğalgaz Bina Ana Altyapısı": "Sokaktaki ana hattan binaya, oradan da daire kapılarına kadar çekilen doğalgaz çelik/sarı boru kolon tesisatıdır.",
+  "Doğalgaz Proje ve Onay Bedeli": "Gaz dağıtım şirketine (İGDAŞ, Başkentgaz vb.) sunulan iç tesisat projelerinin çizimi, onaylatılması ve gaz açma bedelleridir.",
+  "Modüler Su Deposu (2m3 Paket)": "Paslanmaz çelik veya galvaniz panellerden oluşan, binanın günlük su yedeğini sağlayan modüler deponun kurulumudur.",
+  "Isı Pompası (Hava Kaynaklı Dış Ünite)": "Doğalgazın olmadığı veya ekolojik tercihlerin yapıldığı projelerde, havadan aldığı enerjiyi suya aktararak yerden ısıtma sistemini besleyen cihazdır.",
+  "Otopark Drenaj ve Yağ Ayırıcı Sistem": "Araçlardan damlayan yağlı suları ve yıkama/yağmur sularını toplayan ızgaralı kanallar, yağ ayırıcı ünite ve atıksu dalgıç pompa setinden oluşur.",
+  "Şantiye Su ve Elektrik Abonelikleri": "Şantiye elektriği (şantiye panosu dahil) ve şantiye suyunun bağlanması için ilgili kurumlara ödenen güvence bedelleri ve abonelik harçlarıdır.",
+  "Şantiye Araç Giderleri (Aylık)": "Şantiye şefinin ve satın alma personelinin malzeme tedariki, resmi kurum takipleri için kullandığı aracın aylık yakıt ve amortisman gideridir.",
+  "İş Makinesi (JCB/Ekskavatör)": "Hafriyat dışında şantiye içi malzeme dağıtımı, dolgu yapılması ve çevre düzenlemesi için çağrılan saatlik/günlük iş makinesi kiralama bedelidir.",
+  "Daire Sigorta Panosu ve Şalt Malz.": "Daire girişlerindeki sigorta kutusu, içindeki kaçak akım rölesi (KAR) ve W-Otomat sigortaların malzeme ve montaj bedelidir.",
+  "Anahtar/Priz Montajı ve Malzemesi": "Odalardaki ışık anahtarları, komütatörler ve prizlerin dış plastik kapaklarının (çerçevelerinin) satın alınması ve takılmasıdır.",
+  "Akıllı Ev Altyapı ve Donanım Paketi": "KNX veya benzeri protokolle çalışan; aydınlatma, ısıtma, panjur ve su/gaz kesme valflerini telefondan/ekrandan kontrol etmeyi sağlayan otomasyon sistemidir.",
+  "Kamera ve Güvenlik Altyapısı": "Bina çevresine, otoparka ve girişlere yerleştirilen CCTV kameralar ile kayıt cihazının (NVR/DVR) kablolama ve kurulum maliyetidir.",
+  "Özel Havuz Yapımı (Hafriyat, İzolasyon, Beton ve Kaplama)": "Yüzme havuzunun kazılması, demir/beton işleri, çift kat su yalıtımı ve havuz içi cam mozaik/seramik kaplamasını içeren kaba ve ince işler toplamıdır.",
+  "Havuz Mekanik Tesisatı (Motor, Filtre, Aydınlatma)": "Havuzun devridaim pompaları, kum filtresi, denge tankı tesisatı, su altı aydınlatmaları ve dozajlama sisteminin kurulum maliyetidir.",
+  "Çim Ekimi ve Otomatik Sulama Sistemi": "Peyzaj alanlarına rulo veya tohum çim serilmesi, zaman ayarlı otomatik pop-up sulama fıskiyelerinin ve damlama borularının döşenmesidir.",
+  "Sert Zemin / Yürüyüş Yolu": "Bina etrafındaki yaya yolları ve dinlenme alanlarına dökülen baskı beton, kilitli parke taşı veya traverten/doğaltaş kaplama maliyetidir."
 };
 
 export const COST_DATA: CostCategory[] = RAW_COST_DATA.map(cat => ({
