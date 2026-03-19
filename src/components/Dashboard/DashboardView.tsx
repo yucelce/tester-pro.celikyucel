@@ -895,11 +895,10 @@ export const DashboardView: React.FC = () => {
                                                                                 <div className="relative flex items-center cursor-help group/breakdown">
                                                                                     <i className="fas fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded transition shadow-sm"></i>
 
-                                                                                    <div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
-                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+<div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
                                                                                             <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
                                                                                         </div>
-                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
                                                                                             {item.costBreakdown.map((cb: any, idx: number) => (
                                                                                                 <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
                                                                                                     <span className="opacity-90 leading-tight">{cb.label}</span>
@@ -971,14 +970,13 @@ export const DashboardView: React.FC = () => {
                                                                                             <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
 
                                                                                             {/* ANA TOOLTIP BALONU */}
-<div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none">
-                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
+<div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
                                                                                                 {item.costBreakdown && item.costBreakdown.length > 0 && (
                                                                                                     <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
                                                                                                         <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
                                                                                                             <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
                                                                                                         </div>
-                                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
                                                                                                             {item.costBreakdown.map((cb: any, idx: number) => (
                                                                                                                 <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
                                                                                                                     <span className="opacity-90 leading-tight">{cb.label}</span>
@@ -997,7 +995,7 @@ export const DashboardView: React.FC = () => {
                                                                                                         <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
                                                                                                             <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
                                                                                                         </div>
-                                                                                                        <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                                                                                        <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
                                                                                                             {item.breakdown.map((b: any, idx: number) => (
                                                                                                                 <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
                                                                                                                     <span className="opacity-90 leading-tight" title={b.source}>{b.source}</span>
