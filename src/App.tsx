@@ -35,7 +35,7 @@ const AppLayout = () => {
         return <DownloadView downloadId={downloadId} />;
     }
 
-    
+
     // --- AUTHENTICATION LOGIC ---
     useEffect(() => {
         const checkAccess = async () => {
@@ -47,10 +47,13 @@ const AppLayout = () => {
 
             if (!apiKey) {
                 setAuthStatus('error');
-               
+
                 setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
                 return;
             }
+
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState(null, '', newUrl);
 
             setAuthStatus('loading');
 
@@ -58,14 +61,19 @@ const AppLayout = () => {
 
                 //silinecek TESTER MOD
 
-                if(apiKey=="admin"){ //silinecek TESTER MOD
-                    setAuthStatus('success'); 
+                if (apiKey == "admin") { //silinecek TESTER MOD
+                    setAuthStatus('success');
                     setAccountId("admin")
                     return
                 }
-         
-                const response = await fetch(`https://www.celikyucel.com/_functions/validateKey?apiKey=${apiKey}`);
-                const data = await response.json();
+
+                const response = await fetch(`https://www.celikyucel.com/_functions/validateKey`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                }); const data = await response.json();
 
                 if (data.valid === true) {
                     setAuthStatus('success');
@@ -80,8 +88,8 @@ const AppLayout = () => {
             } catch (error) {
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('error');
-            
-               
+
+
                 setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
             }
         };
