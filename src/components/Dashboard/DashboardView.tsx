@@ -51,6 +51,15 @@ export const DashboardView: React.FC = () => {
         }
     };
 
+    const handleLogout = () => {
+        if (window.confirm("Sistemden çıkış yapmak istediğinize emin misiniz? (Kaydedilmeyen verileriniz kaybolabilir)")) {
+            // LocalStorage'daki anahtarı sil
+            localStorage.removeItem('cypro_api_key');
+            // Kullanıcıyı Wix sitenizin ana sayfasına veya giriş sayfasına yönlendir
+            window.location.href = "https://www.celikyucel.com";
+        }
+    };
+
     const {
         isCalculating,
         projectTotalCost, buildingStats, totalConstructionArea, constructionDuration,
@@ -173,6 +182,15 @@ export const DashboardView: React.FC = () => {
 
                             <button onClick={toggleTheme} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition shrink-0">
                                 <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-xs sm:text-base`}></i>
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-2 border border-red-200 dark:border-red-800/50 shrink-0 ml-1"
+                                title="Güvenli Çıkış Yap"
+                            >
+                                <i className="fas fa-sign-out-alt text-sm sm:text-base"></i>
+                                <span className="hidden sm:inline">Çıkış</span>
                             </button>
                         </div>
 
@@ -299,7 +317,7 @@ export const DashboardView: React.FC = () => {
                         </div>
                     </div>
 
-                
+
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
                         {/* KART 1: Konum ve Tip */}
@@ -895,9 +913,9 @@ export const DashboardView: React.FC = () => {
                                                                                 <div className="relative flex items-center cursor-help group/breakdown">
                                                                                     <i className="fas fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded transition shadow-sm"></i>
 
-<div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
-                                                                                            <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
-                                                                                        </div>
+                                                                                    <div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+                                                                                        <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
+                                                                                    </div>
                                                                                         <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
                                                                                             {item.costBreakdown.map((cb: any, idx: number) => (
                                                                                                 <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
@@ -970,7 +988,7 @@ export const DashboardView: React.FC = () => {
                                                                                             <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
 
                                                                                             {/* ANA TOOLTIP BALONU */}
-<div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
+                                                                                            <div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
                                                                                                 {item.costBreakdown && item.costBreakdown.length > 0 && (
                                                                                                     <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
                                                                                                         <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">

@@ -40,56 +40,63 @@ const AppLayout = () => {
     useEffect(() => {
         const checkAccess = async () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const apiKey = urlParams.get('apiKey');
+            let apiKey = urlParams.get('apiKey');
 
-            // ARTIK URL'DEN ACCOUNT ID ALMIYORUZ
-            // const accountId = urlParams.get('accountId');
-
-            if (!apiKey) {
-                setAuthStatus('error');
-
-                setAuthMessage("API anahtarı eksik. Lütfen ana sayfa üzerinden giriş yapın.");
-                return;
+            // 1. URL'de API Key varsa al, depolamaya kaydet ve URL'i temizle
+            if (apiKey) {
+                localStorage.setItem('cypro_api_key', apiKey);
+                const newUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState(null, '', newUrl);
+            } else {
+                // 2. URL'de yoksa (sayfa yenilenmişse), daha önce kaydettiğimiz key'i al
+                apiKey = localStorage.getItem('cypro_api_key');
             }
 
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState(null, '', newUrl);
+            // 3. Hiçbir yerde key bulunamadıysa erişimi reddet
+            if (!apiKey) {
+                setAuthStatus('error');
+                setAuthMessage("Oturum bulunamadı. Lütfen ana sayfa üzerinden giriş yapın.");
+                return;
+            }
 
             setAuthStatus('loading');
 
             try {
-
-                //silinecek TESTER MOD
-
-                if (apiKey == "admin") { //silinecek TESTER MOD
+                // TESTER MOD
+                if (apiKey === "admin") {
                     setAuthStatus('success');
-                    setAccountId("admin")
-                    return
+                    setAccountId("admin");
+                    return;
                 }
 
+                // 4. Elimizdeki API Key'i sunucuya sorarak doğrulayalım
                 const response = await fetch(`https://www.celikyucel.com/_functions/validateKey`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
                     }
-                }); const data = await response.json();
+                });
+                const data = await response.json();
 
                 if (data.valid === true) {
+                    // BAŞARILI: Oturumu aç
                     setAuthStatus('success');
                     // WIX'ten gelen üye ID'sini güvenli bir şekilde sisteme kaydediyoruz
                     if (data.memberId) {
                         setAccountId(data.memberId);
+                    } else {
+                        setAccountId(apiKey); // Fallback olarak apiKey'i accountId yapabiliriz
                     }
                 } else {
+                    // BAŞARISIZ VEYA SÜRESİ DOLMUŞ: LocalStorage'ı temizle ve hata göster
+                    localStorage.removeItem('cypro_api_key');
                     setAuthStatus('error');
-                    setAuthMessage(data.message || "API anahtarınızın süresi dolmuş veya geçersiz.");
+                    setAuthMessage(data.message || "Oturumunuzun süresi dolmuş veya geçersiz. Lütfen tekrar giriş yapın.");
                 }
             } catch (error) {
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('error');
-
-
                 setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
             }
         };
