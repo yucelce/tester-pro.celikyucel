@@ -252,24 +252,24 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                     {activeTab === 'general' && (
                         <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
                             <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
-    <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
-    <div className="grid grid-cols-2 gap-3">
-        <button
-            onClick={() => handleBuildingTypeChange('apartment')}
-            className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType !== 'villa' ? 'bg-blue-500/20 border-blue-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
-        >
-            <i className={`fas fa-building text-2xl sm:text-3xl ${buildingStats.buildingType !== 'villa' ? 'text-blue-400' : 'text-slate-500'}`}></i>
-            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType !== 'villa' ? 'text-white' : 'text-slate-400'}`}>Apartman</span>
-        </button>
-        <button
-            onClick={() => handleBuildingTypeChange('villa')}
-            className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType === 'villa' ? 'bg-orange-500/20 border-orange-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
-        >
-            <i className={`fas fa-home text-2xl sm:text-3xl ${buildingStats.buildingType === 'villa' ? 'text-orange-400' : 'text-slate-500'}`}></i>
-            <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType === 'villa' ? 'text-white' : 'text-slate-400'}`}>Müstakil Villa</span>
-        </button>
-    </div>
-</div>
+                                <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Proje Tipi</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => handleBuildingTypeChange('apartment')}
+                                        className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType !== 'villa' ? 'bg-blue-500/20 border-blue-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
+                                    >
+                                        <i className={`fas fa-building text-2xl sm:text-3xl ${buildingStats.buildingType !== 'villa' ? 'text-blue-400' : 'text-slate-500'}`}></i>
+                                        <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType !== 'villa' ? 'text-white' : 'text-slate-400'}`}>Apartman</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleBuildingTypeChange('villa')}
+                                        className={`flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all ${buildingStats.buildingType === 'villa' ? 'bg-orange-500/20 border-orange-500 shadow-md' : 'bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'}`}
+                                    >
+                                        <i className={`fas fa-home text-2xl sm:text-3xl ${buildingStats.buildingType === 'villa' ? 'text-orange-400' : 'text-slate-500'}`}></i>
+                                        <span className={`text-xs sm:text-sm font-bold text-center leading-tight ${buildingStats.buildingType === 'villa' ? 'text-white' : 'text-slate-400'}`}>Müstakil Villa</span>
+                                    </button>
+                                </div>
+                            </div>
                             <div className="bg-slate-800/50 p-4 md:p-6 rounded-xl border border-slate-700/50 space-y-4">
                                 <h4 className="font-bold text-indigo-400 border-b border-indigo-900 pb-2 text-sm md:text-base">Konum Bilgileri</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1207,6 +1207,26 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
 
                     {activeTab === 'villa_outdoor' && buildingStats.buildingType === 'villa' && (
                         <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                            <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl mt-4">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        // Varsayılan olarak işaretli gelsin (undefined ise true kabul edelim)
+                                        checked={buildingStats.isLuxuryVilla !== false}
+                                        onChange={(e) => setBuildingStats({ ...buildingStats, isLuxuryVilla: e.target.checked })}
+                                        className="w-5 h-5 accent-yellow-500 rounded cursor-pointer"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                                            <i className="fas fa-gem text-yellow-400"></i>
+                                            Lüks Sınıf Maliyeti Uygula
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 mt-1 block">
+                                            İnce işler, vitrifiye ve mobilyalarda yüksek kalite maliyet fiyatlandırmasını aktif eder. Standart bir müstakil ev için bu tiki kaldırabilirsiniz.
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
                             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
                                 <h4 className="font-bold text-white flex items-center gap-2 mb-2">
                                     <i className="fas fa-layer-group text-yellow-500"></i> Subasman Yüksekliği

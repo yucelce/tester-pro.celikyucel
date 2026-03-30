@@ -167,6 +167,7 @@ export type GlobalSlabType = 'plak' | 'asmolen' | 'mantar';
 export interface BuildingStats {
 
     buildingType?: 'apartment' | 'villa';
+    isLuxuryVilla?: boolean;
 
     visitedTabs?: string[];
     concreteClass?: ConcreteClass; // <-- BU SATIR EKSİKTİ

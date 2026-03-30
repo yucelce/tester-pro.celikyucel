@@ -2681,7 +2681,7 @@ export const calculateDynamicUnitPrice = (
         return basePrice + (extraStops * costPerExtraStop);
     }
 
-    if (buildingStats?.buildingType === 'villa') {
+    if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
         // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
         const structuralPremium = [
             "Mantolama Malzemesi", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"

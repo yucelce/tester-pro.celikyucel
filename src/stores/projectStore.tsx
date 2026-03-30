@@ -846,6 +846,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setBuildingStatsState(prev => ({
             ...prev,
             buildingType: type,
+            isLuxuryVilla: isVilla,
             concreteClass: 'C30',  // <--- EKLENDİ
             slabType: 'plak',      // <--- EKLENDİ
             slabThickness: 15,
