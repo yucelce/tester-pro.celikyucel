@@ -962,7 +962,7 @@ export const DashboardView: React.FC = () => {
                                                                         <div className={`flex items-center border rounded-lg relative overflow-hidden ${isLocked ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
                                                                             <NumericInput
                                                                                 disabled={isLocked}
-                                                                                className={`w-full bg-transparent text-sm p-2 outline-none font-mono text-right pr-9 transition ${isLocked ? 'text-slate-500 cursor-not-allowed font-bold' : 'text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-950'}`}
+                                                                                className={`w-full bg-transparent text-sm p-2 outline-none font-mono text-right transition ${item.unit.length > 7 ? 'pr-20' : item.unit.length > 3 ? 'pr-16' : 'pr-9'} ${isLocked ? 'text-slate-500 cursor-not-allowed font-bold' : 'text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-950'}`}
                                                                                 value={isLocked
                                                                                     ? Number(Number(item.calculatedAutoQty).toFixed(2))
                                                                                     : (item.manualQuantity !== undefined ? Number(Number(item.manualQuantity).toFixed(2)) : Number(Number(item.calculatedAutoQty).toFixed(2)))

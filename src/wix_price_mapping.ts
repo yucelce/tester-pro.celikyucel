@@ -193,7 +193,7 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Kalorifer Altyapısı (Mobil Sistem)": "isitmatesisatim2malisc",
   "Panel Radyatör (DemirDöküm vb.)": "radyatormal",
   "Radyatör Montaj ve Vanalar": "radyatorbaglantilariadetmalisc",
-  "Yağmur Suyu Hasat Sistemi (Zorunlu)": "yagmursuyuhasatsistemi2000ltpaket",
+  "Yağmur Suyu Hasat Sistemi": "yagmursuyuhasatsistemi2000ltpaket",
   "Otopark Jet Fan Cihazı (Adet)": "jetfanotoparkmal", // YENİ EKLENDİ,
   "Atıksu Dalgıç Pompa Sistemi (Set)": "dalgicpompamal", // YENİ EKLENDİ
   "Yağ Ayırıcı Ünite (Adet)": "otopark_yag_tutucumal",

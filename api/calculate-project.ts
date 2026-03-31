@@ -354,6 +354,9 @@ export default async function handler(req: any, res: any) {
                     if (globalWallMaterial === 'gazbeton' && item.name === "Duvar Örme Harcı (Kara Harç)") return false;
                     if (globalWallMaterial !== 'gazbeton' && item.name === "Gazbeton Yapıştırıcısı") return false;
                 }
+                if (buildingStats.buildingType === 'villa' && item.name === "Bina Giriş Kapısı (Ana)") {
+                    return false; // Villalarda apartman tipi bina giriş kapısını iptal et
+                }
                 return true;
             });
 

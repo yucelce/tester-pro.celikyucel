@@ -437,7 +437,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Kalorifer Altyapısı (Mobil Sistem)": 340.8,
     "Panel Radyatör (DemirDöküm vb.)": 2812,
     "Radyatör Montaj ve Vanalar": 666,
-    "Yağmur Suyu Hasat Sistemi (Zorunlu)": 30670,
+    "Yağmur Suyu Hasat Sistemi": 30670,
     "Yerden Isıtma (Strafor+Boru+İşçilik)": 765,
     "Yerden Isıtma Kollektörü ve Kutusu": 4600,
     "Asansör (Paket)": 664500,
