@@ -928,7 +928,17 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return item.unit_price * Math.max(1, totalApartments / 10);
     },
 
-    'calc_inspection': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts, constructionDuration }) => {
+    'calc_inspection': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts, constructionDuration, buildingStats }) => {
+        
+        // 200m2 altı müstakil (villa) yapılar Yapı Denetim'den muaftır (TUS / Fenni Mesuliyet'e tabidir)
+        const isDetached = buildingStats.buildingType === 'villa';
+        // BuildingStats'ta zemin kat her zaman 1 adet kabul edildiği için +1 eklenmiştir
+        const activeFloors = buildingStats.normalFloorCount + 1; // Bodrum hariç kat sayısı
+        
+        if (isDetached && totalConstructionArea <= 200 && activeFloors <= 2) {
+            return 0; // Fenni Mesuliyet (TUS) bedeli ayrı bir kalem olarak açılabilir.
+        }
+
         const totalUnits = getEstimatedUnitCount(aggregatedUnitStats, totalConstructionArea);
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
