@@ -102,6 +102,10 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                 defaultName = 'Salon';
                 defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2.5;
                 break;
+            case 'american_kitchen':
+                defaultName = 'Amerikan Mutfak';
+                defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 3.5;
+                break;
             case 'bedroom':
                 defaultName = 'Yatak Odası';
                 defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2;
@@ -285,6 +289,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                             <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                 {[
                                     { id: 'living', label: 'Salon', icon: 'fa-couch', activeColor: 'bg-blue-600 border-blue-500' },
+                                    { id: 'american_kitchen', label: 'Amerikan Mutf.', icon: 'fa-blender', activeColor: 'bg-red-600 border-red-500' },
                                     { id: 'bedroom', label: 'Yatak Od.', icon: 'fa-bed', activeColor: 'bg-purple-600 border-purple-500' },
                                     { id: 'kitchen', label: 'Mutfak', icon: 'fa-utensils', activeColor: 'bg-orange-600 border-orange-500' },
                                     { id: 'bath', label: 'Banyo', icon: 'fa-bath', activeColor: 'bg-cyan-600 border-cyan-500' },

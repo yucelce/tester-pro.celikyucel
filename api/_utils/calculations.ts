@@ -328,8 +328,8 @@ export class QuantityTakeoffService {
     }
 
     private static applySpecificRooms(stats: any, room: any) {
-        const isKitchen = room.type === 'kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
-
+        const isKitchen = room.type === 'kitchen' || room.type === 'american_kitchen' || room.name.toLowerCase().includes('mutfak') || room.name.toLowerCase().includes('kitchen');
+        const isAmericanKitchen = room.type === 'american_kitchen' || room.name.toLowerCase().includes('amerikan');
         // --- SIHHİ TESİSAT HASSASİYET MATEMATİĞİ ---
         // Kullanıcının girdiği oda çevresi (yatay PPRC/PVC borulama uzunluğunu etkiler)
         const roomPerimeter = room.perimeterM || 0;
@@ -341,9 +341,12 @@ export class QuantityTakeoffService {
         if (isKitchen) {
             // Mutfak: Sabit armatürler (0.25) + Yatay Çevre Çarpanı + Dikey Yükseklik Çarpanı
             stats.calc_plumbing_unit += 0.25 + (roomPerimeter * 0.015) + heightFactor;
+            // YENİ: Amerikan mutfaklarda alanın sadece %35'i mutfakmış gibi varsayılır.
+            const effectiveAreaForCabinet = isAmericanKitchen ? (room.areaM2 * 0.35) : room.areaM2;
+            const cabinetLength = Math.min(Math.max(2.5, 2.5 + (effectiveAreaForCabinet * 0.15)), 7.0);
 
             // Tezgah uzunluğu = Mutfak dolabı uzunluğu (Tül Metre)
-            const cabinetLength = Math.min(Math.max(2.5, 2.5 + (room.areaM2 * 0.15)), 7.0);
+
             stats.calc_kitchen_cabinet += cabinetLength;
             stats.kitchen_cabinet_length += cabinetLength;
             stats.calc_kitchen_counter_length += cabinetLength;
@@ -380,6 +383,7 @@ export class QuantityTakeoffService {
         let sp = 0, wp = 0;
         switch (room.type) {
             case 'living': sp = 6; wp = 3; break;
+            case 'american_kitchen': sp = 12; wp = 3; break;
             case 'bedroom': sp = 4; wp = 1; break;
             case 'kitchen': sp = 8; wp = 1; break;
             case 'bath': sp = 3; wp = 0; break;
@@ -481,29 +485,29 @@ export class QuantityTakeoffService {
                 (unit.slabs || []).forEach(slab => {
                     let area = slab.manualAreaM2 > 0 ? slab.manualAreaM2 : (slab.area_px && unit.scale > 0 ? slab.area_px / (unit.scale * unit.scale) : 0);
                     let thicknessM = slab.properties.thickness / 100;
-                    
+
                     // 1. Brüt Hacmi Hesapla
                     let grossVolume = area * thicknessM;
                     let concreteVolume = grossVolume;
-                    
+
                     // ZEKİCE MANTIK: Demir hesabı net betondan değil, brüt hacimden yapılır.
                     // Plak döşeme için baz yoğunluk: 85 kg/m³ (Brüt hacim başına)
-                    let ironDensityPerGrossVolume = 0.085; 
+                    let ironDensityPerGrossVolume = 0.085;
 
                     if (slab.properties.type === 'asmolen') {
                         // Asmolen dolguları (köpük/tuğla) beton hacmini %35 azaltır
-                        concreteVolume = grossVolume * 0.65; 
-                        
+                        concreteVolume = grossVolume * 0.65;
+
                         // Ancak sık nervürler ve etriyeler toplam demiri plak döşemeye göre ~%15 artırır
-                        ironDensityPerGrossVolume = 0.085 * 1.15; 
+                        ironDensityPerGrossVolume = 0.085 * 1.15;
                     } else if (slab.properties.type === 'mantar') {
                         // Zımbalama (punching) donatıları ve ilave pilyeler toplam demiri ~%25 artırır
-                        ironDensityPerGrossVolume = 0.085 * 1.25; 
+                        ironDensityPerGrossVolume = 0.085 * 1.25;
                     }
 
                     stats.slab_concrete_volume += concreteVolume;
                     stats.slab_formwork_area += Math.max(0, area - totalColumnAreaOnFloor);
-                    
+
                     // 2. Demiri Doğrudan Brüt Hacim Üzerinden Çarp
                     totalSlabIronBase += grossVolume * ironDensityPerGrossVolume;
                 });
@@ -929,12 +933,12 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     },
 
     'calc_inspection': ({ aggregatedUnitStats, totalConstructionArea, totalFloors, regulationHeight, currentCosts, constructionDuration, buildingStats }) => {
-        
+
         // 200m2 altı müstakil (villa) yapılar Yapı Denetim'den muaftır (TUS / Fenni Mesuliyet'e tabidir)
         const isDetached = buildingStats.buildingType === 'villa';
         // BuildingStats'ta zemin kat her zaman 1 adet kabul edildiği için +1 eklenmiştir
         const activeFloors = buildingStats.normalFloorCount + 1; // Bodrum hariç kat sayısı
-        
+
         if (isDetached && totalConstructionArea <= 200 && activeFloors <= 2) {
             return 0; // Fenni Mesuliyet (TUS) bedeli ayrı bir kalem olarak açılabilir.
         }
@@ -966,7 +970,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             buildingStats.province,
             buildingStats.constructionModel,
             buildingStats.isUrbanTransformation,
-            estimatedTotalCost, 
+            estimatedTotalCost,
             currentCosts,
             costBreakdowns, // YENİ: Kırılım objesini pasla
             item.name       // YENİ: Kalem adını pasla
@@ -1135,8 +1139,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         if (buildingStats.roofTerraceArea && buildingStats.roofTerraceArea > 0) {
             const terraceArea = buildingStats.roofTerraceArea;
             // Terasın çevresini tahmini olarak buluyoruz
-            const terracePerimeter = estimatePerimeter(terraceArea); 
-            
+            const terracePerimeter = estimatePerimeter(terraceArea);
+
             // Teras alanı + (Çevre x 30 cm Parapet Dönüşü)
             totalTerraceAndBalcony += terraceArea + (terracePerimeter * 0.30);
         }
@@ -1528,7 +1532,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const buildingClass = determineBuildingClass(totalConstructionArea, totalFloors, regulationHeight, totalUnits);
         let classUnitPrice = getGlobalPrice(currentCosts, buildingClass);
         const totalEstimatedCost = totalConstructionArea * classUnitPrice;
-        
+
         const laborBase = totalEstimatedCost * 0.0675;
         const premium = Math.round(laborBase * 0.375);
 
@@ -1573,7 +1577,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.ceil(totalDays * areaFactor);
     },
 
-'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
+    'calc_iron_global': ({ buildingStats, aggregatedUnitStats, totalConstructionArea, totalFloors, item }) => {
         const avgArea = totalConstructionArea / Math.max(1, totalFloors);
 
         // Binanın TOPLAM yüksekliğini hesapla
@@ -1586,7 +1590,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const coeffGround = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.groundFloorHeight, totalBuildingHeight);
         const coeffNormal = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.normalFloorHeight, totalBuildingHeight);
         const coeffBasement = getIronCoefficient(buildingStats.earthquakeZone, avgArea, buildingStats.basementFloorHeight, totalBuildingHeight);
-        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, avgArea, 3.0, totalBuildingHeight);        let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
+        const ironCoeff = getIronCoefficient(buildingStats.earthquakeZone, avgArea, 3.0, totalBuildingHeight); let ironKatlar = aggregatedUnitStats['calc_iron_unit'];
 
         // Detaylı çizim yoksa (otomatik moddaysa) katları ayrı ayrı kendi katsayılarıyla topla
         if (ironKatlar === undefined) {
@@ -2204,7 +2208,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         const totalFloorsForExc = buildingStats.normalFloorCount + buildingStats.basementFloorCount + 1;
         const raftHeightExc = calculateEstimatedRaftHeight(totalFloorsForExc);
-        
+
         // Kazı Derinliği (Bodrum + Radye + Çalışma Payı)
         const excavationDepth = (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + raftHeightExc + 0.40;
 
@@ -2796,7 +2800,7 @@ export const calculateTapuNoterFees = (
     province: string,
     constructionModel: 'standard' | 'kat_karsiligi' = 'standard',
     isUrbanTransformation: boolean = false,
-    totalConstructionCost: number = 0, 
+    totalConstructionCost: number = 0,
     currentCosts?: CostCategory[],
     costBreakdowns?: Record<string, { label: string; value: number }[]>, // YENİ
     itemName?: string // YENİ
@@ -2810,7 +2814,7 @@ export const calculateTapuNoterFees = (
     if (isUrbanTransformation) {
         const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti") / 2;
         const totalCost = baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
-        
+
         if (costBreakdowns && itemName) {
             costBreakdowns[itemName] = [
                 { label: `Maktu Noter Giderleri (Kentsel Dönüşüm)`, value: Math.round(totalCost) },
@@ -2821,13 +2825,13 @@ export const calculateTapuNoterFees = (
     }
 
     if (constructionModel === 'kat_karsiligi') {
-        const stampDutyRate = 0.00948; 
-        const notaryProportionalRate = 0.00113; 
+        const stampDutyRate = 0.00948;
+        const notaryProportionalRate = 0.00113;
 
         const referenceValue = totalConstructionCost > 0 ? totalConstructionCost : (unitCount * 100 * 25000);
 
         const nispiHarclar = referenceValue * (stampDutyRate + notaryProportionalRate);
-        const maktuGiderler = baseNoterPaperFee * cityMultiplier; 
+        const maktuGiderler = baseNoterPaperFee * cityMultiplier;
         const tapuTotal = unitCount * baseTapuDoner;
 
         if (costBreakdowns && itemName) {
