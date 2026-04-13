@@ -305,8 +305,7 @@ export const RoomManagerModal: React.FC<RoomManagerModalProps> = ({
                                         className={`p-2 rounded border text-[10px] md:text-xs flex flex-col items-center justify-center gap-1 min-w-0 transition ${form.type === t.id ? `${t.activeColor} text-white` : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                                     >
                                         <i className={`fas ${t.icon}`}></i>
-                                        <span className="hidden sm:block w-full truncate text-center leading-tight">{t.label}</span>
-                                    </button>
+                                        <span className="block w-full truncate text-center leading-tight text-[9px] sm:text-[10px] mt-0.5">{t.label}</span>                                    </button>
                                 ))}
                             </div>
 
