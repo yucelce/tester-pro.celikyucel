@@ -125,7 +125,7 @@ const AppLayout = () => {
                     </div>
                     <h2 className="text-2xl font-bold text-white mb-2">Erişim Reddedildi</h2>
                     <p className="text-slate-400 mb-6">{authMessage}</p>
-                    <a href="https://www.celikyucel.com" className="inline-block bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold transition">
+                    <a href="https://www.celikyucel.com/cy-pro-insaat-manager" className="inline-block bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold transition">
                         Ana Sayfaya Dön
                     </a>
                 </div>
