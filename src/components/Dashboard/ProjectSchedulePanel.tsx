@@ -117,17 +117,17 @@ export const ProjectSchedulePanel: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button 
-                                onClick={resetSchedule} 
+                            <button
+                                onClick={resetSchedule}
                                 className="w-full md:w-auto bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-md whitespace-nowrap flex items-center justify-center gap-2 active:scale-95"
                             >
                                 <i className="fas fa-unlock-alt"></i> Kilitleri Çöz & Oto Dağıt
                             </button>
                         </div>
                     )}
-                    
+
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 md:p-4 rounded-lg border border-slate-200 dark:border-slate-700">
-                        
+
                         {/* Tarihler - Mobilde Yan Yana */}
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <div className="flex flex-col gap-1 flex-1 md:flex-none">
@@ -152,7 +152,7 @@ export const ProjectSchedulePanel: React.FC = () => {
                         <div className="flex items-center justify-between w-full md:w-auto gap-3 border-t md:border-0 border-slate-200 dark:border-slate-700 pt-3 md:pt-0">
                             <div className="text-left md:text-right">
                                 <span className="block text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Toplam Süre</span>
-<span className="text-[10px] md:text-sm font-mono text-slate-500 leading-none">{(totalWeeks / 4.33).toFixed(1)} Ay <span className="hidden sm:inline">({totalWeeks.toFixed(1)} Hf)</span></span>                            </div>
+                                <span className="text-[10px] md:text-sm font-mono text-slate-500 leading-none">{(totalWeeks / 4.33).toFixed(1)} Ay <span className="hidden sm:inline">({totalWeeks.toFixed(1)} Hf)</span></span>                            </div>
                             <button
                                 onClick={() => setShowDependencies(true)}
                                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 md:px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition shadow-md flex-1 md:flex-none"

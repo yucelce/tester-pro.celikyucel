@@ -381,7 +381,7 @@ export const DashboardView: React.FC = () => {
                                     <div className="text-[9px] font-bold mt-0.5">
                                         {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
                                         {buildingStats.durationSource === 'schedule' && <span className="text-purple-500 flex items-center gap-1"><i className="fas fa-calendar-check"></i> İş Programından</span>}
-                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Alanından (Oto)</span>}
+                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Bilgilerinden (Oto)</span>}
                                     </div>
                                 </div>
                             </div>
