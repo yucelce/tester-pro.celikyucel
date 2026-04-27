@@ -830,7 +830,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
                 setProjectSchedule(parsedSchedule);
                 const totalWeeks = Math.max(...parsedSchedule.map((s: any) => s.endWeek), 0) + 4;
-                const computedMonths = Math.ceil(totalWeeks / 4.33);
+                // Bir ondalık basamaklı (örn: 10.2) olacak şekilde güncellendi:
+                const computedMonths = Number((totalWeeks / 4.33).toFixed(1));
 
                 setBuildingStatsState(prev => {
                     // EĞER kullanıcı eliyle süre girmediyse (manuel değilse) süreyi takvimden al
