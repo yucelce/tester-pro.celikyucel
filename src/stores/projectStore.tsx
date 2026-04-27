@@ -701,7 +701,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             } else {
                 duration = Math.sqrt(totalConstructionArea) / 2.7386;
             }
-            return Math.max(12, Math.round(duration * 100) / 100);
+            return Math.max(10, Math.round(duration * 100) / 100);
         }
     }, [totalConstructionArea, buildingStats.buildingType]);
 
