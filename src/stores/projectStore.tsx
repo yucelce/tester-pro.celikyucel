@@ -714,7 +714,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, [buildingStats.isDurationManual, buildingStats.constructionDuration, autoDuration]);
 
 
-   const updateConstructionDuration = (duration: number | undefined) => {
+    const updateConstructionDuration = (duration: number | undefined) => {
         setBuildingStatsState(prev => ({
             ...prev,
             isDurationManual: duration !== undefined,
@@ -727,9 +727,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const resetSchedule = () => {
         setScheduleOverrides({});
-        setBuildingStatsState(prev => ({ 
-            ...prev, 
-            isScheduleOutdated: false, 
+        setBuildingStatsState(prev => ({
+            ...prev,
+            isScheduleOutdated: false,
             durationSource: 'auto',
             isDurationManual: false,
             constructionDuration: undefined
@@ -835,6 +835,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     // EĞER kullanıcı eliyle süre girmediyse (manuel değilse) süreyi takvimden al
                     if (prev.durationSource !== 'manual') {
                         const newSource = Object.keys(scheduleOverrides).length > 0 ? 'schedule' : 'auto';
+
+                        // SONSUZ DÖNGÜYÜ KIRAN KONTROL: Eğer değerler zaten aynıysa, referansı bozma!
+                        if (prev.durationSource === newSource && prev.constructionDuration === computedMonths) {
+                            return prev;
+                        }
+
                         return {
                             ...prev,
                             durationSource: newSource,
@@ -953,9 +959,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setBuildingStatsState(prev => {
             // Gelen değeri güvenli şekilde işle
             const next = typeof value === 'function' ? value(prev) : { ...prev, ...value };
-            
+
             // Kaba yapı / Alan değişimi kontrolü
-            const isStructureChanged = 
+            const isStructureChanged =
                 prev.normalFloorArea !== next.normalFloorArea ||
                 prev.groundFloorArea !== next.groundFloorArea ||
                 prev.basementFloorArea !== next.basementFloorArea ||
@@ -1482,7 +1488,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addSale, isPriceFetchError,
             removeSale, startNewProject, bulkUpdatePrices, duplexPairs,
             addDuplexPair, updateDuplexPair, removeDuplexPair,
-            isCalculating, systemWarnings, applyAutoFix,resetSchedule,
+            isCalculating, systemWarnings, applyAutoFix, resetSchedule,
             triggerBackendCalculation,
         }}>
             {children}
