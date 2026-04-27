@@ -113,7 +113,7 @@ export const ProjectSchedulePanel: React.FC = () => {
                                 <div>
                                     <h4 className="font-bold text-orange-800 dark:text-orange-300 text-sm">Yapı Bilgileri Değişti!</h4>
                                     <p className="text-xs text-orange-700/80 dark:text-orange-400/80 mt-1 leading-relaxed">
-                                        Proje alanı veya kat sayısı değiştirildi ancak takviminizdeki <b>manuel kilitler (el ile süre değiştirmeleriniz)</b> nedeniyle inşaat süresi yeni yapı alanına göre güncellenemiyor.
+                                        Yapıl bilgileri değiştirildi ancak takviminizdeki <b>manuel kilitler (el ile süre değiştirmeleriniz)</b> nedeniyle inşaat süresi yeni yapı alanına göre güncellenemiyor.
                                     </p>
                                 </div>
                             </div>
