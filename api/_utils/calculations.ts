@@ -682,9 +682,9 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
 
     // 4. YENİ: Çatı Katı Hacmi
     let volR = 0;
-    if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
+    if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
         // Çatı katı için ortalama yükseklik kullanılır
-        volR = buildingStats.roofFloorArea * ((buildingStats.roofFloorHeight || 1.8) - 0.12);
+        volR = (buildingStats.roofFloorArea || 0) * ((buildingStats.roofFloorHeight || 1.8) - 0.12);
     }
 
     // TÜM HACİMLERİ TOPLA VE NET KULLANIM ALANINA (%75) ÇEVİR
@@ -822,7 +822,7 @@ export interface CalculationContext {
     totalBuildingHeight: number;
     regulationHeight: number;
     costBreakdowns?: Record<string, { label: string; value: number }[]>;
-    units?: any[];
+    units?: UnitType[];
 }
 
 type CalculatorFn = (ctx: CalculationContext) => number;
@@ -1007,9 +1007,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const basementHallLen = (buildingStats.basementFloorHallArea || 10) / 1.5;
 
             // Kullanıcı birim (daire) eklemişse tam sayıları bul
-            if (units && units.length > 0) {
-                const unitCountsByFloor = { normal: 0, ground: 0, basement: 0, roof: 0 };
-                units.forEach(u => { unitCountsByFloor[u.floorType] += u.count; });
+           if (units && units.length > 0) {
+                    const unitCountsByFloor: Record<string, number> = { normal: 0, ground: 0, basement: 0, roof: 0 };
+                    units.forEach(u => { unitCountsByFloor[u.floorType] += u.count; });
 
                 // Normal ve Bodrum katlar birden fazla olabileceği için kat başına düşen daireyi buluyoruz
                 const unitsPerNormalFloor = buildingStats.normalFloorCount > 0 ? unitCountsByFloor.normal / buildingStats.normalFloorCount : 0;
@@ -1850,9 +1850,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const basementWall = basementPerimeter * buildingStats.basementFloorHeight * buildingStats.basementFloorCount;
 
         // 4. Çatı katı duvar metrajı
-        let roofWall = 0;
-        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
-            const roofPerimeter = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea);
+       let roofWall = 0;
+        if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
+            const roofPerimeter = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0);
             roofWall = roofPerimeter * (buildingStats.roofFloorHeight || 1.8);
         }
 
@@ -1866,8 +1866,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
 
         // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI (DÜZELTİLMİŞ) ---
         let roofFacade = 0;
-        if (buildingStats.hasRoofFloor && buildingStats.roofFloorArea > 0) {
-            const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea); const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
+        if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
+            const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0); 
+            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
             const parapetHeight = 0.60; // Standart çatı parapet (diz duvarı) yüksekliği
 
             // Kalkan Duvar (Üçgen) Alanı Tahmini:

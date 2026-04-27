@@ -119,6 +119,7 @@ interface ProjectContextType {
     addDuplexPair: (pair: Omit<DuplexPair, 'id'>) => void;
     updateDuplexPair: (id: string, count: number) => void;
     removeDuplexPair: (id: string) => void;
+    resetSchedule: () => void; // EKLENDİ
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -1079,7 +1080,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (cat.id !== catId) return cat;
             return {
                 ...cat,
-                items: cat.items.map(item => {
+                items: cat.items.map((item: any) => {
                     if (item.name !== itemName) return item;
                     return { ...item, [field]: value };
                 })
@@ -1093,7 +1094,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 if (cat.id !== catId) return cat;
 
                 let categoryTotalDiff = 0;
-                const newItems = cat.items.map(item => {
+                const newItems = cat.items.map((item: any) => {
                     if (item.name !== itemName) return item;
 
                     const oldTotal = item.totalPrice || 0;
@@ -1181,7 +1182,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const recalculateCosts = (mode: 'quantities' | 'prices' | 'both') => {
         setCosts(prevCosts => prevCosts.map(cat => ({
             ...cat,
-            items: cat.items.map(item => {
+            items: cat.items.map((item: any) => {
                 let newQty = item.manualQuantity;
                 let newPrice = item.manualPrice;
                 if (mode === 'quantities' || mode === 'both') newQty = undefined;
