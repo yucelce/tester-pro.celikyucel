@@ -707,12 +707,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
     const constructionDuration = useMemo(() => {
-        if (buildingStats.isDurationManual && buildingStats.constructionDuration) {
+        if (buildingStats.constructionDuration !== undefined) {
             return buildingStats.constructionDuration;
         }
+        // Hiçbiri yoksa (ilk yükleme anı vs.) formülden çıkanı kullan
         return autoDuration;
-    }, [buildingStats.isDurationManual, buildingStats.constructionDuration, autoDuration]);
-
+    }, [buildingStats.constructionDuration, autoDuration]);
 
     const updateConstructionDuration = (duration: number | undefined) => {
         setBuildingStatsState(prev => ({
@@ -836,7 +836,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     if (prev.durationSource !== 'manual') {
                         const newSource = Object.keys(scheduleOverrides).length > 0 ? 'schedule' : 'auto';
 
-                        // SONSUZ DÖNGÜYÜ KIRAN KONTROL: Eğer değerler zaten aynıysa, referansı bozma!
+                        // SONSUZ DÖNGÜYÜ KIRAN KONTROL: Eğer değerler zaten aynıysa, objeyi (referansı) bozma!
                         if (prev.durationSource === newSource && prev.constructionDuration === computedMonths) {
                             return prev;
                         }
