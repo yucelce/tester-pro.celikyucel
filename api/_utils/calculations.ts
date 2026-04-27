@@ -678,8 +678,7 @@ export const getHeatingMetrics = (buildingStats: BuildingStats, globalWallMateri
     const volN = buildingStats.normalFloorArea * (buildingStats.normalFloorHeight - 0.12) * buildingStats.normalFloorCount;
 
     // 3. YENİ: Bodrum Kat Hacmi
-    const volB = buildingStats.basementFloorCount * buildingStats.basementFloorArea * (Math.max(0, buildingStats.basementFloorHeight - 0.12) - 0.12);
-
+    const volB = buildingStats.basementFloorCount * buildingStats.basementFloorArea * Math.max(0, buildingStats.basementFloorHeight - 0.12);
     // 4. YENİ: Çatı Katı Hacmi
     let volR = 0;
     if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
@@ -773,6 +772,7 @@ export const calculateUnitCost = (
     let currentFloorHeight = buildingStats.normalFloorHeight;
     if (unit.floorType === 'ground') currentFloorHeight = buildingStats.groundFloorHeight;
     else if (unit.floorType === 'basement') currentFloorHeight = buildingStats.basementFloorHeight;
+    else if (unit.floorType === 'roof') currentFloorHeight = buildingStats.roofFloorHeight || 1.8;
 
     // YENİ: Binanın TOPLAM yüksekliğini hesaplıyoruz (Devrilme Momenti için)
     const totalBuildingHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
@@ -1007,9 +1007,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             const basementHallLen = (buildingStats.basementFloorHallArea || 10) / 1.5;
 
             // Kullanıcı birim (daire) eklemişse tam sayıları bul
-           if (units && units.length > 0) {
-                    const unitCountsByFloor: Record<string, number> = { normal: 0, ground: 0, basement: 0, roof: 0 };
-                    units.forEach(u => { unitCountsByFloor[u.floorType] += u.count; });
+            if (units && units.length > 0) {
+                const unitCountsByFloor: Record<string, number> = { normal: 0, ground: 0, basement: 0, roof: 0 };
+                units.forEach(u => { unitCountsByFloor[u.floorType] += u.count; });
 
                 // Normal ve Bodrum katlar birden fazla olabileceği için kat başına düşen daireyi buluyoruz
                 const unitsPerNormalFloor = buildingStats.normalFloorCount > 0 ? unitCountsByFloor.normal / buildingStats.normalFloorCount : 0;
@@ -1850,7 +1850,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const basementWall = basementPerimeter * buildingStats.basementFloorHeight * buildingStats.basementFloorCount;
 
         // 4. Çatı katı duvar metrajı
-       let roofWall = 0;
+        let roofWall = 0;
         if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
             const roofPerimeter = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0);
             roofWall = roofPerimeter * (buildingStats.roofFloorHeight || 1.8);
@@ -1867,7 +1867,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI (DÜZELTİLMİŞ) ---
         let roofFacade = 0;
         if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
-            const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0); 
+            const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0);
             const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
             const parapetHeight = 0.60; // Standart çatı parapet (diz duvarı) yüksekliği
 
@@ -2218,7 +2218,17 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let isSloped = excavationDepth > 6.0 && !buildingStats.hasWellFoundation;
 
         // 1. Standart çalışma payı (Perde ile dik toprak arası) dolgusu: Çevre x Genişlik x Derinlik
-        let backfillVolume = basePerim * extensionBase * excavationDepth;
+        let backfillVolume = 0;
+        // Kuyu temel varsa toprak dik kesildiği için geri dolgu sıfıra yakındır
+        if (!buildingStats.hasWellFoundation) {
+            backfillVolume = basePerim * extensionBase * excavationDepth;
+
+            if (isSloped) {
+                const extraWidthAtTop = Math.floor(excavationDepth / 6.0) * 2.0;
+                const extraWedgeVolume = basePerim * (extraWidthAtTop / 2) * excavationDepth;
+                backfillVolume += extraWedgeVolume;
+            }
+        }
 
         // 2. Eğer şevli kazı yapılmışsa (6m'den derin), devasa bir kama (üçgen) boşluk oluşur.
         // calc_excavation formülüne göre her 6 metrede 2 metre dışarı açılıyor.
