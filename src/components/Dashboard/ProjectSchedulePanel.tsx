@@ -152,8 +152,7 @@ export const ProjectSchedulePanel: React.FC = () => {
                         <div className="flex items-center justify-between w-full md:w-auto gap-3 border-t md:border-0 border-slate-200 dark:border-slate-700 pt-3 md:pt-0">
                             <div className="text-left md:text-right">
                                 <span className="block text-[10px] md:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Toplam Süre</span>
-                                <span className="text-[10px] md:text-sm font-mono text-slate-500 leading-none">{Math.ceil(totalWeeks / 4.33)} Ay <span className="hidden sm:inline">({Math.ceil(totalWeeks)} Hf)</span></span>
-                            </div>
+<span className="text-[10px] md:text-sm font-mono text-slate-500 leading-none">{(totalWeeks / 4.33).toFixed(1)} Ay <span className="hidden sm:inline">({totalWeeks.toFixed(1)} Hf)</span></span>                            </div>
                             <button
                                 onClick={() => setShowDependencies(true)}
                                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 md:px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition shadow-md flex-1 md:flex-none"
