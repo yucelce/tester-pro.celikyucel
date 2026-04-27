@@ -356,26 +356,33 @@ export const DashboardView: React.FC = () => {
                                     <span className="text-[10px] text-slate-500 font-medium">m² (Emsal Dahil)</span>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                            <div className="flex items-start justify-between mt-3">
+                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mt-1">
                                     <i className="far fa-clock text-indigo-500/70"></i>
                                     <span className="text-[10px] uppercase font-bold tracking-wider">Süre:</span>
                                 </div>
-                                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            type="number"
-                                            value={constructionDuration}
-                                            onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                            className={`w-10 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.isDurationManual ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
-                                        />
-                                        <span className="text-[10px] text-slate-500 ml-1">Ay</span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 shadow-sm">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="number"
+                                                value={constructionDuration || ''}
+                                                onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
+                                                className={`w-10 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
+                                            />
+                                            <span className="text-[10px] text-slate-500 ml-1">Ay</span>
+                                        </div>
+                                        {buildingStats.durationSource === 'manual' && (
+                                            <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
+                                        )}
                                     </div>
-                                    {buildingStats.isDurationManual ? (
-                                        <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
-                                    ) : (
-                                        <span className="ml-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[9px] font-bold px-1.5 py-0.5 rounded">OTO</span>
-                                    )}
+                                    
+                                    {/* KAYNAK BELİRTECİ (YENİ EKLENDİ) */}
+                                    <div className="text-[9px] font-bold mt-0.5">
+                                        {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
+                                        {buildingStats.durationSource === 'schedule' && <span className="text-purple-500 flex items-center gap-1"><i className="fas fa-calendar-check"></i> İş Programından</span>}
+                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Alanından (Oto)</span>}
+                                    </div>
                                 </div>
                             </div>
                         </div>

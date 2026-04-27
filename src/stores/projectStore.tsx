@@ -278,7 +278,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         existingUnitCount: 0,
         monthlyRentPerUnit: 0,
         evictionCostPerUnit: 0,
-        includeRentCost: false
+        includeRentCost: false,
+        durationSource: 'auto',
+        isScheduleOutdated: false
     });
 
     const [duplexPairs, setDuplexPairs] = useState<DuplexPair[]>([]);
@@ -712,11 +714,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, [buildingStats.isDurationManual, buildingStats.constructionDuration, autoDuration]);
 
 
-    const updateConstructionDuration = (duration: number | undefined) => {
+   const updateConstructionDuration = (duration: number | undefined) => {
         setBuildingStatsState(prev => ({
             ...prev,
             isDurationManual: duration !== undefined,
+            // Süre kaynağını belirliyoruz:
+            durationSource: duration !== undefined ? 'manual' : (Object.keys(scheduleOverrides).length > 0 ? 'schedule' : 'auto'),
             constructionDuration: duration
+        }));
+        setIsDataDirty(true);
+    };
+
+    const resetSchedule = () => {
+        setScheduleOverrides({});
+        setBuildingStatsState(prev => ({ 
+            ...prev, 
+            isScheduleOutdated: false, 
+            durationSource: 'auto',
+            isDurationManual: false,
+            constructionDuration: undefined
         }));
         setIsDataDirty(true);
     };
@@ -812,6 +828,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }));
 
                 setProjectSchedule(parsedSchedule);
+                const totalWeeks = Math.max(...parsedSchedule.map((s: any) => s.endWeek), 0) + 4;
+                const computedMonths = Math.ceil(totalWeeks / 4.33);
+
+                setBuildingStatsState(prev => {
+                    // EĞER kullanıcı eliyle süre girmediyse (manuel değilse) süreyi takvimden al
+                    if (prev.durationSource !== 'manual') {
+                        const newSource = Object.keys(scheduleOverrides).length > 0 ? 'schedule' : 'auto';
+                        return {
+                            ...prev,
+                            durationSource: newSource,
+                            constructionDuration: computedMonths
+                        };
+                    }
+                    return prev;
+                });
+
             } else {
                 // YENİ EKLENEN HATA YAKALAMA BLOĞU
                 const errText = await resSchedule.text();
@@ -918,10 +950,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const setBuildingStats = (value: React.SetStateAction<BuildingStats>) => {
-        setBuildingStatsState(value);
+        setBuildingStatsState(prev => {
+            // Gelen değeri güvenli şekilde işle
+            const next = typeof value === 'function' ? value(prev) : { ...prev, ...value };
+            
+            // Kaba yapı / Alan değişimi kontrolü
+            const isStructureChanged = 
+                prev.normalFloorArea !== next.normalFloorArea ||
+                prev.groundFloorArea !== next.groundFloorArea ||
+                prev.basementFloorArea !== next.basementFloorArea ||
+                prev.normalFloorCount !== next.normalFloorCount ||
+                prev.basementFloorCount !== next.basementFloorCount ||
+                prev.buildingType !== next.buildingType;
+
+            // Eğer alan değiştiyse ve takvimde manuel kilitlenmiş işler varsa, takvimi "ESKİMİŞ" işaretle!
+            if (isStructureChanged && Object.keys(scheduleOverrides).length > 0) {
+                next.isScheduleOutdated = true;
+            }
+            return next;
+        });
         setIsDataDirty(true);
     };
-
     const addUnit = () => {
         const newUnit: UnitType = {
             id: Date.now().toString(),
@@ -1134,6 +1183,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 return { ...item, manualQuantity: newQty, manualPrice: newPrice };
             })
         })));
+
+        if (mode === 'quantities' || mode === 'both') {
+            resetSchedule();
+        }
 
         // YENİ EKLENEN KISIM: Sıfırla butonuna basılınca tüm projeyi anında sıfırla
         setProjectCostDetails(prevDetails => {
@@ -1429,7 +1482,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             addSale, isPriceFetchError,
             removeSale, startNewProject, bulkUpdatePrices, duplexPairs,
             addDuplexPair, updateDuplexPair, removeDuplexPair,
-            isCalculating, systemWarnings, applyAutoFix,
+            isCalculating, systemWarnings, applyAutoFix,resetSchedule,
             triggerBackendCalculation,
         }}>
             {children}

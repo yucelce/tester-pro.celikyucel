@@ -9,7 +9,8 @@ export const ProjectSchedulePanel: React.FC = () => {
         buildingStats,
         scheduleOverrides,
         updateScheduleOverride,
-        setProjectStartDate
+        setProjectStartDate,
+        resetSchedule
     } = useProjectStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -103,6 +104,28 @@ export const ProjectSchedulePanel: React.FC = () => {
 
             {isExpanded && (
                 <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-700 animate-fadeIn bg-white dark:bg-slate-900">
+                    {buildingStats.isScheduleOutdated && (
+                        <div className="mb-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="bg-orange-100 dark:bg-orange-800/50 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+                                    <i className="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400 text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-orange-800 dark:text-orange-300 text-sm">Yapı Bilgileri Değişti!</h4>
+                                    <p className="text-xs text-orange-700/80 dark:text-orange-400/80 mt-1 leading-relaxed">
+                                        Proje alanı veya kat sayısı değiştirildi ancak takviminizdeki <b>manuel kilitler (el ile süre değiştirmeleriniz)</b> nedeniyle inşaat süresi yeni yapı alanına göre güncellenemiyor.
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={resetSchedule} 
+                                className="w-full md:w-auto bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-md whitespace-nowrap flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <i className="fas fa-unlock-alt"></i> Kilitleri Çöz & Oto Dağıt
+                            </button>
+                        </div>
+                    )}
+                    
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 md:p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                         
                         {/* Tarihler - Mobilde Yan Yana */}

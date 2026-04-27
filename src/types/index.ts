@@ -251,6 +251,9 @@ export interface BuildingStats {
     constructionDuration?: number; // Manuel girilen süre
     isDurationManual?: boolean;    // Manuel mod aktif mi?
 
+    durationSource?: 'auto' | 'schedule' | 'manual'; 
+    isScheduleOutdated?: boolean;
+
     projectStartDate?: string;
 
     constructionModel?: 'standard' | 'kat_karsiligi'; // İnşaat Modeli
