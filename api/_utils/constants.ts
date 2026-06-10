@@ -338,6 +338,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "İskan Harcı": 318.94,
     "Mevcut Bina Yıkım Ruhsat Bedeli": 25.52,
     "Yeşil Etiket (Asansör Ruhsat)": 7087.5,
+    "Emlak Vergisi Tutarı": 0,
     // 04.03.2026 Güncellendi
     // --- TEMEL KABA VE İNCE İNŞAAT ---
     "Hafriyat (Kazı ve Döküm)": 765,           // hafriyatpaket
