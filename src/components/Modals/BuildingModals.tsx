@@ -421,7 +421,8 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                                 max={buildingStats.buildingType === 'villa' ? 3 : undefined}
                                                 value={buildingStats.normalFloorCount}
                                                 onChange={(e) => {
-                                                    const val = parseInt(e.target.value) || 1;
+                                                    const parsed = parseInt(e.target.value);
+                                                    const val = isNaN(parsed) ? 0 : Math.max(0, parsed); // Negatif girilmesini önlemek için Math.max eklenebilir
                                                     const maxVal = buildingStats.buildingType === 'villa' ? Math.min(val, 3) : val;
                                                     setBuildingStats({ ...buildingStats, normalFloorCount: maxVal });
                                                 }}
