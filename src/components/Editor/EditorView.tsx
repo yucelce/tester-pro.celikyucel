@@ -294,7 +294,8 @@ export const EditorView: React.FC = () => {
                 setZoom(1);
                 setPanOffset({ x: 0, y: 0 });
             };
-            img.src = evt.target.result as string;
+
+            img.src = evt.target?.result as string;
         };
         reader.readAsDataURL(file);
     };
