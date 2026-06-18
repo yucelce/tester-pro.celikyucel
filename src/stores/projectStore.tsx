@@ -234,13 +234,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
 
-    const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([
-        {
-            id: 's1', name: 'Normal Kat Planı', count: 5, rooms: [], walls: [], columns: [], beams: [], slabs: [],
-            floorType: 'normal', imageData: null, scale: 0, lastEdited: Date.now(),
-            structuralWallSource: 'global_calculated', structuralConcreteSource: 'global_calculated'
-        }
-    ]);
+    const [structuralUnits, setStructuralUnits] = useState<UnitType[]>([]);
 
     const [costs, setCosts] = useState<CostCategory[]>([]);
     const [projectSchedule, setProjectSchedule] = useState<ScheduleItem[]>([]);
