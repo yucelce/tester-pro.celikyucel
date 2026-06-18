@@ -599,6 +599,7 @@ export const EditorView: React.FC = () => {
             if (room.type) {
                 switch (room.type) {
                     case 'living': ctx.fillStyle = 'rgba(59, 130, 246, 0.4)'; break; // blue
+                    case 'american_kitchen': ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; break; // red
                     case 'bedroom': ctx.fillStyle = 'rgba(168, 85, 247, 0.4)'; break; // purple
                     case 'kitchen': ctx.fillStyle = 'rgba(249, 115, 22, 0.4)'; break; // orange
                     case 'bath': ctx.fillStyle = 'rgba(6, 182, 212, 0.4)'; break; // cyan

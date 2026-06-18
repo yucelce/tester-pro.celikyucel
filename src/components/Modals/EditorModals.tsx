@@ -297,6 +297,8 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
         switch (type) {
             case 'living':
                 defaultName = 'Salon'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2.5; break;
+            case 'american_kitchen':
+                defaultName = 'Amerikan Mutfak'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 3.5; break;
             case 'bedroom':
                 defaultName = 'Yatak Odası'; defaultFloor = 'parke'; defaultWall = 'boya'; defaultCornice = true; defaultWindowArea = 2; break;
             case 'kitchen':
@@ -404,6 +406,7 @@ export const RoomModal: React.FC<RoomModalProps> = ({ room, scale, onUpdate, onD
                         <div className="grid grid-cols-3 gap-2">
                             {[
                                 { id: 'living', label: 'Salon', icon: 'fa-couch', activeClass: 'bg-blue-900/40 border-blue-500 text-white' },
+                               { id: 'american_kitchen', label: 'Amerikan Mutf.', icon: 'fa-blender', activeClass: 'bg-red-900/40 border-red-500 text-white' },
                                 { id: 'bedroom', label: 'Yatak Odası', icon: 'fa-bed', activeClass: 'bg-purple-900/40 border-purple-500 text-white' },
                                 { id: 'kitchen', label: 'Mutfak', icon: 'fa-utensils', activeClass: 'bg-orange-900/40 border-orange-500 text-white' },
                                 { id: 'bath', label: 'Banyo', icon: 'fa-bath', activeClass: 'bg-cyan-900/40 border-cyan-500 text-white' },
