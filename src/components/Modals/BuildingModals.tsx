@@ -417,7 +417,7 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                                             <label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
                                             <input
                                                 type="number"
-                                                min="1"
+                                                min="0"
                                                 max={buildingStats.buildingType === 'villa' ? 3 : undefined}
                                                 value={buildingStats.normalFloorCount}
                                                 onChange={(e) => {
