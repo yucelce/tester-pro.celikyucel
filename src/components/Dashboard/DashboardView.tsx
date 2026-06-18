@@ -387,7 +387,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* KART 3: Kat Bilgisi */}
+                      {/* KART 3: Kat Bilgisi */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
                             <div>
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
@@ -395,13 +395,13 @@ export const DashboardView: React.FC = () => {
                                     <span className="text-[10px] uppercase font-bold tracking-wider">Kat Bilgisi</span>
                                 </div>
                                 <div className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
-                                    {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal
+                                    {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal{buildingStats.hasRoofFloor ? ' + Çatı' : ''}
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                                 <span>Top. Yükseklik:</span>
                                 <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                    {((buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight + (buildingStats.basementFloorCount * buildingStats.basementFloorHeight)).toFixed(1)} m
+                                    {((buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight + (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0)).toFixed(1)} m
                                 </span>
                             </div>
                         </div>
