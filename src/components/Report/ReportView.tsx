@@ -161,7 +161,7 @@ export const ReportView: React.FC = () => {
         const allMonthsSet = new Set([...Object.keys(expensesByMonth), ...Object.keys(salesByMonth)]);
         const sortedMonths = Array.from(allMonthsSet).sort();
 
-        let table: any[] = []; 
+        let table = [];
         let cumulativeBalance = 0;
 
         sortedMonths.forEach(mStr => {
@@ -198,8 +198,8 @@ export const ReportView: React.FC = () => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
-            if (type === 'logo') updateReportSettings({ firmLogo: evt.target?.result as string }); // <--- DEĞİŞİKLİK BURADA
-            else updateReportSettings({ projectRender: evt.target?.result as string }); // <--- DEĞİŞİKLİK BURADA
+            if (type === 'logo') updateReportSettings({ firmLogo: evt.target.result as string });
+            else updateReportSettings({ projectRender: evt.target.result as string });
         };
         reader.readAsDataURL(file);
     };

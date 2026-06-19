@@ -5,7 +5,6 @@ export interface CostItem {
   name: string;
   unit: string;
   unit_price: number;
-  isExcluded?: boolean;
   auto_source: 'total_area' | 'land_area' | 'total_perimeter' | 'dry_area' | 'wet_area' | 'dry_perimeter' | 'wall_surface_area' | 'net_wall_area' | 'cornice_length' | 'manual' |
   'wall_10_area' | 'wall_13_5_area' | 'wall_15_area' | 'wall_20_area' | 'wall_25_area' |
   'calc_architectural' | 'calc_inspection' | 'calc_acoustic' | 'calc_site_chief' |
