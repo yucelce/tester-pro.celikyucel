@@ -397,7 +397,7 @@ export default async function handler(req: any, res: any) {
 
                     const isExcluded = item.isExcluded === true; // <--- EKLENDİ
                     const finalPrice = item.manualPrice !== undefined ? item.manualPrice : dynamicUnitPrice;
-                    const totalPrice = isExcluded ? 0 : (finalQty * finalPrice); // <--- EKLENDİ (Hariçse 0 yap)
+                    const totalPrice = isExcluded ? 0 : (finalQty * finalPrice); // <--- EKLENDİ (Hariçse 0 yap )
                     catTotal += totalPrice;
 
                     return {
