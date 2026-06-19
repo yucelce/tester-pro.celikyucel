@@ -114,6 +114,7 @@ interface ProjectContextType {
     startNewProject: (type: 'apartment' | 'villa') => void;
 
     bulkUpdatePrices: (newPrices: { itemName: string, price: number }[]) => void;
+    toggleCostItemExclusion: (catId: string, itemName: string, isExcluded: boolean) => void;
 
     duplexPairs: DuplexPair[];
     addDuplexPair: (pair: Omit<DuplexPair, 'id'>) => void;
@@ -766,7 +767,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     name: item.name,
                     unit_price: item.unit_price, // Wix'ten gelen güncel fiyat
                     manualPrice: item.manualPrice,
-                    manualQuantity: item.manualQuantity
+                    manualQuantity: item.manualQuantity,
+                    isExcluded: item.isExcluded
+
                 }))
             }));
 
@@ -1172,6 +1175,52 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDataDirty(true);
     };
 
+    // BUNU AYNEN KOPYALAYIP YAPIŞTIRIN:
+    const toggleCostItemExclusion = (catId: string, itemName: string, isExcluded: boolean) => {
+        setCosts(prevCosts => prevCosts.map(cat => {
+            if (cat.id !== catId) return cat;
+            return {
+                ...cat,
+                items: cat.items.map((item: any) => {
+                    if (item.name !== itemName) return item;
+                    return { ...item, isExcluded };
+                })
+            };
+        }));
+
+        // UI'ın anında (donmadan) tepki vermesi için Optimistic Update
+        setProjectCostDetails(prevDetails => {
+            let totalDiff = 0;
+            const newDetails = prevDetails.map(cat => {
+                if (cat.id !== catId) return cat;
+                let categoryTotalDiff = 0;
+                const newItems = cat.items.map((item: any) => {
+                    if (item.name !== itemName) return item;
+
+                    const oldTotal = item.totalPrice || 0;
+                    const updatedItem = { ...item, isExcluded };
+                    const finalQty = updatedItem.manualQuantity !== undefined ? updatedItem.manualQuantity : (updatedItem.calculatedAutoQty || 0);
+                    const finalPrice = updatedItem.manualPrice !== undefined ? updatedItem.manualPrice : (updatedItem.unit_price || 0);
+
+                    // Hariç tutulduysa toplamını 0 yap
+                    updatedItem.totalPrice = isExcluded ? 0 : (finalQty * finalPrice);
+
+                    categoryTotalDiff += (updatedItem.totalPrice - oldTotal);
+                    return updatedItem;
+                });
+                totalDiff += categoryTotalDiff;
+                return {
+                    ...cat,
+                    items: newItems,
+                    totalCategoryCost: cat.totalCategoryCost + categoryTotalDiff
+                };
+            });
+            setProjectTotalCost(prev => prev + totalDiff);
+            return newDetails;
+        });
+        setIsDataDirty(true);
+    };
+
     const dismissDataDirty = () => setIsDataDirty(false);
 
     const recalculateCosts = (mode: 'quantities' | 'prices' | 'both') => {
@@ -1308,10 +1357,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 duplexPairs,
                 costs: costs.map(c => ({
                     id: c.id,
-                    items: c.items.filter(i => i.manualPrice !== undefined || i.manualQuantity !== undefined).map(i => ({
+                    items: c.items.filter((i: any) => i.manualPrice !== undefined || i.manualQuantity !== undefined || i.isExcluded).map((i: any) => ({
                         name: i.name,
                         manualPrice: i.manualPrice,
-                        manualQuantity: i.manualQuantity
+                        manualQuantity: i.manualQuantity,
+                        isExcluded: i.isExcluded
                     }))
                 })),
                 globalSettings: {
@@ -1406,7 +1456,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     items: cat.items.map(item => {
                         const savedItem = savedCat.items.find((si: any) => si.name === item.name);
                         if (savedItem) {
-                            return { ...item, manualPrice: savedItem.manualPrice, manualQuantity: savedItem.manualQuantity };
+                            return { ...item, manualPrice: savedItem.manualPrice, manualQuantity: savedItem.manualQuantity, isExcluded: savedItem.isExcluded };
                         }
                         return item;
                     })
@@ -1471,6 +1521,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction,
             setGlobalWallThickness: setGlobalWallThicknessAction,
             updateCostItem: updateCostItemAction,
+            toggleCostItemExclusion,
             saveProject, loadProject, fetchProjects, deleteProject,
             updateConstructionDuration, duplicateUnit,
             updateHallArea, reportSettings,

@@ -73,7 +73,8 @@ export default async function handler(req: any, res: any) {
                         // Eğer frontend'den bir fiyat gelmişse onu kullan, yoksa orijinalini tut
                         unit_price: optItem?.unit_price ?? baseItem.unit_price,
                         manualPrice: optItem?.manualPrice,
-                        manualQuantity: optItem?.manualQuantity
+                        manualQuantity: optItem?.manualQuantity,
+                        isExcluded: optItem?.isExcluded ?? baseItem.isExcluded
                     };
                 })
             };
@@ -394,8 +395,9 @@ export default async function handler(req: any, res: any) {
                         finalQty = item.manualQuantity !== undefined ? item.manualQuantity : calculatedAutoQty;
                     }
 
+                    const isExcluded = item.isExcluded === true; // <--- EKLENDİ
                     const finalPrice = item.manualPrice !== undefined ? item.manualPrice : dynamicUnitPrice;
-                    const totalPrice = finalQty * finalPrice;
+                    const totalPrice = isExcluded ? 0 : (finalQty * finalPrice); // <--- EKLENDİ (Hariçse 0 yap)
                     catTotal += totalPrice;
 
                     return {
