@@ -83,6 +83,7 @@ interface ProjectContextType {
     setGlobalWallMaterial: (material: WallMaterial) => void;
     setGlobalWallThickness: (thickness: number) => void;
     updateCostItem: (catId: string, itemName: string, field: 'manualQuantity' | 'manualPrice', value: number | undefined) => void;
+    toggleCostItemActive: (catId: string, itemName: string) => void;
     isFetchingHeat: boolean;
 
     // Persistence
@@ -766,7 +767,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     name: item.name,
                     unit_price: item.unit_price, // Wix'ten gelen güncel fiyat
                     manualPrice: item.manualPrice,
-                    manualQuantity: item.manualQuantity
+                    manualQuantity: item.manualQuantity,
+                    isDisabled: item.isDisabled
                 }))
             }));
 
@@ -1119,6 +1121,54 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsDataDirty(false);
     };
 
+    const toggleCostItemActiveAction = (catId: string, itemName: string) => {
+        // 1. Ana cost listesini güncelle
+        setCosts(prevCosts => prevCosts.map(cat => {
+            if (cat.id !== catId) return cat;
+            return {
+                ...cat,
+                items: cat.items.map((item: any) => {
+                    if (item.name !== itemName) return item;
+                    return { ...item, isDisabled: !item.isDisabled };
+                })
+            };
+        }));
+
+        // 2. Arayüzü anında güncelle (Optimistic UI)
+        setProjectCostDetails(prevDetails => {
+            let totalDiff = 0;
+            const newDetails = prevDetails.map(cat => {
+                if (cat.id !== catId) return cat;
+
+                let categoryTotalDiff = 0;
+                const newItems = cat.items.map((item: any) => {
+                    if (item.name !== itemName) return item;
+                    
+                    const isNowDisabled = !item.isDisabled;
+                    const itemTotal = item.totalPrice || 0;
+                    
+                    // Pasif olduysa toplamdan çıkar (-), Aktif olduysa toplama ekle (+)
+                    const diff = isNowDisabled ? -itemTotal : itemTotal;
+                    categoryTotalDiff += diff;
+
+                    return { ...item, isDisabled: isNowDisabled };
+                });
+                
+                totalDiff += categoryTotalDiff;
+                return {
+                    ...cat,
+                    items: newItems,
+                    totalCategoryCost: cat.totalCategoryCost + categoryTotalDiff
+                };
+            });
+
+            setProjectTotalCost(prev => prev + totalDiff);
+            return newDetails;
+        });
+
+        setIsDataDirty(true);
+    };
+
     const bulkUpdatePrices = (newPrices: { itemName: string, price: number }[]) => {
         setCosts(prevCosts => prevCosts.map(cat => ({
             ...cat,
@@ -1311,7 +1361,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     items: c.items.filter(i => i.manualPrice !== undefined || i.manualQuantity !== undefined).map(i => ({
                         name: i.name,
                         manualPrice: i.manualPrice,
-                        manualQuantity: i.manualQuantity
+                        manualQuantity: i.manualQuantity,
+                        isDisabled: i.isDisabled
                     }))
                 })),
                 globalSettings: {
@@ -1406,7 +1457,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     items: cat.items.map(item => {
                         const savedItem = savedCat.items.find((si: any) => si.name === item.name);
                         if (savedItem) {
-                            return { ...item, manualPrice: savedItem.manualPrice, manualQuantity: savedItem.manualQuantity };
+                            return { ...item, manualPrice: savedItem.manualPrice, manualQuantity: savedItem.manualQuantity, isDisabled: savedItem.isDisabled };
                         }
                         return item;
                     })
@@ -1471,6 +1522,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setBuildingStats, toggleWallMode, toggleConcreteMode, setGlobalWallMaterial: setGlobalWallMaterialAction,
             setGlobalWallThickness: setGlobalWallThicknessAction,
             updateCostItem: updateCostItemAction,
+            toggleCostItemActive: toggleCostItemActiveAction,
             saveProject, loadProject, fetchProjects, deleteProject,
             updateConstructionDuration, duplicateUnit,
             updateHallArea, reportSettings,
