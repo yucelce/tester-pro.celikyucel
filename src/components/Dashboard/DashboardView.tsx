@@ -79,6 +79,28 @@ export const DashboardView: React.FC = () => {
         navigateToReport
     } = useUIStore();
 
+    const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+
+    // Kategoriyi hariç tutma / dahil etme fonksiyonu
+    const toggleExcludeCategory = (e: React.MouseEvent, categoryId: string) => {
+        e.preventDefault();
+        e.stopPropagation(); // Akordiyonun açılıp kapanmasını tetiklemesini engeller
+        setExcludedCategories(prev =>
+            prev.includes(categoryId)
+                ? prev.filter(id => id !== categoryId) // Varsa çıkar (Dahil et)
+                : [...prev, categoryId]                // Yoksa ekle (Hariç tut)
+        );
+    };
+
+    // Pasife alınan kategorileri çıkararak ekranda görünecek yeni toplamı hesaplar
+    const displayedTotalCost = useMemo(() => {
+        if (excludedCategories.length === 0) return projectTotalCost;
+        return projectCostDetails.reduce((sum, cat) => {
+            if (excludedCategories.includes(cat.id)) return sum;
+            return sum + cat.totalCategoryCost;
+        }, 0);
+    }, [projectTotalCost, projectCostDetails, excludedCategories]);
+
     const hasManualOverrides = projectCostDetails.some(cat =>
         cat.items.some(item => item.manualQuantity !== undefined || item.manualPrice !== undefined)
     );
@@ -133,7 +155,14 @@ export const DashboardView: React.FC = () => {
                             <i className="fas fa-circle-notch fa-spin"></i> İşleniyor...
                         </span>
                     ) : (
-                        projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+                        <div className="flex items-center gap-2">
+                            <span>{displayedTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</span>
+                            {excludedCategories.length > 0 && (
+                                <span className="text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/30 whitespace-nowrap">
+                                    (-{excludedCategories.length} Kategori)
+                                </span>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -195,13 +224,22 @@ export const DashboardView: React.FC = () => {
                         </div>
 
                         {/* FİYAT KISMI */}
-                        <div id="tour-total-cost" className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none">
+                        <div id="tour-total-cost" className="text-base sm:text-xl md:text-3xl font-bold text-green-600 dark:text-green-500 tracking-tight leading-none flex items-center">
                             {isCalculating ? (
                                 <span className="flex items-center gap-2 text-blue-500 text-lg md:text-2xl animate-pulse">
                                     <i className="fas fa-circle-notch fa-spin"></i> Hesaplanıyor...
                                 </span>
                             ) : (
-                                projectTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })
+                                <div className="flex items-center gap-2">
+                                    <span>{displayedTotalCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</span>
+                                    {excludedCategories.length > 0 && (
+                                        <span className="flex flex-col justify-center">
+                                            <span className="text-[10px] sm:text-xs text-red-500 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/30 whitespace-nowrap leading-none">
+                                                {excludedCategories.length} Kategori Hariç
+                                            </span>
+                                        </span>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -376,7 +414,7 @@ export const DashboardView: React.FC = () => {
                                             <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
                                         )}
                                     </div>
-                                    
+
                                     {/* KAYNAK BELİRTECİ (YENİ EKLENDİ) */}
                                     <div className="text-[9px] font-bold mt-0.5">
                                         {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
@@ -387,7 +425,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
 
-                      {/* KART 3: Kat Bilgisi */}
+                        {/* KART 3: Kat Bilgisi */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
                             <div>
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
@@ -858,15 +896,42 @@ export const DashboardView: React.FC = () => {
                                     key={category.id}
                                     className={`bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-lg transition-all duration-300 ${expandedCategories[category.id] ? 'md:col-span-2 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700' : ''} relative`}
                                 >
-                                    <button onClick={() => toggleCategory(category.id)} className="sticky top-0 md:top-[110px] z-10 w-full bg-slate-100/95 dark:bg-slate-700/95 backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center hover:bg-slate-200 dark:hover:bg-slate-600 transition shadow-sm">                                        <div className="flex items-center gap-3">
-                                        <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">{getCategoryIcon(category.id)}</div>
-                                        <div className="text-left"><h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">{category.title}</h3></div>
-                                    </div>
-                                        <span className="text-green-600 dark:text-green-400 font-bold text-sm">{category.totalCategoryCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}</span>
-                                    </button>
+                                    {(() => {
+                                        const isExcluded = excludedCategories.includes(category.id);
+                                        return (
+                                            <button
+                                                onClick={() => toggleCategory(category.id)}
+                                                className={`sticky top-0 md:top-[110px] z-10 w-full backdrop-blur-sm px-4 py-3 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center transition shadow-sm group ${isExcluded ? 'bg-slate-200/80 dark:bg-slate-800/80 opacity-60 grayscale' : 'bg-slate-100/95 dark:bg-slate-700/95 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm">
+                                                        {getCategoryIcon(category.id)}
+                                                    </div>
+                                                    <div className={`text-left ${isExcluded ? 'line-through decoration-red-500/50' : ''}`}>
+                                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm uppercase">{category.title}</h3>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`font-bold text-sm ${isExcluded ? 'text-red-500 line-through' : 'text-green-600 dark:text-green-400'}`}>
+                                                        {category.totalCategoryCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
+                                                    </span>
+
+                                                    {/* Hariç Tutma Butonu (Göz İkonu) */}
+                                                    <div
+                                                        onClick={(e) => toggleExcludeCategory(e, category.id)}
+                                                        className={`flex items-center justify-center w-8 h-8 rounded-full transition-all border ${isExcluded ? 'bg-red-100 border-red-200 text-red-500 dark:bg-red-900/40 dark:border-red-800' : 'bg-slate-200 border-transparent text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-white dark:bg-slate-800 dark:hover:bg-slate-700'}`}
+                                                        title={isExcluded ? "Maliyete Dahil Et" : "Maliyetten Çıkar"}
+                                                    >
+                                                        <i className={`fas ${isExcluded ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })()}
 
                                     {expandedCategories[category.id] && (
-                                        <div className="p-4 bg-white dark:bg-slate-900/30 animate-fadeIn">
+    <div className={`p-4 bg-white dark:bg-slate-900/30 animate-fadeIn ${excludedCategories.includes(category.id) ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {category.items.filter(item => {
                                                     const isWall = item.name.includes('Duvar');
