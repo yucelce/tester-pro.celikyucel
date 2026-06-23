@@ -69,8 +69,7 @@ export const DashboardView: React.FC = () => {
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices, duplexPairs,
-        toggleCostItemActive
+        globalStats, costs, bulkUpdatePrices, duplexPairs
     } = useProjectStore();
 
     const [showDuplexModal, setShowDuplexModal] = useState(false);
@@ -377,7 +376,7 @@ export const DashboardView: React.FC = () => {
                                             <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
                                         )}
                                     </div>
-
+                                    
                                     {/* KAYNAK BELİRTECİ (YENİ EKLENDİ) */}
                                     <div className="text-[9px] font-bold mt-0.5">
                                         {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
@@ -388,7 +387,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* KART 3: Kat Bilgisi */}
+                      {/* KART 3: Kat Bilgisi */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
                             <div>
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
@@ -878,240 +877,228 @@ export const DashboardView: React.FC = () => {
                                                 }).map((item) => {
                                                     const isLocked = LOCKED_ITEMS.includes(item.name);
                                                     return (
-                                                        <div key={item.name} className={`flex flex-col gap-2.5 p-3.5 rounded-xl border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-300 relative group ${item.isDisabled ? 'opacity-50 grayscale' : ''}`}>
-
-                                                            {/* ÜST KISIM: İsim, Göz İkonu ve Fiyat */}
-                                                            <div className="flex justify-between items-start gap-3 pl-6">
-
-                                                                {/* YENİ GÖZ İKONU (TOGGLE) BUTONU */}
-                                                                <button
-                                                                    onClick={() => toggleCostItemActive(category.id, item.name)}
-                                                                    className={`absolute left-3 top-4 transition-all duration-200 ${item.isDisabled ? 'opacity-100 text-red-500 hover:text-red-400' : 'opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-500'}`}
-                                                                    title={item.isDisabled ? "Maliyete Tekrar Dahil Et" : "Bu Kalemi Maliyetten Çıkar"}
-                                                                >
-                                                                    <i className={`fas ${item.isDisabled ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                                                </button>
-
-                                                                <span className={`text-slate-800 dark:text-slate-200 text-sm font-bold leading-tight flex items-center flex-wrap gap-1.5 ${item.isDisabled ? 'line-through decoration-red-500/50' : ''}`}>
+                                                        <div key={item.name} className="flex flex-col gap-2.5 p-3.5 rounded-xl border bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+                                                            <div className="flex justify-between items-start gap-3">
+                                                                <span className="text-slate-800 dark:text-slate-200 text-sm font-bold leading-tight flex items-center flex-wrap gap-1.5">
                                                                     {item.name}
                                                                     {isLocked && <i className="fas fa-lock text-[10px] text-slate-400 align-middle" title="Metraj sistem tarafından yönetilir"></i>}
 
                                                                     {/* BİLGİ İKONU VE TOOLTIP BAŞLANGICI */}
                                                                     {ITEM_DESCRIPTIONS[item.name] && (
-                                                                        <div className="relative group/tooltip inline-flex items-center justify-center">
+                                                                        <div className="relative group inline-flex items-center justify-center">
                                                                             <i className="fas fa-info-circle text-[11px] text-blue-400 hover:text-blue-600 cursor-help transition-colors"></i>
 
-                                                                            {/* Tooltip kutusu: group/tooltip kullanıldı */}
-                                                                            <div className="absolute bottom-full -left-2 sm:left-1/2 sm:-translate-x-1/2 pb-2 w-[260px] max-w-[85vw] opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-[9999]">
+                                                                            {/* 1. KAPSAYICI: Görünmez köprü görevi görür. mb-2 yerine pb-2 kullanıldı. pointer-events-none kaldırılıp invisible/visible eklendi. */}
+                                                                            <div className="absolute bottom-full -left-2 sm:left-1/2 sm:-translate-x-1/2 pb-2 w-[260px] max-w-[85vw] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+
+                                                                                {/* 2. GÖRSEL BALON: Arka plan ve padding özellikleri içteki div'e taşındı. */}
                                                                                 <div className="relative p-3 bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-medium leading-relaxed rounded-lg shadow-2xl">
                                                                                     {ITEM_DESCRIPTIONS[item.name]}
+
+                                                                                    {/* Tooltip oku - Mobilde sola yakın, masaüstünde ortada */}
                                                                                     <div className="absolute top-full left-3 sm:left-1/2 sm:-translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
                                                                                 </div>
+
                                                                             </div>
                                                                         </div>
                                                                     )}
                                                                     {/* BİLGİ İKONU VE TOOLTIP BİTİŞİ */}
                                                                 </span>
-
-                                                                <div className={`font-extrabold text-sm whitespace-nowrap px-2 py-0.5 rounded-md transition-colors ${item.isDisabled ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 line-through' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'}`}>
+                                                                <div className="font-extrabold text-green-600 dark:text-green-400 text-sm whitespace-nowrap bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-md">
                                                                     {item.totalPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                                                                 </div>
                                                             </div>
 
-                                                            {/* ALT KISIM (İNPUTLAR): Eğer pasifse pointer-events-none ile tıklamaları engelliyoruz ve soluklaştırıyoruz */}
-                                                            <div className={`transition-opacity duration-300 ${item.isDisabled ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-                                                                {item.inputType === 'manual_total' ? (
-                                                                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 gap-2">
-                                                                        <div className="text-xs text-slate-500">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="font-bold text-slate-700 dark:text-slate-300">Sabit Tutar / Paket Fiyatı</span>
+                                                            {item.inputType === 'manual_total' ? (
+                                                                <div className="mt-1 flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 gap-2">
+                                                                    <div className="text-xs text-slate-500">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-bold text-slate-700 dark:text-slate-300">Sabit Tutar / Paket Fiyatı</span>
 
-                                                                                {/* Paket fiyatı olan kalemler (Zemin Etüdü vb.) için kırılım butonu */}
-                                                                                {item.costBreakdown && item.costBreakdown.length > 0 && (
-                                                                                    <div className="relative flex items-center cursor-help group/breakdown">
-                                                                                        <i className="fas fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded transition shadow-sm"></i>
+                                                                            {/* YENİ EKLENEN: Paket fiyatı olan kalemler (Zemin Etüdü vb.) için kırılım butonu */}
+                                                                            {item.costBreakdown && item.costBreakdown.length > 0 && (
+                                                                                <div className="relative flex items-center cursor-help group/breakdown">
+                                                                                    <i className="fas fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded transition shadow-sm"></i>
 
-                                                                                        <div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
-                                                                                            <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
-                                                                                        </div>
-                                                                                            <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
-                                                                                                {item.costBreakdown.map((cb: any, idx: number) => (
-                                                                                                    <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
-                                                                                                        <span className="opacity-90 leading-tight">{cb.label}</span>
-                                                                                                        <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
-                                                                                                            {cb.value.toLocaleString('tr-TR')} ₺
-                                                                                                        </span>
-                                                                                                    </div>
-                                                                                                ))}
-                                                                                            </div>
-                                                                                            <div className="absolute top-full left-3 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
-                                                                                        </div>
+                                                                                    <div className="absolute bottom-full left-0 mb-2 w-72 sm:w-80 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+                                                                                        <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
                                                                                     </div>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="text-[10px] text-slate-400 mt-0.5">Bu kalem için miktar girilmez, doğrudan toplam tutar giriniz.</div>
+                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
+                                                                                            {item.costBreakdown.map((cb: any, idx: number) => (
+                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                    <span className="opacity-90 leading-tight">{cb.label}</span>
+                                                                                                    <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
+                                                                                                        {cb.value.toLocaleString('tr-TR')} ₺
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                        <div className="absolute top-full left-3 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-slate-400 mt-0.5">Bu kalem için miktar girilmez, doğrudan toplam tutar giriniz.</div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                                                                        <div className="flex items-center border rounded-md relative bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-600 focus-within:border-blue-500 w-32">
+                                                                            <NumericInput
+                                                                                className="w-full bg-transparent text-slate-900 dark:text-white text-sm p-1.5 outline-none font-bold text-right pr-6"
+                                                                                value={item.manualPrice !== undefined ? Number(Number(item.manualPrice).toFixed(2)) : Number(Number(item.unit_price).toFixed(2))}
+                                                                                onChange={(val) => updateCostItem(category.id, item.name, 'manualPrice', val)}
+                                                                                placeholder="Tutar"
+                                                                            />
+                                                                            <span className="absolute right-2 text-xs text-slate-500 bg-white/80 dark:bg-slate-950/80 pl-1">₺</span>
                                                                         </div>
 
-                                                                        <div className="flex items-center gap-2 self-end sm:self-auto">
-                                                                            <div className="flex items-center border rounded-md relative bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-600 focus-within:border-blue-500 w-32">
-                                                                                <NumericInput
-                                                                                    className="w-full bg-transparent text-slate-900 dark:text-white text-sm p-1.5 outline-none font-bold text-right pr-6"
-                                                                                    value={item.manualPrice !== undefined ? Number(Number(item.manualPrice).toFixed(2)) : Number(Number(item.unit_price).toFixed(2))}
-                                                                                    onChange={(val) => updateCostItem(category.id, item.name, 'manualPrice', val)}
-                                                                                    placeholder="Tutar"
-                                                                                />
-                                                                                <span className="absolute right-2 text-xs text-slate-500 bg-white/80 dark:bg-slate-950/80 pl-1">₺</span>
+                                                                        {item.manualPrice !== undefined && item.manualPrice !== item.unit_price && (
+                                                                            <button
+                                                                                onClick={() => updateCostItem(category.id, item.name, 'manualPrice', undefined)}
+                                                                                className="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 w-8 h-8 rounded-md flex items-center justify-center transition-colors"
+                                                                                title="Varsayılan fiyata dön"
+                                                                            >
+                                                                                <i className="fas fa-undo text-xs"></i>
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-start gap-2 sm:gap-4 mt-1">
+                                                                    <div className="flex-1 min-w-0 flex flex-col">
+                                                                        <div className={`flex items-center border rounded-lg relative overflow-hidden ${isLocked ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
+                                                                            <NumericInput
+                                                                                disabled={isLocked}
+                                                                                className={`w-full bg-transparent text-sm p-2 outline-none font-mono text-right transition ${item.unit.length > 7 ? 'pr-20' : item.unit.length > 3 ? 'pr-16' : 'pr-9'} ${isLocked ? 'text-slate-500 cursor-not-allowed font-bold' : 'text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-950'}`}
+                                                                                value={isLocked
+                                                                                    ? Number(Number(item.calculatedAutoQty).toFixed(2))
+                                                                                    : (item.manualQuantity !== undefined ? Number(Number(item.manualQuantity).toFixed(2)) : Number(Number(item.calculatedAutoQty).toFixed(2)))
+                                                                                }
+                                                                                onChange={(val) => !isLocked && updateCostItem(category.id, item.name, 'manualQuantity', val)}
+                                                                                placeholder="Miktar"
+                                                                            />
+                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">{item.unit}</span>
+                                                                        </div>
+
+                                                                        <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1 relative group/breakdown">
+
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
+
+                                                                                {/* BİRLEŞTİRİLMİŞ İCMAL VE MALİYET BALONU */}
+                                                                                {(
+                                                                                    (item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source)) ||
+                                                                                    (item.costBreakdown && item.costBreakdown.length > 0)
+                                                                                ) && (
+                                                                                        <div className="relative flex items-center cursor-help group/breakdown">
+                                                                                            {/* İkon: Eğer maliyet paketi ise yeşil kutu, metraj ise mavi liste ikonu gösterir */}
+                                                                                            <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
+
+                                                                                            {/* ANA TOOLTIP BALONU */}
+                                                                                            <div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">                                                                                                {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
+                                                                                                {item.costBreakdown && item.costBreakdown.length > 0 && (
+                                                                                                    <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
+                                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
+                                                                                                            <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
+                                                                                                        </div>
+                                                                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
+                                                                                                            {item.costBreakdown.map((cb: any, idx: number) => (
+                                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                                    <span className="opacity-90 leading-tight">{cb.label}</span>
+                                                                                                                    <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
+                                                                                                                        {cb.value.toLocaleString('tr-TR')} ₺
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+
+                                                                                                {/* 2. KISIM: METRAJ İCMAL DÖKÜMÜ */}
+                                                                                                {item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) && (
+                                                                                                    <div>
+                                                                                                        <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
+                                                                                                            <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
+                                                                                                        </div>
+                                                                                                        <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
+                                                                                                            {item.breakdown.map((b: any, idx: number) => (
+                                                                                                                <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
+                                                                                                                    <span className="opacity-90 leading-tight" title={b.source}>{b.source}</span>
+                                                                                                                    <span className={`font-mono font-bold shrink-0 mt-0.5 ${b.qty > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                                                                        {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+
+                                                                                                        <div className="border-t border-slate-600 mt-2 pt-2 flex justify-between items-center text-yellow-400 font-bold">
+                                                                                                            <span>Sistem Toplamı:</span>
+                                                                                                            <span>{item.calculatedAutoQty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {item.unit}</span>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+
+                                                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
                                                                             </div>
 
-                                                                            {item.manualPrice !== undefined && item.manualPrice !== item.unit_price && (
+                                                                            {!isLocked && item.manualQuantity !== undefined ? (
+                                                                                <button
+                                                                                    onClick={() => updateCostItem(category.id, item.name, 'manualQuantity', undefined)}
+                                                                                    className="text-[9px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase font-bold"
+                                                                                >
+                                                                                    Sıfırla
+                                                                                </button>
+                                                                            ) : (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${isLocked ? 'bg-slate-200 dark:bg-slate-700 text-slate-500' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'}`}>
+                                                                                        {isLocked ? 'Sistem' : 'Oto'}
+                                                                                    </span>
+                                                                                    {!isLocked && (['wet_area', 'dry_area', 'dry_perimeter', 'calc_facade', 'calc_excavation'].includes(item.auto_source) || item.name.includes("Duvar Malzemesi")) && (
+                                                                                        <span
+                                                                                            className="text-[8px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded cursor-help font-bold"
+                                                                                            title="Plan geometrisine/zorluğuna göre hesaplanan fire veya kabarma payı dahildir."
+                                                                                        >
+                                                                                            +Fire
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center justify-center pt-2">
+                                                                        <span className="text-slate-300 dark:text-slate-600 text-sm font-bold">x</span>
+                                                                    </div>
+
+                                                                    <div className="flex-1 min-w-0 flex flex-col">
+                                                                        <div className="flex items-center border rounded-lg relative overflow-hidden bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus-within:border-blue-500">
+                                                                            <NumericInput
+                                                                                disabled={false}
+                                                                                className="w-full bg-transparent text-slate-900 dark:text-white text-sm p-2 outline-none focus:bg-white dark:focus:bg-slate-950 transition font-mono text-right pr-7"
+                                                                                value={item.manualPrice !== undefined ? Number(Number(item.manualPrice).toFixed(2)) : Number(Number(item.unit_price).toFixed(2))}
+                                                                                onChange={(val) => updateCostItem(category.id, item.name, 'manualPrice', val)}
+                                                                                placeholder="Fiyat"
+                                                                            />
+                                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">₺</span>
+                                                                        </div>
+
+                                                                        <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1">
+                                                                            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">B.Fiyat</span>
+                                                                            {item.manualPrice !== undefined && (
                                                                                 <button
                                                                                     onClick={() => updateCostItem(category.id, item.name, 'manualPrice', undefined)}
-                                                                                    className="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 w-8 h-8 rounded-md flex items-center justify-center transition-colors"
-                                                                                    title="Varsayılan fiyata dön"
+                                                                                    className="text-[9px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase font-bold"
                                                                                 >
-                                                                                    <i className="fas fa-undo text-xs"></i>
+                                                                                    Sıfırla
                                                                                 </button>
                                                                             )}
                                                                         </div>
                                                                     </div>
-                                                                ) : (
-                                                                    <div className="flex items-start gap-2 sm:gap-4 mt-1">
-                                                                        {/* MİKTAR BÖLÜMÜ */}
-                                                                        <div className="flex-1 min-w-0 flex flex-col">
-                                                                            <div className={`flex items-center border rounded-lg relative overflow-hidden ${isLocked ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
-                                                                                <NumericInput
-                                                                                    disabled={isLocked}
-                                                                                    className={`w-full bg-transparent text-sm p-2 outline-none font-mono text-right transition ${item.unit.length > 7 ? 'pr-20' : item.unit.length > 3 ? 'pr-16' : 'pr-9'} ${isLocked ? 'text-slate-500 cursor-not-allowed font-bold' : 'text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-950'}`}
-                                                                                    value={isLocked
-                                                                                        ? Number(Number(item.calculatedAutoQty).toFixed(2))
-                                                                                        : (item.manualQuantity !== undefined ? Number(Number(item.manualQuantity).toFixed(2)) : Number(Number(item.calculatedAutoQty).toFixed(2)))
-                                                                                    }
-                                                                                    onChange={(val) => !isLocked && updateCostItem(category.id, item.name, 'manualQuantity', val)}
-                                                                                    placeholder="Miktar"
-                                                                                />
-                                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">{item.unit}</span>
-                                                                            </div>
-
-                                                                            <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1 relative group/breakdown">
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Metraj</span>
-
-                                                                                    {/* BİRLEŞTİRİLMİŞ İCMAL VE MALİYET BALONU */}
-                                                                                    {(
-                                                                                        (item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source)) ||
-                                                                                        (item.costBreakdown && item.costBreakdown.length > 0)
-                                                                                    ) && (
-                                                                                            <div className="relative flex items-center cursor-help group/breakdown">
-                                                                                                {/* İkon: Eğer maliyet paketi ise yeşil kutu, metraj ise mavi liste ikonu gösterir */}
-                                                                                                <i className={`fas ${item.costBreakdown ? 'fa-box-open text-emerald-500 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30' : 'fa-list-ul text-blue-500 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/30'} p-1 rounded transition`}></i>
-
-                                                                                                <div className="absolute bottom-full -left-6 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-[280px] max-w-[90vw] sm:w-96 bg-slate-800 dark:bg-slate-700 text-white text-[10px] p-3 rounded-lg shadow-2xl opacity-0 invisible group-hover/breakdown:opacity-100 group-hover/breakdown:visible transition-all duration-200 z-[100] border border-slate-600 pointer-events-none group-hover/breakdown:pointer-events-auto">
-                                                                                                    {/* 1. KISIM: PAKET MALİYET İÇERİĞİ (VİRMAN) */}
-                                                                                                    {item.costBreakdown && item.costBreakdown.length > 0 && (
-                                                                                                        <div className={`${item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) ? 'mb-3 pb-3 border-b border-slate-600 border-dashed' : ''}`}>
-                                                                                                            <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-emerald-400 flex items-center gap-2">
-                                                                                                                <i className="fas fa-box-open"></i> Paket Maliyet İçeriği
-                                                                                                            </div>
-                                                                                                            <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
-                                                                                                                {item.costBreakdown.map((cb: any, idx: number) => (
-                                                                                                                    <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
-                                                                                                                        <span className="opacity-90 leading-tight">{cb.label}</span>
-                                                                                                                        <span className="font-mono font-bold shrink-0 mt-0.5 text-emerald-300">
-                                                                                                                            {cb.value.toLocaleString('tr-TR')} ₺
-                                                                                                                        </span>
-                                                                                                                    </div>
-                                                                                                                ))}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    )}
-
-                                                                                                    {/* 2. KISIM: METRAJ İCMAL DÖKÜMÜ */}
-                                                                                                    {item.breakdown && item.breakdown.length > 0 && !['total_area', 'land_area', 'calc_duration_months', 'manual'].includes(item.auto_source) && (
-                                                                                                        <div>
-                                                                                                            <div className="font-bold border-b border-slate-600 pb-1 mb-2 text-blue-300 flex items-center gap-2">
-                                                                                                                <i className="fas fa-calculator"></i> Metraj İcmal Dökümü
-                                                                                                            </div>
-                                                                                                            <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1 overscroll-contain">
-                                                                                                                {item.breakdown.map((b: any, idx: number) => (
-                                                                                                                    <div key={idx} className="flex justify-between items-start gap-3 border-b border-slate-600/30 pb-1 last:border-0 last:pb-0">
-                                                                                                                        <span className="opacity-90 leading-tight" title={b.source}>{b.source}</span>
-                                                                                                                        <span className={`font-mono font-bold shrink-0 mt-0.5 ${b.qty > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                                                                            {b.qty > 0 ? '+' : ''}{b.qty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
-                                                                                                                        </span>
-                                                                                                                    </div>
-                                                                                                                ))}
-                                                                                                            </div>
-
-                                                                                                            <div className="border-t border-slate-600 mt-2 pt-2 flex justify-between items-center text-yellow-400 font-bold">
-                                                                                                                <span>Sistem Toplamı:</span>
-                                                                                                                <span>{item.calculatedAutoQty.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {item.unit}</span>
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    )}
-
-                                                                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
-                                                                                </div>
-
-                                                                                {!isLocked && item.manualQuantity !== undefined ? (
-                                                                                    <button
-                                                                                        onClick={() => updateCostItem(category.id, item.name, 'manualQuantity', undefined)}
-                                                                                        className="text-[9px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase font-bold"
-                                                                                    >
-                                                                                        Sıfırla
-                                                                                    </button>
-                                                                                ) : (
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${isLocked ? 'bg-slate-200 dark:bg-slate-700 text-slate-500' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'}`}>
-                                                                                            {isLocked ? 'Sistem' : 'Oto'}
-                                                                                        </span>
-                                                                                        {!isLocked && (['wet_area', 'dry_area', 'dry_perimeter', 'calc_facade', 'calc_excavation'].includes(item.auto_source) || item.name.includes("Duvar Malzemesi")) && (
-                                                                                            <span
-                                                                                                className="text-[8px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded cursor-help font-bold"
-                                                                                                title="Plan geometrisine/zorluğuna göre hesaplanan fire veya kabarma payı dahildir."
-                                                                                            >
-                                                                                                +Fire
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div className="flex items-center justify-center pt-2">
-                                                                            <span className="text-slate-300 dark:text-slate-600 text-sm font-bold">x</span>
-                                                                        </div>
-
-                                                                        {/* FİYAT BÖLÜMÜ */}
-                                                                        <div className="flex-1 min-w-0 flex flex-col">
-                                                                            <div className="flex items-center border rounded-lg relative overflow-hidden bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus-within:border-blue-500">
-                                                                                <NumericInput
-                                                                                    disabled={false}
-                                                                                    className="w-full bg-transparent text-slate-900 dark:text-white text-sm p-2 outline-none focus:bg-white dark:focus:bg-slate-950 transition font-mono text-right pr-7"
-                                                                                    value={item.manualPrice !== undefined ? Number(Number(item.manualPrice).toFixed(2)) : Number(Number(item.unit_price).toFixed(2))}
-                                                                                    onChange={(val) => updateCostItem(category.id, item.name, 'manualPrice', val)}
-                                                                                    placeholder="Fiyat"
-                                                                                />
-                                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold bg-slate-50/90 dark:bg-slate-900/90 pl-1">₺</span>
-                                                                            </div>
-
-                                                                            <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-1 mt-1.5 px-1">
-                                                                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">B.Fiyat</span>
-                                                                                {item.manualPrice !== undefined && (
-                                                                                    <button
-                                                                                        onClick={() => updateCostItem(category.id, item.name, 'manualPrice', undefined)}
-                                                                                        className="text-[9px] bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase font-bold"
-                                                                                    >
-                                                                                        Sıfırla
-                                                                                    </button>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}

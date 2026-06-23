@@ -44,7 +44,6 @@ export interface CostItem {
   multiplier: number;
   manualQuantity?: number;
   manualPrice?: number;
-  isDisabled?: boolean;
   scope?: 'global' | 'unit' | 'hidden';
   inputType?: 'quantity_x_price' | 'manual_total';
   vatRate?: number;
