@@ -515,10 +515,32 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const netProfit = totals.finalBalance - currentEquityAmount;
     const recommendedPricePerM2 = totalConstructionArea > 0 ? (totals.actualTotalCostWithInflation * (1 + targetProfitMargin / 100)) / totalConstructionArea : 0;
 
-    const kdvRate = 0.20;
     const currentTotalBrut = totals.actualTotalCostWithInflation;
-    const netTotalCost = currentTotalBrut / (1 + kdvRate);
-    const includedVatAmount = currentTotalBrut - netTotalCost;
+    
+    // 1. Enflasyonsuz (Bugünkü) değerler üzerinden net ve KDV tutarlarını bulalım
+    let baseNetTotal = 0;
+    let baseVatAmount = 0;
+
+    projectCostDetails.forEach(cat => {
+        cat.items.forEach(item => {
+            // Eğer vatRate tanımlanmamışsa standart %20 (0.20) kabul et
+            const itemVatRate = item.vatRate !== undefined ? item.vatRate : 0.20;
+            const itemBasePrice = item.totalPrice || 0;
+            
+            const itemNetPrice = itemBasePrice / (1 + itemVatRate);
+            const itemVat = itemBasePrice - itemNetPrice;
+            
+            baseNetTotal += itemNetPrice;
+            baseVatAmount += itemVat;
+        });
+    });
+
+    // 2. Nakit Akışı tablosunda enflasyonlu toplam (currentTotalBrut) kullanıldığı için,
+    // enflasyonun yarattığı artış katsayısını bulup Net ve KDV tutarlarına yansıtıyoruz.
+    const inflationMultiplier = projectTotalCost > 0 ? (currentTotalBrut / projectTotalCost) : 1;
+
+    const netTotalCost = baseNetTotal * inflationMultiplier;
+    const includedVatAmount = baseVatAmount * inflationMultiplier;
     
 
 let estimatedSalesVat = 0;
