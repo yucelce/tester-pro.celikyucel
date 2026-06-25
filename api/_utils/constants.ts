@@ -381,7 +381,7 @@ export const DEFAULT_PRICES: Record<string, number> = {
     "Kuvvetli Akım Sorti (Priz/Aydınlatma)": 850,
     "Zayıf Akım Sorti (TV/Data/Tel)": 920,
     "Ana Dağıtım ve Sayaç Panoları": 45000,
-"Elektrik Ana Kolon Hattı (Bakır Kablo)": 380,
+    "Elektrik Ana Kolon Hattı (Bakır Kablo)": 380,
 
     "Şantiye Elektrik Tüketimi (Aylık)": 4.6,
     "Şantiye Su Tüketimi (Aylık)": 102.2,
@@ -525,4 +525,74 @@ export const PROVINCE_EARTHQUAKE_ZONES: Record<string, number> = {
     "Tunceli": 1, "Şanlıurfa": 3, "Uşak": 1, "Van": 1, "Yozgat": 3, "Zonguldak": 2,
     "Bayburt": 3, "Karaman": 4, "Kırıkkale": 1, "Batman": 2, "Şırnak": 1, "Bartın": 1,
     "Iğdır": 2, "Yalova": 1, "Karabük": 1, "Kilis": 3, "Osmaniye": 1, "Düzce": 1
+};
+
+// 12 Ay için Verimlilik Matrisi (Ocak = 0, Şubat = 1 ... Aralık = 11)
+export const MONTHLY_CLIMATE_PROFILES: Record<string, { structure: number[], facade: number[], interior: number[] }> = {
+    // Şiddetli Kış (Erzurum, Kars vb.)
+    // Kaba yapı Aralık, Ocak, Şubat aylarında don sebebiyle neredeyse durur.
+    "sert_kis": {
+        structure: [0.1, 0.2, 0.4, 0.8, 1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.4, 0.1],
+        facade:    [0.1, 0.2, 0.5, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.4, 0.2],
+        interior:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] // Kapalı alanda iş sürer
+    },
+    
+    // Aşırı Yağış (Rize, Trabzon vb.)
+    // İlkbahar ve Sonbahar aylarında yağışlar dış cepheyi ve betonu yavaşlatır.
+    "karadeniz": {
+        structure: [0.8, 0.8, 0.7, 0.7, 0.9, 1.0, 1.0, 1.0, 0.7, 0.6, 0.7, 0.8],
+        facade:    [0.6, 0.6, 0.5, 0.5, 0.8, 1.0, 1.0, 1.0, 0.6, 0.5, 0.6, 0.6],
+        interior:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    },
+
+    // Turizm ve Aşırı Sıcak (Antalya, Bodrum vb.)
+    // Yazın aşırı sıcak ve turizm yasağı betonu yavaşlatır.
+    "sicak_turizm": {
+        structure: [1.0, 1.0, 1.0, 1.0, 0.8, 0.5, 0.3, 0.3, 0.6, 1.0, 1.0, 1.0],
+        facade:    [1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.7, 0.7, 0.9, 1.0, 1.0, 1.0],
+        interior:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    },
+
+    // Standart İklim (İstanbul, Ankara vb.)
+    // Kışın hafif bir yavaşlama, yazın tam verim.
+    "standart": {
+        structure: [0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.7],
+        facade:    [0.6, 0.7, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.6],
+        interior:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    }
+};
+
+
+// Hangi ilin hangi iklim/verimlilik profiline ait olduğunu eşleştiren yapı (81 İl)
+export const PROVINCE_TO_PROFILE: Record<string, string> = {
+    // 1. ŞİDDETLİ KIŞ BÖLGESİ (23 İl)
+    // Kış aylarında don ve kar nedeniyle kaba yapı ve dış cephe imalatları durma noktasına gelir.
+    "Erzurum": "sert_kis", "Kars": "sert_kis", "Ağrı": "sert_kis", "Sivas": "sert_kis", "Van": "sert_kis",
+    "Ardahan": "sert_kis", "Bayburt": "sert_kis", "Gümüşhane": "sert_kis", "Hakkari": "sert_kis", 
+    "Bitlis": "sert_kis", "Muş": "sert_kis", "Bingöl": "sert_kis", "Tunceli": "sert_kis", "Erzincan": "sert_kis",
+    "Yozgat": "sert_kis", "Kayseri": "sert_kis", "Niğde": "sert_kis", "Nevşehir": "sert_kis", "Aksaray": "sert_kis", 
+    "Karaman": "sert_kis", "Afyonkarahisar": "sert_kis", "Kütahya": "sert_kis", "Bolu": "sert_kis",
+
+    // 2. KARADENİZ / YAĞIŞ BÖLGESİ (12 İl)
+    // Özellikle ilkbahar ve sonbahardaki şiddetli sağanaklar kaba yapı ve cepheyi yavaşlatır.
+    "Rize": "karadeniz", "Trabzon": "karadeniz", "Artvin": "karadeniz", "Giresun": "karadeniz", "Ordu": "karadeniz",
+    "Samsun": "karadeniz", "Sinop": "karadeniz", "Kastamonu": "karadeniz", "Bartın": "karadeniz", 
+    "Zonguldak": "karadeniz", "Düzce": "karadeniz", "Karabük": "karadeniz",
+
+    // 3. AŞIRI SICAK VE TURİZM BÖLGESİ (14 İl)
+    // Yaz aylarında Ege/Akdeniz'de turizm yasağı, Güneydoğu'da ise gündüz beton dökümüne engel olan aşırı sıcaklar görülür.
+    "Antalya": "sicak_turizm", "Muğla": "sicak_turizm", "İzmir": "sicak_turizm", "Aydın": "sicak_turizm",
+    "Mersin": "sicak_turizm", "Adana": "sicak_turizm", "Hatay": "sicak_turizm", "Osmaniye": "sicak_turizm",
+    "Şanlıurfa": "sicak_turizm", "Diyarbakır": "sicak_turizm", "Batman": "sicak_turizm", "Mardin": "sicak_turizm", 
+    "Siirt": "sicak_turizm", "Kilis": "sicak_turizm",
+
+    // 4. STANDART İKLİM VE GEÇİŞ BÖLGELERİ (32 İl)
+    // Kışın hafif yavaşlama (kar/don kısa sürer), yazın ise genel olarak tam verimle çalışılan iller.
+    "İstanbul": "standart", "Ankara": "standart", "Bursa": "standart", "Kocaeli": "standart", "Sakarya": "standart", 
+    "Yalova": "standart", "Balıkesir": "standart", "Çanakkale": "standart", "Tekirdağ": "standart", "Edirne": "standart", 
+    "Kırklareli": "standart", "Bilecik": "standart", "Manisa": "standart", "Denizli": "standart", "Uşak": "standart", 
+    "Burdur": "standart", "Isparta": "standart", "Kahramanmaraş": "standart", "Eskişehir": "standart", "Konya": "standart", 
+    "Kırıkkale": "standart", "Kırşehir": "standart", "Çankırı": "standart", "Amasya": "standart", "Tokat": "standart", 
+    "Çorum": "standart", "Iğdır": "standart", "Malatya": "standart", "Elazığ": "standart", "Gaziantep": "standart", 
+    "Adıyaman": "standart", "Şırnak": "standart"
 };

@@ -1907,25 +1907,29 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         const totalWindowArea = aggregatedUnitStats['calc_window_area'] || 0;
         const deductibleWindowArea = totalWindowArea;
 
-        // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI (DÜZELTİLMİŞ) ---
+        // --- ÇATI KATI (KALKAN DUVAR / PARAPET) HESABI ---
         let roofFacade = 0;
         if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
             const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0);
-            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; // Çatı mahya (tepe) yüksekliği
-            const parapetHeight = 0.60; // Standart çatı parapet (diz duvarı) yüksekliği
+            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; 
+            const parapetHeight = 0.60; 
 
-            // Kalkan Duvar (Üçgen) Alanı Tahmini:
-            // Varsayım: Çatının iki kısa kenarında kalkan duvar var. Kareye yakın kabul ile kısa kenar ~ Çevre / 4.5
             const shortSideApprox = roofPerim / 4.5;
             const triangleHeight = Math.max(0, maxHeight - parapetHeight);
-
-            // 2 adet üçgen kalkan duvar alanı: 2 * (Taban * Yükseklik / 2) -> Taban * Yükseklik
             const gableWallArea = shortSideApprox * triangleHeight;
-
-            // Parapet Alanı (Tüm çevre boyunca dönen 60cm'lik duvar)
             const parapetArea = roofPerim * parapetHeight;
 
             roofFacade = gableWallArea + parapetArea;
+        }
+
+        // ---> YENİ: ÇIKMA ALTI (KONSOL SOFFIT) HESABI <---
+        // Normal kat alanı, zemin kat alanından büyükse, aradaki fark binanın çıkma altı alanıdır.
+        // Bu yatay alan dış havayla temas ettiği için mantolama ve boya metrajına eklenmelidir.
+        let overhangArea = 0;
+        if (buildingStats.normalFloorCount > 0) {
+            const normalArea = buildingStats.normalFloorArea || 0;
+            const groundArea = buildingStats.groundFloorArea || 0;
+            overhangArea = Math.max(0, normalArea - groundArea);
         }
 
         if (buildingStats.buildingType === 'villa') {
@@ -1936,30 +1940,25 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             let normalFacade = 0;
             if (buildingStats.normalFloorCount > 0) {
                 const perim = buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea);
-                // EKSİK OLAN SATIR EKLENDİ:
                 normalFacade = perim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
 
-            // Çatı kalkan/parapet alanını toplama ekliyoruz
-            const grossFacade = groundFacade + normalFacade + roofFacade;
+            // overhangArea (çıkma altı) toplama dahil edildi
+            const grossFacade = groundFacade + normalFacade + roofFacade + overhangArea; 
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
             return netFacade * 1.15; // %15 zayiat
 
         } else {
-            // Apartman için - Her katın kendi çevresi ayrı ayrı hesaplanacak şekilde güncellendi
             let groundFacadeHeight = buildingStats.groundFloorHeight;
 
-            // DÜZELTME: Bodrum yoksa subasman (topraktan koparma) yüksekliğini zemin kat cephe alanına ekle
             if (buildingStats.basementFloorCount === 0) {
                 const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
                 groundFacadeHeight += subasmanH;
             }
 
-            // 1. Zemin Kat Cephesi (Kendi çevresi ile çarpılır)
             const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
             const groundFacade = groundPerim * groundFacadeHeight;
 
-            // 2. Normal Katlar Cephesi (Kendi çevresi ile çarpılır)
             let normalFacade = 0;
             let normalPerim = 0;
             if (buildingStats.normalFloorCount > 0) {
@@ -1967,11 +1966,10 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
                 normalFacade = normalPerim * buildingStats.normalFloorHeight * buildingStats.normalFloorCount;
             }
 
-            // Alt katların dış cephesi + Sadece çatı kalkan/parapet cephesi
-            const grossFacade = groundFacade + normalFacade + roofFacade;
+            // overhangArea (çıkma altı) toplama dahil edildi
+            const grossFacade = groundFacade + normalFacade + roofFacade + overhangArea;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
 
-            // Zayiat hesabı (Binanın büyük kısmını normal katlar oluşturduğu için normal kat perimetresi baz alınır)
             const facadeWaste = calculateWasteFactor([], buildingStats.normalFloorArea, normalPerim);
             return netFacade * facadeWaste;
         }
@@ -2346,22 +2344,27 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let facadeHeight = (buildingStats.normalFloorCount * buildingStats.normalFloorHeight) +
             buildingStats.groundFloorHeight;
 
-        // 1. Subasman (Topraktan koparma) yüksekliğini iskeleye ekle
         if (buildingStats.basementFloorCount === 0) {
             const subasmanH = buildingStats.subasmanHeight !== undefined ? buildingStats.subasmanHeight : 0.50;
             facadeHeight += subasmanH;
         }
 
-        const basePerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea);
-        const scaffoldingPerimeter = basePerim + 8;
+        // ---> YENİ: İSKELE ÇEVRESİ DÜZELTMESİ <---
+        // İskele her zaman binanın en geniş oturumuna (genelde çıkmaların olduğu normal kata) göre kurulur.
+        const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
+        const normalPerim = buildingStats.normalFloorCount > 0 ? (buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea || 0)) : 0;
+        
+        // Zemin ve normal kat çevrelerinden en büyük olanı baz alıyoruz
+        const maxBuildingPerimeter = Math.max(groundPerim, normalPerim);
+        
+        // İskeleyi bina yüzeyinden ayırmak ve köşeleri dönmek için +8 mt eklenir
+        const scaffoldingPerimeter = maxBuildingPerimeter + 8;
 
-        // Temel iskele alanı (Çatı hariç)
         let totalScaffoldingArea = facadeHeight * scaffoldingPerimeter;
 
-        // MÜHENDİSLİK DÜZELTMESİ: Çatı katı (kalkan duvar) iskelesi
+        // Çatı katı (kalkan duvar) iskelesi
         if (buildingStats.hasRoofFloor) {
             const roofHeight = buildingStats.roofFloorMaxHeight || 3.0;
-            // Tüm çevre yerine, kalkan duvarların bulunduğu varsayılan çevrenin yarısına iskele ilave edilir
             totalScaffoldingArea += (scaffoldingPerimeter / 2) * roofHeight;
         }
 

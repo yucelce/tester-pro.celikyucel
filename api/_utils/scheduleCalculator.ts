@@ -1,6 +1,8 @@
 
 import { BuildingStats, ScheduleTaskOverride } from '../../src/types';
 
+import { MONTHLY_CLIMATE_PROFILES, PROVINCE_TO_PROFILE } from './constants'; 
+
 export interface ScheduleItem {
     id: string;
     name: string;
@@ -27,6 +29,41 @@ const addDays = (date: Date, days: number) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
+};
+
+const getEffectiveDuration = (
+    baseWorkDays: number, 
+    startCalendarDayOffset: number, 
+    projectStartDate: Date, 
+    province: string, 
+    taskType: 'structure' | 'facade' | 'interior'
+): number => {
+    const profileKey = PROVINCE_TO_PROFILE[province] || "standart";
+    const profile = MONTHLY_CLIMATE_PROFILES[profileKey][taskType];
+
+    let currentWorkNeeded = baseWorkDays;
+    let calendarDaysElapsed = 0;
+    
+    // Haftada 1 gün tatil ve resmi bayramlar için ortalama takvim kayıp çarpanı
+    const WORK_DAY_TO_CALENDAR_FACTOR = 1.18; 
+
+    while (currentWorkNeeded > 0) {
+        // İlgili günün hangi aya denk geldiğini buluyoruz
+        const currentDate = new Date(projectStartDate);
+        currentDate.setDate(currentDate.getDate() + startCalendarDayOffset + calendarDaysElapsed);
+        const currentMonth = currentDate.getMonth(); // 0-11 arası
+
+        const dailyEfficiency = profile[currentMonth];
+
+        // O gün çalışılan net miktarı düş (Verim 0.5 ise yarım gün düşer)
+        currentWorkNeeded -= (dailyEfficiency / WORK_DAY_TO_CALENDAR_FACTOR);
+        calendarDaysElapsed++;
+
+        // Çok ekstrem durumlar için sonsuz döngü koruması (10 yıl)
+        if (calendarDaysElapsed > 3650) break; 
+    }
+
+    return calendarDaysElapsed;
 };
 
 export const calculateConstructionSchedule = (
@@ -153,6 +190,7 @@ export const calculateConstructionSchedule = (
     });
 
     // Hesaplama (Forward Pass)
+    // Hesaplama (Forward Pass)
     tasks.forEach(task => {
         let calculatedStartDay = 0;
 
@@ -181,18 +219,51 @@ export const calculateConstructionSchedule = (
 
         calculatedStartDay = Math.max(0, calculatedStartDay);
 
+        // --- YENİ EKLENEN KISIM: İKLİMSEL SÜRE HESAPLAMASI ---
+        let taskType: 'structure' | 'facade' | 'interior' = 'interior';
+        
+        // Hangi işlerin kaba yapı, hangi işlerin dış cephe olduğunu grupluyoruz
+        const structureTasks = ['site_prep', 'excavation', 'structure', 'pool'];
+        const facadeTasks = ['roof', 'facade', 'landscape'];
+        
+        if (structureTasks.includes(task.id!)) {
+            taskType = 'structure';
+        } else if (facadeTasks.includes(task.id!)) {
+            taskType = 'facade';
+        }
+
+        let actualDurationDays = task.durationDays!;
+
+        // Kullanıcı manuel süre girmediyse (override etmediyse), iklimsel süreyi hesapla
+        if (!overrides[task.id!]?.manualDuration) {
+            // Kuyu Temel varsa Hafriyat süresini insan gücüne göre radikal uzat
+            let baseDays = task.durationDays!;
+            if (task.id === 'excavation' && buildingStats.hasWellFoundation) {
+                baseDays = baseDays * 3.5; 
+            }
+
+            actualDurationDays = getEffectiveDuration(
+                baseDays,
+                calculatedStartDay,
+                startDate,
+                buildingStats.province,
+                taskType
+            );
+        }
+        // ------------------------------------------------------
+
         const newItem: ScheduleItem = {
             id: task.id!,
             name: task.name!,
-            durationDays: task.durationDays!,
+            durationDays: actualDurationDays, // Artık iklime göre uzamış olan süreyi atıyoruz
             startDay: calculatedStartDay,
-            endDay: calculatedStartDay + task.durationDays!,
+            endDay: calculatedStartDay + actualDurationDays,
             startDate: addDays(startDate, calculatedStartDay),
-            endDate: addDays(startDate, calculatedStartDay + task.durationDays!),
+            endDate: addDays(startDate, calculatedStartDay + actualDurationDays),
 
-            durationWeeks: Number((task.durationDays! / 7).toFixed(2)),
+            durationWeeks: Number((actualDurationDays / 7).toFixed(2)),
             startWeek: Number((calculatedStartDay / 7).toFixed(2)),
-            endWeek: Number(((calculatedStartDay + task.durationDays!) / 7).toFixed(2)),
+            endWeek: Number(((calculatedStartDay + actualDurationDays) / 7).toFixed(2)),
 
             dependencies: task.dependencies || [],
             dependencyType: task.dependencyType as any || 'finish_to_start',
