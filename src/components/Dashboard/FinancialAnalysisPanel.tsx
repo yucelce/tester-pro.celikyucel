@@ -88,6 +88,10 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const defaultSaleDate = formatMonth(addMonths(constructionEndDate, 3));
     const [newSale, setNewSale] = useState({ name: '', amount: 0, saleDate: defaultSaleDate, vatRate: 0.20 });
 
+    useEffect(() => {
+        setNewSale(prev => ({ ...prev, saleDate: defaultSaleDate }));
+    }, [defaultSaleDate]);
+
     const handleAddSale = () => {
         if (!newSale.name || newSale.amount <= 0 || !newSale.saleDate) return;
         addSale({ id: Date.now().toString(), name: newSale.name, amount: newSale.amount, month: 0, saleDate: newSale.saleDate, vatRate: newSale.vatRate });
@@ -193,10 +197,6 @@ export const FinancialAnalysisPanel: React.FC = () => {
             const endDate = new Date(task.endDate);
             const totalDays = (endDate.getTime() - taskStartDate.getTime()) / (1000 * 3600 * 24) || 1; // <-- BURASI DA GÜNCELLENDİ
 
-            let monthsDiff = (endDate.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (endDate.getMonth() - projectStartMonthDate.getMonth());
-            monthsDiff = Math.max(0, monthsDiff);
-            let finalTaskCost = fixedTasks.includes(task.id) ? baseTaskCost : baseTaskCost * Math.pow(1 + inflationRate, monthsDiff);
-
             let currentD = new Date(taskStartDate); // <-- BURASI DA GÜNCELLENDİ
             let accumulatedDays = 0;
 
@@ -214,7 +214,16 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 let costRatio = calculateSCurve(endProgressRatio) - calculateSCurve(startProgressRatio);
                 let monthStr = formatMonth(currentD);
 
-                expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (finalTaskCost * costRatio);
+                // --- YENİ EKLENEN/GÜNCELLENEN KISIM BAŞLANGICI ---
+                let currentMonthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
+                currentMonthsDiff = Math.max(0, currentMonthsDiff);
+                
+                let currentInflatedCost = fixedTasks.includes(task.id) 
+                    ? baseTaskCost 
+                    : baseTaskCost * Math.pow(1 + inflationRate, currentMonthsDiff);
+
+                expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (currentInflatedCost * costRatio);
+                // --- YENİ EKLENEN/GÜNCELLENEN KISIM BİTİŞİ ---
 
                 if (!tasksByMonth[monthStr]) tasksByMonth[monthStr] = [];
                 if (!tasksByMonth[monthStr].includes(task.name)) tasksByMonth[monthStr].push(task.name);

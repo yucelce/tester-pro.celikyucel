@@ -37,7 +37,7 @@ export interface CostItem {
   'calc_suspended_ceiling_area' | 'calc_sgk_premium' | 'calc_all_risk' | "calc_plaster_area" |
   "waterproofing_area" | "calc_terrace_waterproofing" | "calc_garage_door" |
   'calc_indoor_parking_screed' | 'calc_parking_ceiling_insulation' | 'calc_shelter_package' | 'calc_parking_ventilation' | "calc_garage_drainage" |
-  "calc_generator"
+  "calc_generator" | 'calc_main_electrical_panel' | 'calc_main_electrical_cable_length'
 
   ;
 
@@ -101,7 +101,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Yapı Sınıfı 3C", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Yapı Sınıfı 4A", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
       { name: "Yapı Sınıfı 4B", unit: "m2", auto_source: "manual", multiplier: 0, scope: 'hidden' },
-{ name: "Yıkım Teknik Sorumlu Ücreti", unit: "Paket", auto_source: "calc_demolition_supervisor", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },      { name: "Mevcut Bina Yıkım Ruhsat Bedeli", unit: "Paket", auto_source: "calc_demolition_area", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
+      { name: "Yıkım Teknik Sorumlu Ücreti", unit: "Paket", auto_source: "calc_demolition_supervisor", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 }, { name: "Mevcut Bina Yıkım Ruhsat Bedeli", unit: "Paket", auto_source: "calc_demolition_area", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "Ruhsat Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global', vatRate: 0 },
       { name: "İskan Harcı", unit: "m2", auto_source: "total_area", multiplier: 1, scope: 'global', vatRate: 0 },
       { name: "Enerji Kimlik Belgesi", unit: "Paket", auto_source: "calc_ekb", multiplier: 1, scope: 'global', inputType: 'manual_total' },
@@ -112,7 +112,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
     id: "santiye_hafriyat",
     title: "2. Şantiye Kurulumu ve Genel Giderler",
     items: [
-      { name: "Şantiye Şefi (Aylık)", unit: "Ay", auto_source: "calc_site_chief", multiplier: 1, scope: 'global',vatRate: 0 },
+      { name: "Şantiye Şefi (Aylık)", unit: "Ay", auto_source: "calc_site_chief", multiplier: 1, scope: 'global', vatRate: 0 },
       { name: "SGK Asgari İşçilik Primi", unit: "Paket", auto_source: "calc_sgk_premium", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "İnşaat All Risk Sigortası", unit: "Paket", auto_source: "calc_all_risk", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "OSGB Hizmet Bedeli (Aylık)", unit: "Ay", auto_source: "calc_osgb_service", multiplier: 1, scope: 'global' },
@@ -121,7 +121,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "İş Makinesi (JCB/Ekskavatör)", unit: "Saat", auto_source: "calc_jcb", multiplier: 1, scope: 'global' },
       { name: "Şantiye Çiti (Çevirme)", unit: "mt", auto_source: "calc_fence", multiplier: 1, scope: 'global' },
       { name: "Konteyner (Ofis/Depo)", unit: "Adet", auto_source: "calc_container_complex", multiplier: 1, scope: 'global' },
-      { name: "Şantiye Su ve Elektrik Abonelikleri", unit: "Toplam", auto_source: "calc_utilities_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total',vatRate: 0 },
+      { name: "Şantiye Su ve Elektrik Abonelikleri", unit: "Toplam", auto_source: "calc_utilities_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "Şantiye Elektrik Panosu (Geçici)", unit: "Toplam", auto_source: "manual", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Şantiye Elektrik Tüketimi (Aylık)", unit: "Ay", auto_source: "calc_duration_months", multiplier: 1, scope: 'global' },
       { name: "Şantiye Su Tüketimi (Aylık)", unit: "Ay", auto_source: "calc_duration_months", multiplier: 1, scope: 'global' },
@@ -132,7 +132,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "Kule Vinç Kurulum ve Söküm Bedeli", unit: "Paket", auto_source: "calc_tower_crane_setup", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Mobil Vinç Hizmet Bedeli", unit: "Gün", auto_source: "calc_mobile_crane_days", multiplier: 1, scope: 'global' },
       { name: "Şantiye Araç Giderleri (Aylık)", unit: "Ay", auto_source: "calc_duration_months", multiplier: 1, scope: 'global' },
-      { name: "Şantiye Personel Giderleri (Bekçi vb.)", unit: "Ay", auto_source: "calc_duration_months", multiplier: 1, scope: 'global' ,vatRate: 0 },
+      { name: "Şantiye Personel Giderleri (Bekçi vb.)", unit: "Ay", auto_source: "calc_duration_months", multiplier: 1, scope: 'global', vatRate: 0 },
       { name: "İSG Kişisel Koruyucu Donanım (Baret, Yelek vb.)", unit: "Paket", auto_source: "calc_isg_package", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Dış Cephe Güvenlik Ağı ve Kenar Koruma", unit: "m2", auto_source: "calc_safety_net", multiplier: 1, scope: 'global' }
     ]
@@ -262,7 +262,7 @@ const RAW_COST_DATA: RawCostCategory[] = [
       { name: "VRF İç Ünite (Kaset/Duvar Tipi)", unit: "Adet", auto_source: "calc_vrf_indoor", multiplier: 1, scope: 'unit' },
       { name: "VRF Bakır Borulama ve Altyapı", unit: "m2", auto_source: "calc_vrf_infrastructure", multiplier: 1, scope: 'unit' },
       { name: "Doğalgaz Bina Ana Altyapısı", unit: "Paket", auto_source: "calc_gas_infrastructure", multiplier: 1, scope: 'global', inputType: 'manual_total' },
-      { name: "Doğalgaz Proje ve Onay Bedeli", unit: "Paket", auto_source: "calc_gas_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total' ,vatRate: 0 },
+      { name: "Doğalgaz Proje ve Onay Bedeli", unit: "Paket", auto_source: "calc_gas_subscription", multiplier: 1, scope: 'global', inputType: 'manual_total', vatRate: 0 },
       { name: "Yağmur Suyu Hasat Sistemi", unit: "Paket", auto_source: "calc_rainwater_system", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Modüler Su Deposu (2m3 Paket)", unit: "Paket", auto_source: "calc_water_tank", multiplier: 1, scope: 'global', inputType: 'manual_total' },
       { name: "Hidrofor Sistemi", unit: "Paket", auto_source: "calc_hydrophore", multiplier: 1, scope: 'global', inputType: 'manual_total' },
@@ -279,6 +279,8 @@ const RAW_COST_DATA: RawCostCategory[] = [
     title: "10. Elektrik Tesisatı",
     items: [
       { name: "Temel Topraklaması (Galvaniz Şerit)", unit: "mt", auto_source: "calc_foundation_grounding", multiplier: 1, scope: 'global' },
+      { name: "Ana Dağıtım ve Sayaç Panoları", unit: "Paket", auto_source: "calc_main_electrical_panel", multiplier: 1, scope: 'global', inputType: 'manual_total' },
+      { name: "Elektrik Ana Kolon Hattı (Bakır Kablo)", unit: "mt", auto_source: "calc_main_electrical_cable_length", multiplier: 1, scope: 'global' },
       { name: "Kuvvetli Akım Sorti (Priz/Aydınlatma)", unit: "Adet", auto_source: "calc_electrical_points", multiplier: 1, scope: 'unit' },
       { name: "Zayıf Akım Sorti (TV/Data/Tel)", unit: "Adet", auto_source: "calc_weak_current_points", multiplier: 1, scope: 'unit' },
       { name: "Anahtar/Priz Montajı ve Malzemesi", unit: "Adet", auto_source: "calc_switch_socket_count", multiplier: 1, scope: 'unit' },
@@ -421,6 +423,8 @@ export const ITEM_DESCRIPTIONS: Record<string, string> = {
   "Otopark Yüzey Sertleştirici (Helikopterli Beton)": "Kapalı otopark zeminlerinde tozumayı önlemek ve dayanımı artırmak için uygulanan kuvars/korund katkılı helikopter perdahlı beton/şap yüzey işlemidir.",
   "Sığınak Kapısı ve Havalandırma Paketi": "Sığınak yönetmeliğine uygun çelik sığınak kapıları ve radyoaktif/biyolojik partikül tutucu karbon filtreli havalandırma (santral) sistemidir.",
   "Otopark Yangın ve Jet Fan Sistemi": "Kapalı otoparklarda egzoz dumanını tahliye etmek (jet fan) ve olası araç yangınlarına müdahale etmek için kurulan sulu söndürme (sprinkler) altyapısıdır.",
+  "Ana Dağıtım ve Sayaç Panoları": "Bina girişinde yer alan ana dağıtım tablosu, sayaçların bulunduğu panolar ve bunlara ait şalt malzemelerin (ana TMŞ şalter, kaçak akım vb.) toplam maliyetidir.",
+"Elektrik Ana Kolon Hattı (Bakır Kablo)": "Zemin kattaki sayaç panosundan her bir dairenin içindeki sigorta kutusuna kadar şaft üzerinden çekilen kalın kesitli (Örn: 4x10 mm² veya 3x6 mm² vb.) bakır ve halojensiz (alev iletmeyen) ana besleme kablosudur.",
 
   // --- EKSİK KALEMLER İÇİN EKLENENLER ---
   "Zemin Etüdü": "Arsanın jeolojik yapısını, depremselliğini ve taşıma kapasitesini belirlemek için yapılan sondaj, SPT, presiyometre deneyleri ve laboratuvar raporunu kapsayan paket fiyattır.",

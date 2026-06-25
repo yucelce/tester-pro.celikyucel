@@ -380,6 +380,8 @@ export const DEFAULT_PRICES: Record<string, number> = {
 
     "Kuvvetli Akım Sorti (Priz/Aydınlatma)": 850,
     "Zayıf Akım Sorti (TV/Data/Tel)": 920,
+    "Ana Dağıtım ve Sayaç Panoları": 45000,
+"Elektrik Ana Kolon Hattı (Bakır Kablo)": 380,
 
     "Şantiye Elektrik Tüketimi (Aylık)": 4.6,
     "Şantiye Su Tüketimi (Aylık)": 102.2,

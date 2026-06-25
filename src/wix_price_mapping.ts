@@ -224,6 +224,8 @@ export const WIX_PRICE_MAP: Record<string, string> = {
   "Anahtar/Priz Montajı ve Malzemesi": "anahtarprizadetpaket",             // Mevcut ID kullanılabilir
   "Daire Sigorta Panosu ve Şalt Malz.": "dairesigortasalterpaket",          // Mevcut ID kullanılabilir
   "Temel Topraklaması (Galvaniz Şerit)": "galvaniz_topraklama_seritmtmal",
+  "Ana Dağıtım ve Sayaç Panoları": "elektrik_ana_panomalisc",
+"Elektrik Ana Kolon Hattı (Bakır Kablo)": "elektrik_kolon_kablomalisc",
 
   "Görüntülü Diafon Sistemi": "goruntuludiyafonpaket",
   "Merkezi Uydu Sistemi": "uydusistemipaket",

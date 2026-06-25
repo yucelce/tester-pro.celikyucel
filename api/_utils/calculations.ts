@@ -244,13 +244,12 @@ export class QuantityTakeoffService {
             } else if (heatingSystem === 'underfloor' || heatingSystem === 'heat_pump') {
                 stats.calc_underfloor_area += heatedArea;
 
-                // Gerçek Mühendislik Yaklaşımı:
-                // Yerden ısıtmada 1 kangal boru devresi (1 port) ortalama 15 m² alanı ısıtır.
+                // 1 port ortalama 15 m² alanı ısıtır.
                 const portsNeeded = Math.ceil(heatedArea / 15.0);
 
-                // 1 adet standart kolektör kutusunda ortalama 8-10 port bulunur.
-                // Küsuratları (0.1, 0.2 gibi) toplayıp, en son total_cost kısmında tamsayıya yuvarlayacak şekilde havuza ekliyoruz.
-                stats.calc_underfloor_collector += (portsNeeded / 10.0);
+                // Her bağımsız bölümün kendine ait 1 kutusu ve tam sayı kolektörü olmalıdır.
+                // 10 portlu bir kolektör kutusu baz alınmıştır.
+                stats.calc_underfloor_collector = (stats.calc_underfloor_collector || 0) + Math.ceil(portsNeeded / 10.0);
             } else if (heatingSystem === 'vrf') {
                 stats.calc_vrf_infrastructure += heatedArea;
             }
@@ -1694,6 +1693,50 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         return Math.round(totalCost * areaMultiplier);
     },
 
+    'calc_main_electrical_panel': ({ aggregatedUnitStats, buildingStats, currentCosts, item, costBreakdowns }) => {
+        const totalUnits = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
+        const basePrice = getGlobalPrice(currentCosts, "Ana Dağıtım ve Sayaç Panoları");
+        
+        // Pano maliyeti daire sayısına göre artar. Her daire için ortalama %10 pano büyümesi/şalt malzeme eklenir.
+        const totalCost = basePrice + (totalUnits * (basePrice * 0.10)); 
+
+        if (costBreakdowns) {
+            costBreakdowns[item.name] = [
+                { label: `Bina Ana Dağıtım Panosu (AG)`, value: basePrice },
+                { label: `${totalUnits} Dairelik Sayaç Panosu ve Şalt Malzemeleri`, value: totalUnits * (basePrice * 0.10) }
+            ];
+        }
+
+        return Math.round(totalCost);
+    },
+
+    'calc_main_electrical_cable_length': ({ buildingStats, aggregatedUnitStats }) => {
+        const totalUnits = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
+        let totalCableLength = 0;
+        
+        if (buildingStats.buildingType === 'villa') {
+            const landSide = Math.sqrt(buildingStats.landArea || 0);
+            // Villalarda ana panodan (örneğin bahçe duvarı sınırından) eve geliş mesafesi
+            totalCableLength = Math.max(15, landSide + 5);
+        } else {
+             // Apartmanlarda her daire için zemin kattaki sayaç panosundan daireye kadar çekilen kablo
+             const floorHeight = buildingStats.normalFloorHeight || 3.0;
+             let sumVertical = 0;
+             let unitsPerFloor = buildingStats.normalFloorCount > 0 ? (totalUnits / buildingStats.normalFloorCount) : totalUnits;
+             
+             // Kat yükseldikçe kablo uzar (1. kat için 1h, 2. kat için 2h ...)
+             for(let i = 1; i <= buildingStats.normalFloorCount; i++) {
+                 sumVertical += (unitsPerFloor * (i * floorHeight));
+             }
+             
+             // Yatayda her daire için ortalama 12 metre pay (sayaçtan şafta ve şafttan daire sigorta kutusuna)
+             const sumHorizontal = totalUnits * 12; 
+             
+             totalCableLength = sumVertical + sumHorizontal;
+        }
+        return totalCableLength;
+    },
+
     'calc_excavation': ({ buildingStats, item }) => {
         const excavationBaseArea = buildingStats.basementFloorCount > 0
             ? buildingStats.basementFloorArea
@@ -2616,6 +2659,25 @@ export const calculateDynamicUnitPrice = (
     if (item.name === "Grobeton") {
         const c30Price = getGlobalPrice(currentCosts, "Betonarme Betonu") || 2500;
         return Math.round(c30Price * 0.85);
+    }
+
+    // --- ISI POMPASI KAPASİTE/FİYAT DÜZELTMESİ ---
+    if (item.name === "Isı Pompası (Hava Kaynaklı Dış Ünite)") {
+        const basePrice = item.unit_price;
+        
+        // calculate-project.ts'den çağrıldığında unitArea 0 gelebilir. 
+        // Çökmeyi önlemek için güvenli alan (targetArea) belirliyoruz.
+        let targetArea = unitArea;
+        if (targetArea <= 0 && buildingStats) {
+            targetArea = buildingStats.buildingType === 'villa' 
+                ? totalConstructionArea 
+                : (buildingStats.normalFloorArea || 100);
+        }
+        
+        // Ortalama 100 m²'ye kadar standart fiyatı (1.0 çarpan) kabul et.
+        // Alan büyüdükçe (cihaz kapasitesi arttıkça) fiyatı doğrusal olarak çarp.
+        const capacityMultiplier = Math.max(1.0, targetArea / 100.0);
+        return Math.round(basePrice * capacityMultiplier);
     }
 
     if (item.name === "Elektrik Tesisatı Malzeme" || item.name === "Elektrik Tesisatı İşçilik") {
