@@ -260,8 +260,8 @@ export const calculateConstructionSchedule = (
         let taskType: 'structure' | 'facade' | 'interior' = 'interior';
         
         const structureTasks = ['site_prep', 'excavation', 'structure', 'pool'];
-        // MANTIKSAL HATA ÇÖZÜMÜ: Duvar ve Sıva dış etkenlere (facade) dahil edildi
-        const facadeTasks = ['roof', 'facade', 'landscape', 'walls', 'plaster']; 
+        // Duvar ve Sıva işleri iklimden etkilenmemesi için 'facade' listesinden çıkarıldı, 'interior' (tam verim) kabul edilecek.
+        const facadeTasks = ['roof', 'facade', 'landscape']; 
         
         if (structureTasks.includes(task.id!)) {
             taskType = 'structure';
