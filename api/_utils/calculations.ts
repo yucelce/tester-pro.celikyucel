@@ -2776,7 +2776,7 @@ export const calculateDynamicUnitPrice = (
 
         // İklim bölgelerine göre malzeme kalınlık ve nitelik maliyet katsayıları
         switch (heatZone) {
-            case 1: zoneMultiplier = 0.80; break; // 1. Bölge (Örn: Antalya) -> %20 İndirim
+            case 1: zoneMultiplier = 0.90; break; // 1. Bölge (Örn: Antalya) -> %10 İndirim
             case 2: zoneMultiplier = 1.00; break; // 2. Bölge (Örn: İstanbul) -> Standart
             case 3: zoneMultiplier = 1.15; break; // 3. Bölge (Örn: Konya) -> %15 Zam
             case 4: zoneMultiplier = 1.30; break; // 4. Bölge (Örn: Kars) -> %30 Zam
