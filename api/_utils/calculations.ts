@@ -1613,8 +1613,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             vBodrumPerde = perimeter * buildingStats.subasmanHeight * 0.25;
         }
 
-        // DÜZELTME: Temel için %30 (1.30), Bodrum Perdeleri için %15 (1.15) daha fazla demir yoğunluğu hesaplanır.
-        let totalIron = ironKatlar + (vTemel * (ironCoeff * 0.85)) + (vBodrumPerde * (ironCoeff * 1.05));
+        let totalIron = ironKatlar + (vTemel * (ironCoeff * 1.15)) + (vBodrumPerde * (ironCoeff * 1.10));
 
         // YENİ: Bodrumsuz binalarda zemin taban betonu içine Çelik Hasır ilavesi (Ort. 4 kg/m² = 0.004 ton)
         if (buildingStats.basementFloorCount === 0) {
