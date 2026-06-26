@@ -8,6 +8,7 @@ import { estimatePerimeter } from '../../../api/_utils/calculations';
 import { useProjectStore } from '../../stores/projectStore';
 import { NumericInput } from '../Shared/NumericInput';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../../api/_utils/constants';
+import { ProLockedWrapper } from '../Shared/ProLockedWrapper';
 
 // ... (StructureModal bileşeni aynı kalacak) ...
 
@@ -24,6 +25,7 @@ interface BuildingModalProps {
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
     const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor'>('general'); const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+    const isPro = false;
 
     const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor') => {
         setActiveTab(tabId);
@@ -404,69 +406,83 @@ export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingS
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                                
                                 {/* Normal Katlar */}
                                 <div className="space-y-4 bg-slate-800/30 p-4 md:p-5 rounded-xl border border-slate-700/50 hover:border-blue-500/30 transition">
                                     <h4 className="font-bold text-blue-400 text-sm md:text-base flex items-center justify-between border-b border-blue-900/50 pb-2">
-                                        <div className="flex items-center gap-2"><i className="fas fa-building"></i> Normal Katlar</div>
-                                        <button onClick={() => handleFetchFromDrawing('normal')} className="text-[10px] bg-blue-900/50 hover:bg-blue-600 text-blue-200 px-2 py-1 rounded transition flex items-center gap-1 font-normal">
-                                            <i className="fas fa-drafting-compass"></i> Çizimden Çek
+                                        <div className="flex items-center gap-2">
+                                            <i className="fas fa-building"></i> Normal Katlar
+                                            {/* YENİ: Başlığın yanına ufak bir PRO rozeti ekliyoruz */}
+                                            {!isPro && <span className="text-[9px] bg-blue-500/20 border border-blue-500/50 text-blue-300 px-2 py-0.5 rounded-full font-bold tracking-wider">PRO</span>}
+                                        </div>
+                                        {/* "Çizimden Çek" butonunu da pasif (veya gizli) yapıyoruz */}
+                                        <button 
+                                            onClick={() => isPro ? handleFetchFromDrawing('normal') : window.open('https://www.celikyucel.com/abonelikler', '_blank')} 
+                                            className={`text-[10px] px-2 py-1 rounded transition flex items-center gap-1 font-normal ${isPro ? 'bg-blue-900/50 hover:bg-blue-600 text-blue-200' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'}`}
+                                        >
+                                            <i className={isPro ? "fas fa-drafting-compass" : "fas fa-lock"}></i> Çizimden Çek
                                         </button>
                                     </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                        <div>
-                                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max={buildingStats.buildingType === 'villa' ? 3 : undefined}
-                                                value={buildingStats.normalFloorCount}
-                                                onChange={(e) => {
-                                                    const parsed = parseInt(e.target.value);
-                                                    const val = isNaN(parsed) ? 0 : Math.max(0, parsed); // Negatif girilmesini önlemek için Math.max eklenebilir
-                                                    const maxVal = buildingStats.buildingType === 'villa' ? Math.min(val, 3) : val;
-                                                    setBuildingStats({ ...buildingStats, normalFloorCount: maxVal });
-                                                }}
-                                                className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
-                                            />
-                                            {buildingStats.buildingType === 'villa' && (
-                                                <p className="text-[10px] text-orange-400 mt-1">Maks. 3 kat</p>
-                                            )}                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Yük. (m)</label>
-                                            <input type="number" step="0.1" value={buildingStats.normalFloorHeight} onChange={(e) => setBuildingStats({ ...buildingStats, normalFloorHeight: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Kat Alanı (m²)</label>
-                                            <input type="number" value={buildingStats.normalFloorArea} onChange={(e) => handleAreaChange('normal', parseFloat(e.target.value) || 0)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Çevre (m)</label>
-                                            <div className="relative">
-                                                <input type="number" value={buildingStats.normalFloorPerimeter || 0} onChange={(e) => handlePerimeterChange('normal', parseFloat(e.target.value) || 0)} className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono pr-7 ${buildingStats.isNormalPerimeterManual ? 'border-yellow-500' : 'border-slate-600'}`} />
-                                                {buildingStats.isNormalPerimeterManual && (
-                                                    <button onClick={() => resetPerimeter('normal')} className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400" title="Kare kabulü ile otomatik hesapla">
-                                                        <i className="fas fa-undo text-[10px]"></i>
-                                                    </button>
+                                    
+                                    {/* YENİ: Tüm input grid'ini Wrapper içine alıyoruz */}
+                                    <ProLockedWrapper isPro={isPro}>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Adet</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={buildingStats.buildingType === 'villa' ? 3 : undefined}
+                                                    value={buildingStats.normalFloorCount}
+                                                    onChange={(e) => {
+                                                        const parsed = parseInt(e.target.value);
+                                                        const val = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                                                        const maxVal = buildingStats.buildingType === 'villa' ? Math.min(val, 3) : val;
+                                                        setBuildingStats({ ...buildingStats, normalFloorCount: maxVal });
+                                                    }}
+                                                    className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm"
+                                                />
+                                                {buildingStats.buildingType === 'villa' && (
+                                                    <p className="text-[10px] text-orange-400 mt-1">Maks. 3 kat</p>
                                                 )}
                                             </div>
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Yük. (m)</label>
+                                                <input type="number" step="0.1" value={buildingStats.normalFloorHeight} onChange={(e) => setBuildingStats({ ...buildingStats, normalFloorHeight: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Kat Alanı (m²)</label>
+                                                <input type="number" value={buildingStats.normalFloorArea} onChange={(e) => handleAreaChange('normal', parseFloat(e.target.value) || 0)} className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-sm font-mono" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Çevre (m)</label>
+                                                <div className="relative">
+                                                    <input type="number" value={buildingStats.normalFloorPerimeter || 0} onChange={(e) => handlePerimeterChange('normal', parseFloat(e.target.value) || 0)} className={`w-full bg-slate-900 border rounded p-2 text-white text-sm font-mono pr-7 ${buildingStats.isNormalPerimeterManual ? 'border-yellow-500' : 'border-slate-600'}`} />
+                                                    {buildingStats.isNormalPerimeterManual && (
+                                                        <button onClick={() => resetPerimeter('normal')} className="absolute right-2 top-2 text-yellow-500 hover:text-yellow-400" title="Kare kabulü ile otomatik hesapla">
+                                                            <i className="fas fa-undo text-[10px]"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-slate-400 font-bold block mb-1">Hol (m²)</label>
+                                                <input
+                                                    type="number"
+                                                    value={buildingStats.normalFloorHallArea || 0}
+                                                    onChange={(e) => updateHallArea('normal', parseFloat(e.target.value))}
+                                                    disabled={buildingStats.buildingType === 'villa'}
+                                                    title={buildingStats.buildingType === 'villa' ? 'Müstakil villalarda ortak hol alanı hesaplanmaz.' : ''}
+                                                    className={`w-full bg-slate-900 border rounded p-2 text-sm font-mono transition ${buildingStats.buildingType === 'villa'
+                                                        ? 'border-slate-800 text-slate-600 cursor-not-allowed bg-slate-900/50'
+                                                        : buildingStats.isNormalHallManual
+                                                            ? 'border-yellow-500 text-white'
+                                                            : 'border-slate-600 text-white'
+                                                        }`}
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="text-[10px] text-slate-400 font-bold block mb-1">Hol (m²)</label>
-                                            <input
-                                                type="number"
-                                                value={buildingStats.normalFloorHallArea || 0}
-                                                onChange={(e) => updateHallArea('normal', parseFloat(e.target.value))}
-                                                disabled={buildingStats.buildingType === 'villa'}
-                                                title={buildingStats.buildingType === 'villa' ? 'Müstakil villalarda ortak hol alanı hesaplanmaz.' : ''}
-                                                className={`w-full bg-slate-900 border rounded p-2 text-sm font-mono transition ${buildingStats.buildingType === 'villa'
-                                                    ? 'border-slate-800 text-slate-600 cursor-not-allowed bg-slate-900/50'
-                                                    : buildingStats.isNormalHallManual
-                                                        ? 'border-yellow-500 text-white'
-                                                        : 'border-slate-600 text-white'
-                                                    }`}
-                                            />
-                                        </div>
-                                    </div>
+                                    </ProLockedWrapper>
                                 </div>
 
                                 {/* Zemin Kat */}
