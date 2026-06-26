@@ -347,7 +347,13 @@ export const DashboardView: React.FC = () => {
                                 <i className="fas fa-building text-blue-500"></i> Yapı Genel Bilgileri
                             </h2>
                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                Arsa, Konum ve Kat Bilgileri {accountId !== 'guest' && accountId !== null && <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>}
+                                Arsa, Konum ve Kat Bilgileri {
+                                    accountId !== 'guest' && accountId !== null ? (
+                                        <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>
+                                    ) : (
+                                        <span className="ml-2 text-slate-400 font-medium">(Misafir Kullanıcı)</span>
+                                    )
+                                }
                             </p>
                         </div>
 
