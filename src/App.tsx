@@ -42,34 +42,23 @@ const AppLayout = () => {
             const urlParams = new URLSearchParams(window.location.search);
             let apiKey = urlParams.get('apiKey');
 
-            // 1. URL'de API Key varsa al, depolamaya kaydet ve URL'i temizle
-            if (apiKey) {
-                localStorage.setItem('cypro_api_key', apiKey);
-                const newUrl = window.location.pathname + window.location.hash;
-                window.history.replaceState(null, '', newUrl);
-            } else {
-                // 2. URL'de yoksa (sayfa yenilenmişse), daha önce kaydettiğimiz key'i al
-                apiKey = localStorage.getItem('cypro_api_key');
-            }
-
-            // 3. Hiçbir yerde key bulunamadıysa erişimi reddet
+            // 1. Durum: Hiç key yoksa (Misafir)
             if (!apiKey) {
-                setAuthStatus('error');
-                setAuthMessage("Oturum bulunamadı. Lütfen ana sayfa üzerinden giriş yapın.");
+                setAuthStatus('success');
+                setAccountId('guest'); // Kullanıcıyı ücretsiz modda başlat
                 return;
             }
 
-            setAuthStatus('loading');
+            // 2. Durum: Tester Modu
+            if (apiKey === "admin") {
+                setAuthStatus('success');
+                setAccountId("admin"); // Pro yetkileri ver
+                return;
+            }
+
+            // 3. Durum: API Key var, sunucuya doğruluğunu soralım
 
             try {
-                // TESTER MOD
-                if (apiKey === "admin") {
-                    setAuthStatus('success');
-                    setAccountId("admin");
-                    return;
-                }
-
-                // 4. Elimizdeki API Key'i sunucuya sorarak doğrulayalım
                 const response = await fetch(`https://www.celikyucel.com/_functions/validateKey`, {
                     method: 'GET',
                     headers: {
@@ -77,27 +66,25 @@ const AppLayout = () => {
                         'Content-Type': 'application/json'
                     }
                 });
+                
                 const data = await response.json();
 
+                // Wix'ten gelen veriye göre doğrulama
                 if (data.valid === true) {
-                    // BAŞARILI: Oturumu aç
+                    // Key DOĞRU: Kullanıcıyı Pro yetkileriyle içeri al
                     setAuthStatus('success');
-                    // WIX'ten gelen üye ID'sini güvenli bir şekilde sisteme kaydediyoruz
-                    if (data.memberId) {
-                        setAccountId(data.memberId);
-                    } else {
-                        setAccountId(apiKey); // Fallback olarak apiKey'i accountId yapabiliriz
-                    }
+                    setAccountId(data.memberId || apiKey); 
                 } else {
-                    // BAŞARISIZ VEYA SÜRESİ DOLMUŞ: LocalStorage'ı temizle ve hata göster
-                    localStorage.removeItem('cypro_api_key');
-                    setAuthStatus('error');
-                    setAuthMessage(data.message || "Oturumunuzun süresi dolmuş veya geçersiz. Lütfen tekrar giriş yapın.");
+                    // Key YANLIŞ: Hata verme, yanlış key'i temizle ve ücretsiz modda içeri al
+                    localStorage.removeItem('cypro_api_key'); 
+                    setAuthStatus('success');
+                    setAccountId('guest');    
                 }
             } catch (error) {
+                // SUNUCU HATASI: Yine de dışarıda bırakma, ücretsiz modda al
                 console.error("Doğrulama hatası:", error);
-                setAuthStatus('error');
-                setAuthMessage("Sistem doğrulaması şu an yapılamıyor. Lütfen daha sonra tekrar deneyin.");
+                setAuthStatus('success');
+                setAccountId('guest');
             }
         };
 
