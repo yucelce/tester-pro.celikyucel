@@ -42,22 +42,31 @@ const AppLayout = () => {
             const urlParams = new URLSearchParams(window.location.search);
             let apiKey = urlParams.get('apiKey');
 
-            // 1. Durum: Hiç key yoksa (Misafir)
+            // 1. URL'de API Key varsa al, depolamaya kaydet ve URL'i temizle
+            if (apiKey) {
+                localStorage.setItem('cypro_api_key', apiKey);
+                const newUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState(null, '', newUrl);
+            } else {
+                // 2. URL'de yoksa (sayfa yenilenmişse), daha önce kaydettiğimiz key'i al
+                apiKey = localStorage.getItem('cypro_api_key');
+            }
+
+            // 3. Hiçbir yerde key bulunamadıysa (Misafir / Freemium Modu)
             if (!apiKey) {
                 setAuthStatus('success');
-                setAccountId('guest'); // Kullanıcıyı ücretsiz modda başlat
+                setAccountId('guest'); 
                 return;
             }
 
-            // 2. Durum: Tester Modu
+            // 4. Tester (Admin) Modu Kontrolü
             if (apiKey === "admin") {
                 setAuthStatus('success');
                 setAccountId("admin"); // Pro yetkileri ver
                 return;
             }
 
-            // 3. Durum: API Key var, sunucuya doğruluğunu soralım
-
+            // 5. Normal Kullanıcı: API Key var, Wix sunucusuna doğruluğunu soralım
             try {
                 const response = await fetch(`https://www.celikyucel.com/_functions/validateKey`, {
                     method: 'GET',
@@ -66,22 +75,21 @@ const AppLayout = () => {
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 const data = await response.json();
 
-                // Wix'ten gelen veriye göre doğrulama
                 if (data.valid === true) {
                     // Key DOĞRU: Kullanıcıyı Pro yetkileriyle içeri al
                     setAuthStatus('success');
                     setAccountId(data.memberId || apiKey); 
                 } else {
-                    // Key YANLIŞ: Hata verme, yanlış key'i temizle ve ücretsiz modda içeri al
+                    // Key YANLIŞ veya SÜRESİ DOLMUŞ: Hata verme, yanlış key'i temizle ve misafir yap
                     localStorage.removeItem('cypro_api_key'); 
-                    setAuthStatus('success');
+                    setAuthStatus('success'); 
                     setAccountId('guest');    
                 }
             } catch (error) {
-                // SUNUCU HATASI: Yine de dışarıda bırakma, ücretsiz modda al
+                // SUNUCU HATASI: Yine de misafir modda içeri al
                 console.error("Doğrulama hatası:", error);
                 setAuthStatus('success');
                 setAccountId('guest');
