@@ -2769,6 +2769,7 @@ export const calculateDynamicUnitPrice = (
         return basePrice + (extraStops * costPerExtraStop);
     }
 
+
     if ((item.name === "Mantolama Malzemesi" || item.name === "Mantolama İşçiliği") && buildingStats) {
         let zoneMultiplier = 1.0;
         const heatZone = buildingStats.heatZone || 2; // Varsayılan 2. Bölge kabulü
@@ -2808,21 +2809,21 @@ export const calculateDynamicUnitPrice = (
     }
 
     if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
-        // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
+        // İşçilik ve Kaba Montaj gerektirenler (Mantolama buradan çıkartıldı)
         const structuralPremium = [
-            "Mantolama Malzemesi", "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
+            "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
         ];
 
-        // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler (Yüksek çarpan)
+        // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler
         const decorativePremium = [
             "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
             "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
-            "Portmanto / Vestiyer", "İç Merdiven (Dubleks)", "Balkon Korkulukları (Alüminyum)",
+            "Portmanto / Vestiyer", "İç Merdiven Kaplama", "Balkon Korkulukları (Alüminyum)",
             "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
             "Seramik Malzemesi", "Seramik İşçiliği"
         ];
 
-        // Mekanik ve Vitrifiye (Çok lüks armatürler seçileceği için en yüksek çarpan)
+        // Mekanik ve Vitrifiye
         const mepPremium = [
             "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
             "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
@@ -2830,57 +2831,35 @@ export const calculateDynamicUnitPrice = (
         ];
 
         // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-        if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
+        let luxuryScale = 1.0;
 
-            // Mantolama buradan silindiği için structuralPremium dizisini güncelledik
-            const structuralPremium = [
-                "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
-            ];
-
-            // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler
-            const decorativePremium = [
-                "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
-                "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
-                "Portmanto / Vestiyer", "İç Merdiven Kaplama", "Balkon Korkulukları (Alüminyum)",
-                "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
-                "Seramik Malzemesi", "Seramik İşçiliği"
-            ];
-
-            // Mekanik ve Vitrifiye
-            const mepPremium = [
-                "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
-                "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
-                "Cephe Aydınlatma (Wallwasher)"
-            ];
-
-            // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-            let luxuryScale = 1.0;
-
-            if (totalConstructionArea <= 150) {
-                luxuryScale = 0.60;
-            } else if (totalConstructionArea >= 1000) {
-                luxuryScale = 1.80;
-            } else {
-                const range = 1000 - 150;
-                const excess = totalConstructionArea - 150;
-                const progress = excess / range;
-                luxuryScale = 0.60 + (1.20 * progress);
-            }
-
-            // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
-            if (structuralPremium.includes(item.name)) {
-                const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
-                return Math.round(item.unit_price * (1 + butikZorlukCarpani));
-            } else if (decorativePremium.includes(item.name)) {
-                return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
-            } else if (mepPremium.includes(item.name)) {
-                return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
-            }
+        if (totalConstructionArea <= 150) {
+            luxuryScale = 0.60; 
+        } else if (totalConstructionArea >= 1000) {
+            luxuryScale = 1.80; 
+        } else {
+            const range = 1000 - 150;     
+            const excess = totalConstructionArea - 150;
+            const progress = excess / range;
+            luxuryScale = 0.60 + (1.20 * progress);
         }
 
-        // Diğer tüm kalemler için orijinal fiyatı döndür
-        return item.unit_price;
-    };
+        // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
+        if (structuralPremium.includes(item.name)) {
+            const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
+            return Math.round(item.unit_price * (1 + butikZorlukCarpani));
+        } else if (decorativePremium.includes(item.name)) {
+            return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
+        } else if (mepPremium.includes(item.name)) {
+            return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
+        }
+    }
+
+    // Diğer tüm kalemler için orijinal fiyatı döndür
+    return item.unit_price;
+};
+
+    
 
     export const calculateTapuNoterFees = (
         unitCount: number,
