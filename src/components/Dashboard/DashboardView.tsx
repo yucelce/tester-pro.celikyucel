@@ -346,7 +346,10 @@ export const DashboardView: React.FC = () => {
                             <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <i className="fas fa-building text-blue-500"></i> Yapı Genel Bilgileri
                             </h2>
-                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Arsa, Konum ve Kat Bilgileri {accountId && <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>}</p>                        </div>
+                            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                Arsa, Konum ve Kat Bilgileri {accountId !== 'guest' && accountId !== null && <span className="ml-2 text-green-500 font-bold">(Pro Hesap)</span>}
+                            </p>
+                        </div>
 
                         <div className="flex gap-2 w-full md:w-auto flex-wrap md:flex-nowrap">
                             <button
@@ -499,7 +502,7 @@ export const DashboardView: React.FC = () => {
 
                         {/* KART 3: Finans & Sistem Sağlığı (Güncellendi: 3 Satırlı Tam Tamamlamalı Sistem) */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
-                            
+
                             <div className="border-b border-slate-200 dark:border-slate-700/50 pb-4 mb-4 flex-1">
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-3">
                                     <i className="fas fa-coins text-emerald-500/70"></i>
@@ -511,7 +514,7 @@ export const DashboardView: React.FC = () => {
                                         <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2"><i className="fas fa-cubes text-yellow-500"></i> Kaba Yapı</span>
                                         <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                                     </div>
-                                    
+
                                     {/* 2. Satır: İnce İşler */}
                                     <div className="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
                                         <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2"><i className="fas fa-paint-roller text-purple-500"></i> İnce İşler</span>

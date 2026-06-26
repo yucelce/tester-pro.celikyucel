@@ -9,6 +9,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { NumericInput } from '../Shared/NumericInput';
 import { TURKEY_HEAT_MAP, PROVINCE_EARTHQUAKE_ZONES } from '../../../api/_utils/constants';
 import { ProLockedWrapper } from '../Shared/ProLockedWrapper';
+import { useUIStore } from '../../stores/uiStore';
 
 // ... (StructureModal bileşeni aynı kalacak) ...
 
@@ -24,9 +25,11 @@ interface BuildingModalProps {
 
 export const BuildingModal: React.FC<BuildingModalProps> = ({ onClose, buildingStats, setBuildingStats, handleProvinceChange, handleDistrictChange, isFetchingHeat }) => {
     const { updateHallArea, structuralUnits, globalWallMaterial, setGlobalWallMaterial } = useProjectStore();
-    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor'>('general'); const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
-    const isPro = false;
-
+    const [activeTab, setActiveTab] = useState<'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor'>('general'); 
+    const systemEqZone = PROVINCE_EARTHQUAKE_ZONES[buildingStats.province] || 1;
+    const { accountId } = useUIStore(); 
+    const isPro = accountId !== 'guest' && accountId !== null;
+    
     const handleTabClick = (tabId: 'general' | 'floors' | 'contract' | 'special' | 'structural' | 'villa_outdoor') => {
         setActiveTab(tabId);
         const visited = buildingStats.visitedTabs || [];
