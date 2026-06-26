@@ -1695,9 +1695,9 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_main_electrical_panel': ({ aggregatedUnitStats, buildingStats, currentCosts, item, costBreakdowns }) => {
         const totalUnits = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         const basePrice = getGlobalPrice(currentCosts, "Ana Dağıtım ve Sayaç Panoları");
-        
+
         // Pano maliyeti daire sayısına göre artar. Her daire için ortalama %10 pano büyümesi/şalt malzeme eklenir.
-        const totalCost = basePrice + (totalUnits * (basePrice * 0.10)); 
+        const totalCost = basePrice + (totalUnits * (basePrice * 0.10));
 
         if (costBreakdowns) {
             costBreakdowns[item.name] = [
@@ -1712,26 +1712,26 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
     'calc_main_electrical_cable_length': ({ buildingStats, aggregatedUnitStats }) => {
         const totalUnits = buildingStats.buildingType === 'villa' ? 1 : (aggregatedUnitStats['calc_unit_count'] || 1);
         let totalCableLength = 0;
-        
+
         if (buildingStats.buildingType === 'villa') {
             const landSide = Math.sqrt(buildingStats.landArea || 0);
             // Villalarda ana panodan (örneğin bahçe duvarı sınırından) eve geliş mesafesi
             totalCableLength = Math.max(15, landSide + 5);
         } else {
-             // Apartmanlarda her daire için zemin kattaki sayaç panosundan daireye kadar çekilen kablo
-             const floorHeight = buildingStats.normalFloorHeight || 3.0;
-             let sumVertical = 0;
-             let unitsPerFloor = buildingStats.normalFloorCount > 0 ? (totalUnits / buildingStats.normalFloorCount) : totalUnits;
-             
-             // Kat yükseldikçe kablo uzar (1. kat için 1h, 2. kat için 2h ...)
-             for(let i = 1; i <= buildingStats.normalFloorCount; i++) {
-                 sumVertical += (unitsPerFloor * (i * floorHeight));
-             }
-             
-             // Yatayda her daire için ortalama 12 metre pay (sayaçtan şafta ve şafttan daire sigorta kutusuna)
-             const sumHorizontal = totalUnits * 12; 
-             
-             totalCableLength = sumVertical + sumHorizontal;
+            // Apartmanlarda her daire için zemin kattaki sayaç panosundan daireye kadar çekilen kablo
+            const floorHeight = buildingStats.normalFloorHeight || 3.0;
+            let sumVertical = 0;
+            let unitsPerFloor = buildingStats.normalFloorCount > 0 ? (totalUnits / buildingStats.normalFloorCount) : totalUnits;
+
+            // Kat yükseldikçe kablo uzar (1. kat için 1h, 2. kat için 2h ...)
+            for (let i = 1; i <= buildingStats.normalFloorCount; i++) {
+                sumVertical += (unitsPerFloor * (i * floorHeight));
+            }
+
+            // Yatayda her daire için ortalama 12 metre pay (sayaçtan şafta ve şafttan daire sigorta kutusuna)
+            const sumHorizontal = totalUnits * 12;
+
+            totalCableLength = sumVertical + sumHorizontal;
         }
         return totalCableLength;
     },
@@ -1910,8 +1910,8 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         let roofFacade = 0;
         if (buildingStats.hasRoofFloor && (buildingStats.roofFloorArea || 0) > 0) {
             const roofPerim = buildingStats.roofFloorPerimeter || estimatePerimeter(buildingStats.roofFloorArea || 0);
-            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0; 
-            const parapetHeight = 0.60; 
+            const maxHeight = buildingStats.roofFloorMaxHeight || 3.0;
+            const parapetHeight = 0.60;
 
             const shortSideApprox = roofPerim / 4.5;
             const triangleHeight = Math.max(0, maxHeight - parapetHeight);
@@ -1943,7 +1943,7 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
             }
 
             // overhangArea (çıkma altı) toplama dahil edildi
-            const grossFacade = groundFacade + normalFacade + roofFacade + overhangArea; 
+            const grossFacade = groundFacade + normalFacade + roofFacade + overhangArea;
             const netFacade = Math.max(0, grossFacade - deductibleWindowArea);
             return netFacade * 1.15; // %15 zayiat
 
@@ -2352,10 +2352,10 @@ const globalQuantityStrategies: Record<string, CalculatorFn> = {
         // İskele her zaman binanın en geniş oturumuna (genelde çıkmaların olduğu normal kata) göre kurulur.
         const groundPerim = buildingStats.groundFloorPerimeter || estimatePerimeter(buildingStats.groundFloorArea || 0);
         const normalPerim = buildingStats.normalFloorCount > 0 ? (buildingStats.normalFloorPerimeter || estimatePerimeter(buildingStats.normalFloorArea || 0)) : 0;
-        
+
         // Zemin ve normal kat çevrelerinden en büyük olanı baz alıyoruz
         const maxBuildingPerimeter = Math.max(groundPerim, normalPerim);
-        
+
         // İskeleyi bina yüzeyinden ayırmak ve köşeleri dönmek için +8 mt eklenir
         const scaffoldingPerimeter = maxBuildingPerimeter + 8;
 
@@ -2666,16 +2666,16 @@ export const calculateDynamicUnitPrice = (
     // --- ISI POMPASI KAPASİTE/FİYAT DÜZELTMESİ ---
     if (item.name === "Isı Pompası (Hava Kaynaklı Dış Ünite)") {
         const basePrice = item.unit_price;
-        
+
         // calculate-project.ts'den çağrıldığında unitArea 0 gelebilir. 
         // Çökmeyi önlemek için güvenli alan (targetArea) belirliyoruz.
         let targetArea = unitArea;
         if (targetArea <= 0 && buildingStats) {
-            targetArea = buildingStats.buildingType === 'villa' 
-                ? totalConstructionArea 
+            targetArea = buildingStats.buildingType === 'villa'
+                ? totalConstructionArea
                 : (buildingStats.normalFloorArea || 100);
         }
-        
+
         // Ortalama 100 m²'ye kadar standart fiyatı (1.0 çarpan) kabul et.
         // Alan büyüdükçe (cihaz kapasitesi arttıkça) fiyatı doğrusal olarak çarp.
         const capacityMultiplier = Math.max(1.0, targetArea / 100.0);
@@ -2793,75 +2793,50 @@ export const calculateDynamicUnitPrice = (
         ];
 
         // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-        if ((item.name === "Mantolama Malzemesi" || item.name === "Mantolama İşçiliği") && buildingStats) {
-            let zoneMultiplier = 1.0;
-            const heatZone = buildingStats.heatZone || 2; // Varsayılan 2. Bölge kabulü
+        if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
+        
+        // Mantolama buradan silindiği için structuralPremium dizisini güncelledik
+        const structuralPremium = [
+             "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
+        ];
 
-            // İklim bölgelerine göre malzeme kalınlık ve nitelik (EPS/XPS/Taşyünü) maliyet katsayıları
-            switch (heatZone) {
-                case 1: zoneMultiplier = 0.85; break; // 1. Bölge (Örn: Antalya) -> İnce EPS (3-4 cm)
-                case 2: zoneMultiplier = 1.00; break; // 2. Bölge (Örn: İstanbul) -> Standart Karbonlu EPS (5 cm)
-                case 3: zoneMultiplier = 1.25; break; // 3. Bölge (Örn: Ankara) -> Kalın EPS veya Taşyünü (6-8 cm)
-                case 4: zoneMultiplier = 1.50; break; // 4. Bölge (Örn: Erzurum) -> Çok Kalın XPS / Taşyünü (8-10 cm)
-            }
+        // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler
+        const decorativePremium = [
+            "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
+            "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
+            "Portmanto / Vestiyer", "İç Merdiven Kaplama", "Balkon Korkulukları (Alüminyum)",
+            "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
+            "Seramik Malzemesi", "Seramik İşçiliği"
+        ];
 
-            let calculatedPrice = item.unit_price;
+        // Mekanik ve Vitrifiye
+        const mepPremium = [
+            "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
+            "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
+            "Cephe Aydınlatma (Wallwasher)"
+        ];
 
-            if (item.name === "Mantolama Malzemesi") {
-                // Malzeme iklimden tam etkilenir (Kalınlık ve yoğunluk farkı)
-                calculatedPrice = item.unit_price * zoneMultiplier;
-            } else if (item.name === "Mantolama İşçiliği") {
-                // İşçilik iklimden bağımsızdır veya sadece %5'lik bir "kalın malzeme" farkı eklenir
-                calculatedPrice = item.unit_price * 1.05;
-            }
-
-            // Çakışmayı önlemek için: Eğer bina tipi villa ise, aşağıdaki "structuralPremium" katsayısını 
-            // manuel olarak iklimsel fiyata da yansıtıp doğrudan döndürüyoruz.
-            if (buildingStats.buildingType === 'villa') {
-                let luxuryScale = 1.0;
-                if (totalConstructionArea <= 150) {
-                    luxuryScale = 0.60;
-                } else if (totalConstructionArea >= 1000) {
-                    luxuryScale = 1.80;
-                } else {
-                    const range = 1000 - 150;
-                    const excess = totalConstructionArea - 150;
-                    luxuryScale = 0.60 + (1.20 * (excess / range));
-                }
-
-                // Villalar için yapısal katsayı payı olan %20'yi (0.20) lüks çarpanıyla ekliyoruz
-                calculatedPrice = calculatedPrice * (1 + (0.20 * luxuryScale));
-            }
-
-            return Math.round(calculatedPrice);
-        }
+        // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
         let luxuryScale = 1.0;
 
         if (totalConstructionArea <= 150) {
-            luxuryScale = 0.60; // Tiny/Kompakt Villa: Karmaşa az, lüks oranı düşük
+            luxuryScale = 0.60; 
         } else if (totalConstructionArea >= 1000) {
-            luxuryScale = 1.80; // Malikane: VRF, Akıllı Ev, Galeri Boşlukları, Özel Şaftlar
+            luxuryScale = 1.80; 
         } else {
-            // 150 m² ile 1000 m² arasında lineer bir artış eğrisi kuralım
-            const range = 1000 - 150;     // 850 m² metraj farkı
+            const range = 1000 - 150;     
             const excess = totalConstructionArea - 150;
             const progress = excess / range;
-
-            // 0.60'tan 1.80'e kadar (1.20 birimlik fark) doğrusal artış
             luxuryScale = 0.60 + (1.20 * progress);
         }
 
         // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
         if (structuralPremium.includes(item.name)) {
-            // YENİ: Kaba ve yarı-kaba işlerde lüks çarpanı değil, "butik iş/zorluk" çarpanı geçerlidir. 
-            // Maksimum %10-%15 arası bir işçilik/fire farkı yansıtmak piyasa gerçeğine uygundur.
             const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
             return Math.round(item.unit_price * (1 + butikZorlukCarpani));
         } else if (decorativePremium.includes(item.name)) {
-            // Temel artış %45 (0.45)
             return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
         } else if (mepPremium.includes(item.name)) {
-            // Temel artış %70 (0.70)
             return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
         }
     }
