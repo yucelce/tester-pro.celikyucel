@@ -69,13 +69,18 @@ export const DashboardView: React.FC = () => {
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices, duplexPairs,setProjectStartDate
+        globalStats, costs, bulkUpdatePrices, duplexPairs,scheduleOverrides,setProjectStartDate
     } = useProjectStore();
 
-    const projectEndDate = useMemo(() => {
+   const projectEndDate = useMemo(() => {
         if (!projectSchedule || projectSchedule.length === 0) return null;
         return projectSchedule.reduce((max, item) => item.endDate > max ? item.endDate : max, projectSchedule[0].endDate);
     }, [projectSchedule]);
+
+    // 2. Aşağıdaki İş Programında el ile kilitlenmiş/değiştirilmiş kalem var mı?
+    const hasActiveScheduleLocks = useMemo(() => {
+        return scheduleOverrides && Object.keys(scheduleOverrides).length > 0;
+    }, [scheduleOverrides]);
 
     const [showDuplexModal, setShowDuplexModal] = useState(false);
 
@@ -400,54 +405,98 @@ export const DashboardView: React.FC = () => {
                         </div>
 
                         {/* KART 2: Tarih ve Süre */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3">
-                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 relative">
+                            
+                            {/* Üst Kısım: Başlangıç ve Canlı Bitiş Tarihi */}
+                            <div className="border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-3">
+                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-2">
                                     <i className="fas fa-calendar-alt text-indigo-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Başlangıç Tarihi</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Proje Zamanlaması</span>
                                 </div>
-                                <div className="mt-1">
-                                    <input
-                                        type="date"
-                                        value={buildingStats.projectStartDate ? new Date(buildingStats.projectStartDate).toISOString().split('T')[0] : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]}
-                                        onChange={(e) => setProjectStartDate(e.target.value)}
-                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors shadow-sm cursor-pointer"
-                                    />
-                                </div>
-                                {/* Tahmini Bitiş Tarihi */}
-                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/50">
-                                    <span className="text-[9px] text-slate-500 font-medium">Bitiş (Tahmini):</span>
-                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 font-mono">
-                                        {projectEndDate ? projectEndDate.toLocaleDateString('tr-TR') : '-'}
-                                    </span>
+                                
+                                <div className="grid grid-cols-1 gap-2">
+                                    {/* Başlangıç Tarihi Inputu */}
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={buildingStats.projectStartDate ? new Date(buildingStats.projectStartDate).toISOString().split('T')[0] : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]}
+                                            onChange={(e) => setProjectStartDate(e.target.value)}
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                                        />
+                                        <span className="absolute right-2 top-1.5 text-[9px] text-slate-400 pointer-events-none uppercase font-bold bg-slate-50 dark:bg-slate-900 pl-1">Başlangıç</span>
+                                    </div>
+
+                                    {/* Canlı ve Read-Only Bitiş Tarihi */}
+                                    <div className="flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30 px-2 py-1.5 rounded border border-slate-100 dark:border-slate-800 mt-1">
+                                        <span className="text-[10px] font-medium text-slate-500">Tahmini Bitiş:</span>
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                            {projectEndDate ? projectEndDate.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mt-1">
-                                    <i className="far fa-clock text-indigo-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Süre:</span>
+
+                            {/* Alt Kısım: Süre Girişi ve Akıllı Akış Kontrolü */}
+                            <div className="flex items-start justify-between gap-2 mt-1">
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                        <i className="far fa-clock text-indigo-500/70"></i>
+                                        <span className="text-[10px] uppercase font-bold tracking-wider">İnşaat Süresi</span>
+                                    </div>
+                                    
+                                    {/* ÇAKIŞMA UYARISI: Kullanıcı aşağıda plan yapmış ama yukarıdan süreyi ezmişse çıkar */}
+                                    {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
+                                        <div className="text-[9px] text-amber-600 dark:text-amber-400 font-medium leading-tight max-w-[130px] bg-amber-500/10 p-1.5 rounded border border-amber-500/20 animate-pulse">
+                                            <i className="fas fa-exclamation-triangle mr-1"></i> İş programı detayları geçersiz kılındı.
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 shadow-sm">
+
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1 shadow-inner">
                                         <div className="relative flex items-center">
-                                            {/* w-10 yerine w-12 yapıldı ve step="0.1" eklendi */}
                                             <input
                                                 type="number"
                                                 step="0.1"
+                                                min="1"
                                                 value={constructionDuration || ''}
                                                 onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                                className={`w-12 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
+                                                className={`w-14 bg-transparent font-mono font-black text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500') : 'text-slate-900 dark:text-white'}`}
                                             />
-                                            <span className="text-[10px] text-slate-500 ml-1">Ay</span>
+                                            <span className="text-[10px] text-slate-400 font-bold ml-1 mr-1">Ay</span>
                                         </div>
+                                        
+                                        {/* Geri Al (Undo) Butonu */}
                                         {buildingStats.durationSource === 'manual' && (
-                                            <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
+                                            <button 
+                                                onClick={() => updateConstructionDuration(undefined)} 
+                                                className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20" 
+                                                title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
+                                            >
+                                                <i className="fas fa-undo text-xs"></i>
+                                            </button>
                                         )}
                                     </div>
-                                    <div className="text-[9px] font-bold mt-0.5">
-                                        {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
-                                        {buildingStats.durationSource === 'schedule' && <span className="text-purple-500 flex items-center gap-1"><i className="fas fa-calendar-check"></i> İş Programından</span>}
-                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Bilgilerinden</span>}
+
+                                    {/* Durum Rozeti */}
+                                    <div className="text-[9px] font-bold mt-1">
+                                        {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks ? (
+                                            <span className="text-amber-500 flex items-center gap-1" title="Aşağıdaki detaylar yukarıdan girilen süre nedeniyle geçersiz kılındı.">
+                                                <i className="fas fa-lock-open"></i> Detaylar Ezildi
+                                            </span>
+                                        ) : buildingStats.durationSource === 'manual' ? (
+                                            <span className="text-orange-500 flex items-center gap-1">
+                                                <i className="fas fa-pen"></i> El ile Girildi
+                                            </span>
+                                        ) : buildingStats.durationSource === 'schedule' ? (
+                                            <span className="text-purple-500 flex items-center gap-1">
+                                                <i className="fas fa-calendar-check"></i> İş Programından
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-400 flex items-center gap-1">
+                                                <i className="fas fa-calculator"></i> Algoritma (Oto)
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

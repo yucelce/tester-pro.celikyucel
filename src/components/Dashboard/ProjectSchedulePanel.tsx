@@ -10,7 +10,7 @@ export const ProjectSchedulePanel: React.FC = () => {
         scheduleOverrides,
         updateScheduleOverride,
         setProjectStartDate,
-        resetSchedule
+        resetSchedule, constructionDuration,updateConstructionDuration
     } = useProjectStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -122,6 +122,39 @@ export const ProjectSchedulePanel: React.FC = () => {
                                 className="w-full md:w-auto bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-md whitespace-nowrap flex items-center justify-center gap-2 active:scale-95"
                             >
                                 <i className="fas fa-unlock-alt"></i> Kilitleri Çöz & Oto Dağıt
+                            </button>
+                        </div>
+                    )}
+
+                    {/* YENİ EKLENEN: Manuel Süre Uyarı Bandı */}
+                    {buildingStats.durationSource === 'manual' && (
+                        <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm relative overflow-hidden animate-fadeIn">
+                            {/* Arka plan deseni */}
+                            <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none">
+                                <i className="fas fa-lock text-6xl text-amber-500"></i>
+                            </div>
+                            
+                            <div className="flex items-start gap-3 relative z-10">
+                                <div className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 w-10 h-10 rounded-full flex items-center justify-center border border-amber-200 dark:border-amber-800">
+                                    <i className="fas fa-ban text-lg"></i>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-amber-800 dark:text-amber-400">
+                                        İş Programı Detayları Devre Dışı
+                                    </h4>
+                                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1 leading-relaxed max-w-2xl">
+                                        Proje genel süresi üst panelden <strong className="font-bold underline decoration-amber-300/50">el ile ({constructionDuration} Ay)</strong> sabitlenmiştir. 
+                                        Şu an bu tablo üzerinde yapacağınız gün bazlı görev uzatma/kısaltma işlemleri, genel proje maliyetini ve nakit akışını <strong>etkilememektedir</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={() => updateConstructionDuration(undefined)}
+                                className="w-full md:w-auto flex-shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 relative z-10 active:scale-95"
+                            >
+                                <i className="fas fa-sync-alt"></i>
+                                Detaylı Planlamayı Aktif Et
                             </button>
                         </div>
                     )}
