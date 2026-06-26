@@ -2493,7 +2493,6 @@ export const calculateDynamicUnitPrice = (
 
 
     // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
-    // 2. Duvar Dinamik Fiyat Hesaplaması kendi işine bakıyor
     if (item.name.startsWith("Duvar Malzemesi (") || item.name.startsWith("Duvar İşçiliği (")) {
         const match = item.name.match(/\(([\d\.]+) cm\)/);
         if (match && currentCosts && globalWallMaterial) {
@@ -2770,6 +2769,44 @@ export const calculateDynamicUnitPrice = (
         return basePrice + (extraStops * costPerExtraStop);
     }
 
+    if ((item.name === "Mantolama Malzemesi" || item.name === "Mantolama İşçiliği") && buildingStats) {
+        let zoneMultiplier = 1.0;
+        const heatZone = buildingStats.heatZone || 2; // Varsayılan 2. Bölge kabulü
+
+        // İklim bölgelerine göre malzeme kalınlık ve nitelik maliyet katsayıları
+        switch (heatZone) {
+            case 1: zoneMultiplier = 0.80; break; // 1. Bölge (Örn: Antalya) -> %20 İndirim
+            case 2: zoneMultiplier = 1.00; break; // 2. Bölge (Örn: İstanbul) -> Standart
+            case 3: zoneMultiplier = 1.15; break; // 3. Bölge (Örn: Konya) -> %15 Zam
+            case 4: zoneMultiplier = 1.30; break; // 4. Bölge (Örn: Kars) -> %30 Zam
+        }
+
+        let calculatedPrice = item.unit_price;
+
+        if (item.name === "Mantolama Malzemesi") {
+            // Malzeme iklimden tam etkilenir (Kalınlık ve yoğunluk farkı)
+            calculatedPrice = item.unit_price * zoneMultiplier;
+        } else if (item.name === "Mantolama İşçiliği") {
+            // İşçilik kalınlık farkından az etkilenir
+            calculatedPrice = item.unit_price * 1.02;
+        }
+
+        // Eğer bina lüks villa ise, mevcut lüks çarpanını da fiyata ekle
+        if (buildingStats.buildingType === 'villa' && buildingStats.isLuxuryVilla !== false) {
+            let luxuryScale = 1.0;
+            if (totalConstructionArea <= 150) luxuryScale = 0.60;
+            else if (totalConstructionArea >= 1000) luxuryScale = 1.80;
+            else {
+                const range = 1000 - 150;
+                const excess = totalConstructionArea - 150;
+                luxuryScale = 0.60 + (1.20 * (excess / range));
+            }
+            calculatedPrice = calculatedPrice * (1 + (0.20 * luxuryScale));
+        }
+
+        return Math.round(calculatedPrice);
+    }
+
     if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
         // İşçilik ve Kaba Montaj gerektirenler (Daha az çarpan)
         const structuralPremium = [
@@ -2794,117 +2831,117 @@ export const calculateDynamicUnitPrice = (
 
         // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
         if (buildingStats?.buildingType === 'villa' && buildingStats?.isLuxuryVilla !== false) {
-        
-        // Mantolama buradan silindiği için structuralPremium dizisini güncelledik
-        const structuralPremium = [
-             "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
-        ];
 
-        // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler
-        const decorativePremium = [
-            "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
-            "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
-            "Portmanto / Vestiyer", "İç Merdiven Kaplama", "Balkon Korkulukları (Alüminyum)",
-            "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
-            "Seramik Malzemesi", "Seramik İşçiliği"
-        ];
-
-        // Mekanik ve Vitrifiye
-        const mepPremium = [
-            "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
-            "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
-            "Cephe Aydınlatma (Wallwasher)"
-        ];
-
-        // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
-        let luxuryScale = 1.0;
-
-        if (totalConstructionArea <= 150) {
-            luxuryScale = 0.60; 
-        } else if (totalConstructionArea >= 1000) {
-            luxuryScale = 1.80; 
-        } else {
-            const range = 1000 - 150;     
-            const excess = totalConstructionArea - 150;
-            const progress = excess / range;
-            luxuryScale = 0.60 + (1.20 * progress);
-        }
-
-        // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
-        if (structuralPremium.includes(item.name)) {
-            const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
-            return Math.round(item.unit_price * (1 + butikZorlukCarpani));
-        } else if (decorativePremium.includes(item.name)) {
-            return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
-        } else if (mepPremium.includes(item.name)) {
-            return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
-        }
-    }
-
-    // Diğer tüm kalemler için orijinal fiyatı döndür
-    return item.unit_price;
-};
-
-export const calculateTapuNoterFees = (
-    unitCount: number,
-    province: string,
-    constructionModel: 'standard' | 'kat_karsiligi' = 'standard',
-    isUrbanTransformation: boolean = false,
-    totalConstructionCost: number = 0,
-    currentCosts?: CostCategory[],
-    costBreakdowns?: Record<string, { label: string; value: number }[]>, // YENİ
-    itemName?: string // YENİ
-): number => {
-    const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
-    let cityMultiplier = highCostCities.includes(province) ? 2.5 : 1.5;
-
-    const baseTapuDoner = getGlobalPrice(currentCosts, "Tapu Döner Sermaye") * cityMultiplier;
-    const baseNoterPaperFee = getGlobalPrice(currentCosts, "Noter Yazı Ücreti");
-
-    if (isUrbanTransformation) {
-        const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti") / 2;
-        const totalCost = baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
-
-        if (costBreakdowns && itemName) {
-            costBreakdowns[itemName] = [
-                { label: `Maktu Noter Giderleri (Kentsel Dönüşüm)`, value: Math.round(totalCost) },
-                { label: `Harç ve Damga Vergisi (Muafiyet)`, value: 0 }
+            // Mantolama buradan silindiği için structuralPremium dizisini güncelledik
+            const structuralPremium = [
+                "Çatı Konstrüksiyon ve Kaplama", "PVC Pencere (Doğrama)"
             ];
+
+            // Göz önünde olan ve lüks seçilen Mimari/Dekoratif kalemler
+            const decorativePremium = [
+                "Bina Giriş Kapısı (Ana)", "Çelik Kapı (Daire Giriş)", "İç Kapı (Panel/Lake)",
+                "Mutfak Dolabı (Standart)", "Mutfak Tezgahı (Granit/Çimstone)", "Banyo Dolabı & Lavabo",
+                "Portmanto / Vestiyer", "İç Merdiven Kaplama", "Balkon Korkulukları (Alüminyum)",
+                "Cam Balkon Sistemleri", "Laminat Parke Malzemesi", "Laminat Parke İşçiliği",
+                "Seramik Malzemesi", "Seramik İşçiliği"
+            ];
+
+            // Mekanik ve Vitrifiye
+            const mepPremium = [
+                "Klozet Takımı (Gömme Rezervuar)", "Duşakabin", "Duş Seti (Başlık/Hortum)",
+                "Lavabo Bataryası", "Evye Bataryası", "Davlumbaz / Aspiratör",
+                "Cephe Aydınlatma (Wallwasher)"
+            ];
+
+            // --- DİNAMİK LÜKS KATSAYISI (Luxury Scale) HESABI ---
+            let luxuryScale = 1.0;
+
+            if (totalConstructionArea <= 150) {
+                luxuryScale = 0.60;
+            } else if (totalConstructionArea >= 1000) {
+                luxuryScale = 1.80;
+            } else {
+                const range = 1000 - 150;
+                const excess = totalConstructionArea - 150;
+                const progress = excess / range;
+                luxuryScale = 0.60 + (1.20 * progress);
+            }
+
+            // --- ÇARPANLARIN DİNAMİK UYGULANMASI ---
+            if (structuralPremium.includes(item.name)) {
+                const butikZorlukCarpani = totalConstructionArea <= 250 ? 0.15 : 0.10;
+                return Math.round(item.unit_price * (1 + butikZorlukCarpani));
+            } else if (decorativePremium.includes(item.name)) {
+                return Math.round(item.unit_price * (1 + (0.45 * luxuryScale)));
+            } else if (mepPremium.includes(item.name)) {
+                return Math.round(item.unit_price * (1 + (0.70 * luxuryScale)));
+            }
         }
-        return totalCost;
-    }
 
-    if (constructionModel === 'kat_karsiligi') {
-        const stampDutyRate = 0.00948;
-        const notaryProportionalRate = 0.00113;
+        // Diğer tüm kalemler için orijinal fiyatı döndür
+        return item.unit_price;
+    };
 
-        const referenceValue = totalConstructionCost > 0 ? totalConstructionCost : (unitCount * 100 * 25000);
+    export const calculateTapuNoterFees = (
+        unitCount: number,
+        province: string,
+        constructionModel: 'standard' | 'kat_karsiligi' = 'standard',
+        isUrbanTransformation: boolean = false,
+        totalConstructionCost: number = 0,
+        currentCosts?: CostCategory[],
+        costBreakdowns?: Record<string, { label: string; value: number }[]>, // YENİ
+        itemName?: string // YENİ
+    ): number => {
+        const highCostCities = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Muğla'];
+        let cityMultiplier = highCostCities.includes(province) ? 2.5 : 1.5;
 
-        const nispiHarclar = referenceValue * (stampDutyRate + notaryProportionalRate);
-        const maktuGiderler = baseNoterPaperFee * cityMultiplier;
+        const baseTapuDoner = getGlobalPrice(currentCosts, "Tapu Döner Sermaye") * cityMultiplier;
+        const baseNoterPaperFee = getGlobalPrice(currentCosts, "Noter Yazı Ücreti");
+
+        if (isUrbanTransformation) {
+            const kentselDonusumEvrakBedeli = getGlobalPrice(currentCosts, "Noter Yazı Ücreti") / 2;
+            const totalCost = baseNoterPaperFee + (unitCount * kentselDonusumEvrakBedeli);
+
+            if (costBreakdowns && itemName) {
+                costBreakdowns[itemName] = [
+                    { label: `Maktu Noter Giderleri (Kentsel Dönüşüm)`, value: Math.round(totalCost) },
+                    { label: `Harç ve Damga Vergisi (Muafiyet)`, value: 0 }
+                ];
+            }
+            return totalCost;
+        }
+
+        if (constructionModel === 'kat_karsiligi') {
+            const stampDutyRate = 0.00948;
+            const notaryProportionalRate = 0.00113;
+
+            const referenceValue = totalConstructionCost > 0 ? totalConstructionCost : (unitCount * 100 * 25000);
+
+            const nispiHarclar = referenceValue * (stampDutyRate + notaryProportionalRate);
+            const maktuGiderler = baseNoterPaperFee * cityMultiplier;
+            const tapuTotal = unitCount * baseTapuDoner;
+
+            if (costBreakdowns && itemName) {
+                costBreakdowns[itemName] = [
+                    { label: `Nispi Harçlar (Damga Vergisi + Noter Harcı)`, value: Math.round(nispiHarclar) },
+                    { label: `Maktu Noter Giderleri (Kağıt, İmza)`, value: Math.round(maktuGiderler) },
+                    { label: `${unitCount} Daire Tapu Döner Sermaye`, value: Math.round(tapuTotal) }
+                ];
+            }
+
+            return Math.round(nispiHarclar + maktuGiderler + tapuTotal);
+        }
+
+        const baseStandardContract = getGlobalPrice(currentCosts, "Standart Sözleşme Harcı");
+        const standardContractFee = baseStandardContract * cityMultiplier;
         const tapuTotal = unitCount * baseTapuDoner;
 
         if (costBreakdowns && itemName) {
             costBreakdowns[itemName] = [
-                { label: `Nispi Harçlar (Damga Vergisi + Noter Harcı)`, value: Math.round(nispiHarclar) },
-                { label: `Maktu Noter Giderleri (Kağıt, İmza)`, value: Math.round(maktuGiderler) },
+                { label: `Standart Sözleşme ve Noter Giderleri`, value: Math.round(standardContractFee) },
                 { label: `${unitCount} Daire Tapu Döner Sermaye`, value: Math.round(tapuTotal) }
             ];
         }
 
-        return Math.round(nispiHarclar + maktuGiderler + tapuTotal);
-    }
-
-    const baseStandardContract = getGlobalPrice(currentCosts, "Standart Sözleşme Harcı");
-    const standardContractFee = baseStandardContract * cityMultiplier;
-    const tapuTotal = unitCount * baseTapuDoner;
-
-    if (costBreakdowns && itemName) {
-        costBreakdowns[itemName] = [
-            { label: `Standart Sözleşme ve Noter Giderleri`, value: Math.round(standardContractFee) },
-            { label: `${unitCount} Daire Tapu Döner Sermaye`, value: Math.round(tapuTotal) }
-        ];
-    }
-
-    return standardContractFee + tapuTotal;
-};
+        return standardContractFee + tapuTotal;
+    };
