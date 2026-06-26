@@ -72,6 +72,11 @@ export const DashboardView: React.FC = () => {
         globalStats, costs, bulkUpdatePrices, duplexPairs,setProjectStartDate
     } = useProjectStore();
 
+    const projectEndDate = useMemo(() => {
+        if (!projectSchedule || projectSchedule.length === 0) return null;
+        return projectSchedule.reduce((max, item) => item.endDate > max ? item.endDate : max, projectSchedule[0].endDate);
+    }, [projectSchedule]);
+
     const [showDuplexModal, setShowDuplexModal] = useState(false);
 
     const {
@@ -409,6 +414,13 @@ export const DashboardView: React.FC = () => {
                                         className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors shadow-sm cursor-pointer"
                                     />
                                 </div>
+                                {/* Tahmini Bitiş Tarihi */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/50">
+                                    <span className="text-[9px] text-slate-500 font-medium">Bitiş (Tahmini):</span>
+                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 font-mono">
+                                        {projectEndDate ? projectEndDate.toLocaleDateString('tr-TR') : '-'}
+                                    </span>
+                                </div>
                             </div>
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mt-1">
@@ -418,11 +430,13 @@ export const DashboardView: React.FC = () => {
                                 <div className="flex flex-col items-end gap-1">
                                     <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 shadow-sm">
                                         <div className="relative flex items-center">
+                                            {/* w-10 yerine w-12 yapıldı ve step="0.1" eklendi */}
                                             <input
                                                 type="number"
+                                                step="0.1"
                                                 value={constructionDuration || ''}
                                                 onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                                className={`w-10 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
+                                                className={`w-12 bg-transparent font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? 'text-orange-600 dark:text-orange-400' : 'text-slate-900 dark:text-white'}`}
                                             />
                                             <span className="text-[10px] text-slate-500 ml-1">Ay</span>
                                         </div>
