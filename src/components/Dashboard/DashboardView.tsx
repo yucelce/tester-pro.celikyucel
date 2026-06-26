@@ -69,7 +69,7 @@ export const DashboardView: React.FC = () => {
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices, duplexPairs
+        globalStats, costs, bulkUpdatePrices, duplexPairs,setProjectStartDate
     } = useProjectStore();
 
     const [showDuplexModal, setShowDuplexModal] = useState(false);
@@ -358,43 +358,59 @@ export const DashboardView: React.FC = () => {
 
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                        {/* KART 1: Konum ve Tip */}
+                        {/* KART 1: Konum ve Alan */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                            <div>
-                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                                    <i className="fas fa-map-marker-alt text-blue-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Konum</span>
+                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3 flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                                        <i className="fas fa-map-marker-alt text-blue-500/70"></i>
+                                        <span className="text-[10px] uppercase font-bold tracking-wider">Konum</span>
+                                    </div>
+                                    <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                        {buildingStats.province}, {buildingStats.district}
+                                    </div>
                                 </div>
-                                <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
-                                    {buildingStats.province}, {buildingStats.district}
-                                </div>
+                                {buildingStats.buildingType === 'villa' ? (
+                                    <div className="w-max inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-bold px-2 py-1 rounded-md">
+                                        <i className="fas fa-home"></i> VİLLA
+                                    </div>
+                                ) : (
+                                    <div className="w-max inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[9px] font-bold px-2 py-1 rounded-md">
+                                        <i className="fas fa-building"></i> APT.
+                                    </div>
+                                )}
                             </div>
-                            {buildingStats.buildingType === 'villa' ? (
-                                <div className="mt-4 w-max inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-bold px-2.5 py-1 rounded-md">
-                                    <i className="fas fa-home"></i> VİLLA MODU
-                                </div>
-                            ) : (
-                                <div className="mt-4 w-max inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2.5 py-1 rounded-md">
-                                    <i className="fas fa-building"></i> APARTMAN MODU
-                                </div>
-                            )}
-                        </div>
-
-                        {/* KART 2: Alan ve Süre */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3">
+                            <div>
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
-                                    <i className="fas fa-ruler-combined text-indigo-500/70"></i>
+                                    <i className="fas fa-ruler-combined text-blue-500/70"></i>
                                     <span className="text-[10px] uppercase font-bold tracking-wider">Top. İnşaat Alanı</span>
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-bold text-slate-900 dark:text-white leading-none tracking-tight">
+                                    <span className="text-xl font-bold text-slate-900 dark:text-white leading-none tracking-tight">
                                         {totalConstructionArea.toLocaleString()}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 font-medium">m² (Emsal Dahil)</span>
+                                    <span className="text-[10px] text-slate-500 font-medium">m²</span>
                                 </div>
                             </div>
-                            <div className="flex items-start justify-between mt-3">
+                        </div>
+
+                        {/* KART 2: Tarih ve Süre */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3">
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                                    <i className="fas fa-calendar-alt text-indigo-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Başlangıç Tarihi</span>
+                                </div>
+                                <div className="mt-1">
+                                    <input
+                                        type="date"
+                                        value={buildingStats.projectStartDate ? new Date(buildingStats.projectStartDate).toISOString().split('T')[0] : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]}
+                                        onChange={(e) => setProjectStartDate(e.target.value)}
+                                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors shadow-sm cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mt-1">
                                     <i className="far fa-clock text-indigo-500/70"></i>
                                     <span className="text-[10px] uppercase font-bold tracking-wider">Süre:</span>
@@ -414,12 +430,10 @@ export const DashboardView: React.FC = () => {
                                             <button onClick={() => updateConstructionDuration(undefined)} className="ml-1 text-orange-500 hover:text-orange-600 bg-orange-50 dark:bg-orange-900/30 w-5 h-5 rounded flex items-center justify-center" title="Otomatiğe Dön"><i className="fas fa-undo text-[10px]"></i></button>
                                         )}
                                     </div>
-
-                                    {/* KAYNAK BELİRTECİ (YENİ EKLENDİ) */}
                                     <div className="text-[9px] font-bold mt-0.5">
                                         {buildingStats.durationSource === 'manual' && <span className="text-orange-500 flex items-center gap-1"><i className="fas fa-pen"></i> El ile Girildi</span>}
                                         {buildingStats.durationSource === 'schedule' && <span className="text-purple-500 flex items-center gap-1"><i className="fas fa-calendar-check"></i> İş Programından</span>}
-                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Bilgilerinden (Oto)</span>}
+                                        {(!buildingStats.durationSource || buildingStats.durationSource === 'auto') && <span className="text-slate-400 flex items-center gap-1"><i className="fas fa-calculator"></i> Yapı Bilgilerinden</span>}
                                     </div>
                                 </div>
                             </div>
