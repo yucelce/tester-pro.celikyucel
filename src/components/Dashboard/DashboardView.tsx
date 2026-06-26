@@ -69,10 +69,10 @@ export const DashboardView: React.FC = () => {
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices, duplexPairs,scheduleOverrides,setProjectStartDate
+        globalStats, costs, bulkUpdatePrices, duplexPairs, scheduleOverrides, setProjectStartDate
     } = useProjectStore();
 
-   const projectEndDate = useMemo(() => {
+    const projectEndDate = useMemo(() => {
         if (!projectSchedule || projectSchedule.length === 0) return null;
         return projectSchedule.reduce((max, item) => item.endDate > max ? item.endDate : max, projectSchedule[0].endDate);
     }, [projectSchedule]);
@@ -365,94 +365,96 @@ export const DashboardView: React.FC = () => {
                         </div>
                     </div>
 
-
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                        {/* KART 1: Konum ve Alan */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
+                        {/* KART 1: Proje Künyesi ve Fiziksel Yapı (Eski Kart 1 + 3 Birleşimi) */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-3 mb-3 flex justify-between items-start">
+                            {/* Konum & Tip */}
+                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-4 mb-4 flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                                         <i className="fas fa-map-marker-alt text-blue-500/70"></i>
                                         <span className="text-[10px] uppercase font-bold tracking-wider">Konum</span>
                                     </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                    <div className="text-sm md:text-base font-bold text-slate-900 dark:text-white truncate">
                                         {buildingStats.province}, {buildingStats.district}
                                     </div>
                                 </div>
                                 {buildingStats.buildingType === 'villa' ? (
-                                    <div className="w-max inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-bold px-2 py-1 rounded-md">
-                                        <i className="fas fa-home"></i> VİLLA
+                                    <div className="w-max inline-flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-bold px-2 py-1 rounded-md">
+                                        <i className="fas fa-home text-sm"></i> VİLLA
                                     </div>
                                 ) : (
-                                    <div className="w-max inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[9px] font-bold px-2 py-1 rounded-md">
-                                        <i className="fas fa-building"></i> APT.
+                                    <div className="w-max inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 py-1 rounded-md">
+                                        <i className="fas fa-building text-sm"></i> APT.
                                     </div>
                                 )}
                             </div>
-                            <div>
+
+                            {/* Kat Bilgisi */}
+                            <div className="mb-4 flex-1">
                                 <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
-                                    <i className="fas fa-ruler-combined text-blue-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Top. İnşaat Alanı</span>
+                                    <i className="fas fa-layer-group text-blue-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Kat Planlaması</span>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white leading-none tracking-tight">
-                                        {totalConstructionArea.toLocaleString()}
-                                    </span>
-                                    <span className="text-[10px] text-slate-500 font-medium">m²</span>
+                                <div className="text-sm md:text-base font-bold text-slate-900 dark:text-white leading-snug">
+                                    {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal{buildingStats.hasRoofFloor ? ' + Çatı' : ''}
+                                </div>
+                            </div>
+
+                            {/* Alan & Yükseklik (Alt Alta / Yan Yana Düzeni) */}
+                            <div className="grid grid-cols-2 gap-3 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm mt-auto">
+                                <div>
+                                    <span className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Top. Alan</span>
+                                    <span className="text-sm md:text-base font-bold text-slate-900 dark:text-white">{totalConstructionArea.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">m²</span></span>
+                                </div>
+                                <div className="border-l border-slate-200 dark:border-slate-700 pl-3">
+                                    <span className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Yükseklik</span>
+                                    <span className="text-sm md:text-base font-bold text-slate-900 dark:text-white">{((buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight + (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0)).toFixed(1)} <span className="text-[10px] font-normal text-slate-500">m</span></span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* KART 2: Tarih ve Süre */}
+                        {/* KART 2: Zaman Çizelgesi ve Planlama */}
                         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 relative">
-                            
-                            {/* Üst Kısım: Başlangıç ve Canlı Bitiş Tarihi */}
-                            <div className="border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-3">
-                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-2">
+                            {/* Üst Kısım: Tarihler */}
+                            <div className="border-b border-slate-100 dark:border-slate-700/50 pb-4 mb-4">
+                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-3">
                                     <i className="fas fa-calendar-alt text-indigo-500/70"></i>
                                     <span className="text-[10px] uppercase font-bold tracking-wider">Proje Zamanlaması</span>
                                 </div>
-                                
-                                <div className="grid grid-cols-1 gap-2">
+
+                                <div className="grid grid-cols-2 gap-4">
                                     {/* Başlangıç Tarihi Inputu */}
                                     <div className="relative">
+                                        <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1">Başlangıç</label>
                                         <input
                                             type="date"
                                             value={buildingStats.projectStartDate ? new Date(buildingStats.projectStartDate).toISOString().split('T')[0] : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]}
                                             onChange={(e) => setProjectStartDate(e.target.value)}
-                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5 text-xs text-slate-900 dark:text-white font-bold outline-none focus:border-indigo-500 transition-colors cursor-pointer"
                                         />
-                                        <span className="absolute right-2 top-1.5 text-[9px] text-slate-400 pointer-events-none uppercase font-bold bg-slate-50 dark:bg-slate-900 pl-1">Başlangıç</span>
                                     </div>
 
-                                    {/* Canlı ve Read-Only Bitiş Tarihi */}
-                                    <div className="flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30 px-2 py-1.5 rounded border border-slate-100 dark:border-slate-800 mt-1">
-                                        <span className="text-[10px] font-medium text-slate-500">Tahmini Bitiş:</span>
-                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
+                                    {/* Canlı Bitiş Tarihi */}
+                                    <div>
+                                        <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1">Tahmini Bitiş</label>
+                                        <div className="w-full bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 rounded-md px-2 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 font-mono flex items-center justify-between">
                                             {projectEndDate ? projectEndDate.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                                        </span>
+                                            <i className="fas fa-flag-checkered text-emerald-500/70"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Alt Kısım: Süre Girişi ve Akıllı Akış Kontrolü */}
-                            <div className="flex items-start justify-between gap-2 mt-1">
-                                <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                                        <i className="far fa-clock text-indigo-500/70"></i>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider">İnşaat Süresi</span>
+                            {/* Alt Kısım: Süre Girişi ve Görsel Bar */}
+                            <div className="mt-auto">
+                                <div className="flex items-end justify-between mb-3">
+                                    <div>
+                                        {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
+                                            <span className="text-[9px] text-amber-500 flex items-center gap-1 animate-pulse mb-1"><i className="fas fa-lock"></i> Program Ezildi</span>
+                                        )}
+                                        <span className="text-[10px] text-slate-500 uppercase font-bold">İnşaat Süresi (Ay)</span>
                                     </div>
-                                    
-                                    {/* ÇAKIŞMA UYARISI: Kullanıcı aşağıda plan yapmış ama yukarıdan süreyi ezmişse çıkar */}
-                                    {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
-                                        <div className="text-[9px] text-amber-600 dark:text-amber-400 font-medium leading-tight max-w-[130px] bg-amber-500/10 p-1.5 rounded border border-amber-500/20 animate-pulse">
-                                            <i className="fas fa-exclamation-triangle mr-1"></i> İş programı detayları geçersiz kılındı.
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex flex-col items-end gap-1 shrink-0">
                                     <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1 shadow-inner">
                                         <div className="relative flex items-center">
                                             <input
@@ -465,96 +467,79 @@ export const DashboardView: React.FC = () => {
                                             />
                                             <span className="text-[10px] text-slate-400 font-bold ml-1 mr-1">Ay</span>
                                         </div>
-                                        
+
                                         {/* Geri Al (Undo) Butonu */}
                                         {buildingStats.durationSource === 'manual' && (
-                                            <button 
-                                                onClick={() => updateConstructionDuration(undefined)} 
-                                                className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20" 
+                                            <button
+                                                onClick={() => updateConstructionDuration(undefined)}
+                                                className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20"
                                                 title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
                                             >
                                                 <i className="fas fa-undo text-xs"></i>
                                             </button>
                                         )}
                                     </div>
+                                </div>
 
-                                    {/* Durum Rozeti */}
-                                    <div className="text-[9px] font-bold mt-1">
-                                        {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks ? (
-                                            <span className="text-amber-500 flex items-center gap-1" title="Aşağıdaki detaylar yukarıdan girilen süre nedeniyle geçersiz kılındı.">
-                                                <i className="fas fa-lock-open"></i> Detaylar Ezildi
-                                            </span>
-                                        ) : buildingStats.durationSource === 'manual' ? (
-                                            <span className="text-orange-500 flex items-center gap-1">
-                                                <i className="fas fa-pen"></i> El ile Girildi
-                                            </span>
-                                        ) : buildingStats.durationSource === 'schedule' ? (
-                                            <span className="text-purple-500 flex items-center gap-1">
-                                                <i className="fas fa-calendar-check"></i> İş Programından
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-400 flex items-center gap-1">
-                                                <i className="fas fa-calculator"></i> Algoritma (Oto)
-                                            </span>
-                                        )}
+                                {/* Görsel Gantt / İlerleme Çubuğu */}
+                                <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
+                                    <div className="h-full bg-indigo-500 w-full relative">
+                                        {/* Taralı desen efekti */}
+                                        <div className="absolute inset-0 w-full" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.15) 10px, rgba(255,255,255,0.15) 20px)' }}></div>
                                     </div>
+                                </div>
+                                <div className="flex justify-between mt-1 text-[9px] text-slate-400 font-bold uppercase">
+                                    <span>
+                                        {buildingStats.durationSource === 'manual' ? 'Manuel Belirlendi' : buildingStats.durationSource === 'schedule' ? 'İş Programından' : 'Algoritma (Oto)'}
+                                    </span>
+                                    <span>{Math.round((constructionDuration || 0) * 4.33)} Hafta</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* KART 3: Kat Bilgisi */}
+                        {/* KART 3: Finans & Sistem Sağlığı (Eski Kart 4) */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors">
-                            <div>
-                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
-                                    <i className="fas fa-layer-group text-emerald-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Kat Bilgisi</span>
-                                </div>
-                                <div className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
-                                    {buildingStats.basementFloorCount} Bodrum + Zemin + {buildingStats.normalFloorCount} Normal{buildingStats.hasRoofFloor ? ' + Çatı' : ''}
-                                </div>
-                            </div>
-                            <div className="mt-4 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                                <span>Top. Yükseklik:</span>
-                                <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                    {((buildingStats.normalFloorCount * buildingStats.normalFloorHeight) + buildingStats.groundFloorHeight + (buildingStats.basementFloorCount * buildingStats.basementFloorHeight) + (buildingStats.hasRoofFloor ? (buildingStats.roofFloorMaxHeight || 0) : 0)).toFixed(1)} m
-                                </span>
-                            </div>
-                        </div>
 
-                        {/* KART 4: Maliyet Özeti & Uyarılar */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-between group hover:border-red-300 dark:hover:border-red-700 transition-colors">
-                            <div className="space-y-2.5 mb-3">
-                                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 pb-2">
-                                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i className="fas fa-cubes w-3 text-yellow-500"></i> Kaba Yapı</span>
-                                    <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                            <div className="border-b border-slate-200 dark:border-slate-700/50 pb-4 mb-4 flex-1">
+                                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-3">
+                                    <i className="fas fa-coins text-emerald-500/70"></i>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Alt Maliyetler</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i className="fas fa-paint-roller w-3 text-purple-500"></i> İnce İşler</span>
-                                    <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2"><i className="fas fa-cubes text-yellow-500"></i> Kaba Yapı</span>
+                                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{globalStructuralCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2"><i className="fas fa-paint-roller text-purple-500"></i> İnce İşler</span>
+                                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{interiorFitoutCost.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            {systemWarnings && systemWarnings.length > 0 ? (
-                                <button
-                                    onClick={() => setShowWarningsModal(true)}
-                                    className={`mt-2 w-full flex items-center justify-between px-3 py-2 rounded-lg border shadow-sm transition-all ${systemWarnings.some(w => w.type === 'critical') ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 border-red-200 dark:border-red-800' : 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 border-orange-200 dark:border-orange-800'}`}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <i className={`fas fa-exclamation-triangle animate-pulse ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-500' : 'text-orange-500'}`}></i>
-                                        <span className={`text-[10px] font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                                            {systemWarnings.length} Sistem Uyarısı
-                                        </span>
+                            <div className="mt-auto">
+                                {systemWarnings && systemWarnings.length > 0 ? (
+                                    <button
+                                        onClick={() => setShowWarningsModal(true)}
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border shadow-sm transition-all ${systemWarnings.some(w => w.type === 'critical') ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 border-red-200 dark:border-red-800' : 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 border-orange-200 dark:border-orange-800'}`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <i className={`fas fa-exclamation-triangle animate-pulse ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-500' : 'text-orange-500'}`}></i>
+                                            <span className={`text-xs font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                                                {systemWarnings.length} Sistem Uyarısı
+                                            </span>
+                                        </div>
+                                        <span className={`text-[10px] underline font-bold ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-500' : 'text-orange-500'}`}>İncele</span>
+                                    </button>
+                                ) : (
+                                    <div className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20">
+                                        <div className="flex items-center gap-2">
+                                            <i className="fas fa-check-circle text-emerald-500"></i>
+                                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Tüm Kontroller Başarılı</span>
+                                        </div>
                                     </div>
-                                    <span className={`text-[9px] underline ${systemWarnings.some(w => w.type === 'critical') ? 'text-red-400' : 'text-orange-400'}`}>İncele</span>
-                                </button>
-                            ) : (
-                                <div className="mt-2 w-full flex items-center justify-center px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20">
-                                    <div className="flex items-center gap-1.5">
-                                        <i className="fas fa-check-circle text-emerald-500"></i>
-                                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">Tüm Kontroller Başarılı</span>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1008,7 +993,7 @@ export const DashboardView: React.FC = () => {
                                     })()}
 
                                     {expandedCategories[category.id] && (
-    <div className={`p-4 bg-white dark:bg-slate-900/30 animate-fadeIn ${excludedCategories.includes(category.id) ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                                        <div className={`p-4 bg-white dark:bg-slate-900/30 animate-fadeIn ${excludedCategories.includes(category.id) ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {category.items.filter(item => {
                                                     const isWall = item.name.includes('Duvar');
