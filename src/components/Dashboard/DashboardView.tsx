@@ -69,7 +69,8 @@ export const DashboardView: React.FC = () => {
         isDataDirty, recalculateCosts, dismissDataDirty, updateConstructionDuration, duplicateUnit, areaValidation,
         systemWarnings, applyAutoFix,
         customCosts, addCustomCost, updateCustomCost, removeCustomCost, projectSchedule, isPriceFetchError,
-        globalStats, costs, bulkUpdatePrices, duplexPairs, scheduleOverrides, setProjectStartDate
+        globalStats, costs, bulkUpdatePrices, duplexPairs, scheduleOverrides, setProjectStartDate,
+        financialSettings
     } = useProjectStore();
 
     const projectEndDate = useMemo(() => {
@@ -414,13 +415,13 @@ export const DashboardView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* KART 2: Zaman Çizelgesi ve Planlama */}
+                        {/* KART 2: Proje Zaman ve Finans */}
                         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300 relative">
                             {/* Üst Kısım: Tarihler */}
-                            <div className="border-b border-slate-100 dark:border-slate-700/50 pb-4 mb-4">
+                            <div className="border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-3">
                                 <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-3">
                                     <i className="fas fa-calendar-alt text-indigo-500/70"></i>
-                                    <span className="text-[10px] uppercase font-bold tracking-wider">Proje Zamanlaması</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Proje Zaman ve Finans</span>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -446,54 +447,53 @@ export const DashboardView: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Alt Kısım: Süre Girişi ve Görsel Bar */}
-                            <div className="mt-auto">
-                                <div className="flex items-end justify-between mb-3">
-                                    <div>
-                                        {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
-                                            <span className="text-[9px] text-amber-500 flex items-center gap-1 animate-pulse mb-1"><i className="fas fa-lock"></i> Program Ezildi</span>
-                                        )}
-                                        <span className="text-[10px] text-slate-500 uppercase font-bold">İnşaat Süresi (Ay)</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1 shadow-inner">
-                                        <div className="relative flex items-center">
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                min="1"
-                                                value={constructionDuration || ''}
-                                                onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                                className={`w-14 bg-transparent font-mono font-black text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500') : 'text-slate-900 dark:text-white'}`}
-                                            />
-                                            <span className="text-[10px] text-slate-400 font-bold ml-1 mr-1">Ay</span>
-                                        </div>
-
-                                        {/* Geri Al (Undo) Butonu */}
-                                        {buildingStats.durationSource === 'manual' && (
-                                            <button
-                                                onClick={() => updateConstructionDuration(undefined)}
-                                                className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20"
-                                                title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
-                                            >
-                                                <i className="fas fa-undo text-xs"></i>
-                                            </button>
-                                        )}
-                                    </div>
+                            {/* Orta Kısım: Süre Girişi */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
+                                        <span className="text-[9px] text-amber-500 flex items-center gap-1 animate-pulse mb-1"><i className="fas fa-lock"></i> Program Ezildi</span>
+                                    )}
+                                    <span className="text-[10px] text-slate-500 uppercase font-bold">İnşaat Süresi</span>
                                 </div>
-
-                                {/* Görsel Gantt / İlerleme Çubuğu */}
-                                <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                                    <div className="h-full bg-indigo-500 w-full relative">
-                                        {/* Taralı desen efekti */}
-                                        <div className="absolute inset-0 w-full" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.15) 10px, rgba(255,255,255,0.15) 20px)' }}></div>
+                                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1 shadow-inner">
+                                    <div className="relative flex items-center">
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="1"
+                                            value={constructionDuration || ''}
+                                            onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
+                                            className={`w-12 bg-transparent font-mono font-black text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500') : 'text-slate-900 dark:text-white'}`}
+                                        />
+                                        <span className="text-[10px] text-slate-400 font-bold ml-1 mr-1">Ay</span>
                                     </div>
+                                    {buildingStats.durationSource === 'manual' && (
+                                        <button
+                                            onClick={() => updateConstructionDuration(undefined)}
+                                            className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-5 h-5 rounded flex items-center justify-center transition hover:bg-orange-500/20"
+                                            title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
+                                        >
+                                            <i className="fas fa-undo text-[10px]"></i>
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex justify-between mt-1 text-[9px] text-slate-400 font-bold uppercase">
-                                    <span>
-                                        {buildingStats.durationSource === 'manual' ? 'Manuel Belirlendi' : buildingStats.durationSource === 'schedule' ? 'İş Programından' : 'Algoritma (Oto)'}
+                            </div>
+
+                            {/* Alt Kısım: Enflasyonlu Maliyet Tutarı */}
+                            <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-slate-500 uppercase font-bold flex items-center gap-1">
+                                        <i className="fas fa-trending-up text-orange-500"></i> Enflasyonlu Bütçe
                                     </span>
-                                    <span>{Math.round((constructionDuration || 0) * 4.33)} Hafta</span>
+                                    <span className="text-[9px] text-slate-400 font-medium">Aylık %{financialSettings.monthlyInflationRate || 0} artış endeksi ile</span>
                                 </div>
+                                <span className="text-sm md:text-base font-black font-mono text-orange-600 dark:text-orange-400">
+                                    {isCalculating ? (
+                                        <span className="animate-pulse">...</span>
+                                    ) : (
+                                        `${Math.round(projectTotalCost * Math.pow(1 + ((financialSettings.monthlyInflationRate || 0) / 100), (constructionDuration || 0) / 2)).toLocaleString('tr-TR')} ₺`
+                                    )}
+                                </span>
                             </div>
                         </div>
 
