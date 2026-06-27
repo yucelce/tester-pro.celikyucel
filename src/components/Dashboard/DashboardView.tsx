@@ -456,34 +456,6 @@ export const DashboardView: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mb-3">
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[9px] uppercase font-bold text-slate-500">İnşaat Süresi</label>
-                                    {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
-                                        <span className="text-[9px] text-amber-500 flex items-center gap-1 animate-pulse">
-                                            <i className="fas fa-lock"></i> Program Ezildi
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5 shadow-inner">
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        min="1"
-                                        value={constructionDuration || ''}
-                                        onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                        className={`flex-1 bg-transparent font-mono font-bold text-sm outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500') : 'text-slate-900 dark:text-white'}`}
-                                    />
-                                    <span className="text-[10px] text-slate-400 font-bold ml-1 mr-2">Ay</span>
-                                    {buildingStats.durationSource === 'manual' && (
-                                        <button
-                                            onClick={() => updateConstructionDuration(undefined)}
-                                            className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20 shrink-0"
-                                            title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
-                                        >
-                                            <i className="fas fa-undo text-[10px]"></i>
-                                        </button>
-                                    )}
                             {/* Orta Kısım: Süre Girişi */}
                             <div className="grid grid-cols-2 gap-4 items-center mb-3">
                                 <div>
