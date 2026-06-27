@@ -479,19 +479,6 @@ export const DashboardView: React.FC = () => {
                                             }`}
                                     />
                                     <span className="text-[10px] text-slate-400 font-bold ml-1 mr-2">Ay</span>
-
-                                    {buildingStats.durationSource === 'manual' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                resetConstructionDuration();
-                                            }}
-                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1 transition-colors"
-                                            title="Otomatik süreye dön"
-                                        >
-                                            <i className="fas fa-undo text-[10px]"></i>
-                                        </button>
-                                    )}
                                 </div>
                             </div>
 
