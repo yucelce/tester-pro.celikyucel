@@ -458,7 +458,7 @@ export const DashboardView: React.FC = () => {
 
                             {/* Orta Kısım: Süre Girişi */}
                             <div className="grid grid-cols-2 gap-4 items-center mb-3">
-                                <div>
+                                <div className="text-right flex flex-col items-end">
                                     <span className="text-[9px] uppercase font-bold text-slate-500 block">İnşaat Süresi</span>
                                     {buildingStats.durationSource === 'manual' && hasActiveScheduleLocks && (
                                         <span className="text-[9px] text-amber-500 flex items-center gap-1 animate-pulse mt-0.5">
@@ -473,14 +473,21 @@ export const DashboardView: React.FC = () => {
                                         min="1"
                                         value={constructionDuration || ''}
                                         onChange={(e) => updateConstructionDuration(parseFloat(e.target.value))}
-                                        className={`flex-1 w-full bg-transparent font-mono font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual' ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500') : 'text-slate-900 dark:text-white'}`}
+                                        className={`flex-1 w-full bg-transparent font-mono font-bold text-sm text-right outline-none transition-all p-0 ${buildingStats.durationSource === 'manual'
+                                                ? (hasActiveScheduleLocks ? 'text-amber-500' : 'text-orange-500')
+                                                : 'text-slate-900 dark:text-white'
+                                            }`}
                                     />
                                     <span className="text-[10px] text-slate-400 font-bold ml-1 mr-2">Ay</span>
+
                                     {buildingStats.durationSource === 'manual' && (
                                         <button
-                                            onClick={() => updateConstructionDuration(undefined)}
-                                            className="text-orange-500 hover:text-orange-600 bg-orange-500/10 w-6 h-6 rounded flex items-center justify-center transition hover:bg-orange-500/20 shrink-0"
-                                            title={hasActiveScheduleLocks ? "İş programı detaylarına geri dön" : "Oto hesaplamaya dön"}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                resetConstructionDuration();
+                                            }}
+                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1 transition-colors"
+                                            title="Otomatik süreye dön"
                                         >
                                             <i className="fas fa-undo text-[10px]"></i>
                                         </button>
