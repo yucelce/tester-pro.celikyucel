@@ -217,9 +217,9 @@ export const FinancialAnalysisPanel: React.FC = () => {
                 // --- YENİ EKLENEN/GÜNCELLENEN KISIM BAŞLANGICI ---
                 let currentMonthsDiff = (currentD.getFullYear() - projectStartMonthDate.getFullYear()) * 12 + (currentD.getMonth() - projectStartMonthDate.getMonth());
                 currentMonthsDiff = Math.max(0, currentMonthsDiff);
-                
-                let currentInflatedCost = fixedTasks.includes(task.id) 
-                    ? baseTaskCost 
+
+                let currentInflatedCost = fixedTasks.includes(task.id)
+                    ? baseTaskCost
                     : baseTaskCost * Math.pow(1 + inflationRate, currentMonthsDiff);
 
                 expensesByMonth[monthStr] = (expensesByMonth[monthStr] || 0) + (currentInflatedCost * costRatio);
@@ -525,7 +525,7 @@ export const FinancialAnalysisPanel: React.FC = () => {
     const recommendedPricePerM2 = totalConstructionArea > 0 ? (totals.actualTotalCostWithInflation * (1 + targetProfitMargin / 100)) / totalConstructionArea : 0;
 
     const currentTotalBrut = totals.actualTotalCostWithInflation;
-    
+
     // 1. Enflasyonsuz (Bugünkü) değerler üzerinden net ve KDV tutarlarını bulalım
     let baseNetTotal = 0;
     let baseVatAmount = 0;
@@ -535,10 +535,10 @@ export const FinancialAnalysisPanel: React.FC = () => {
             // Eğer vatRate tanımlanmamışsa standart %20 (0.20) kabul et
             const itemVatRate = item.vatRate !== undefined ? item.vatRate : 0.20;
             const itemBasePrice = item.totalPrice || 0;
-            
+
             const itemNetPrice = itemBasePrice / (1 + itemVatRate);
             const itemVat = itemBasePrice - itemNetPrice;
-            
+
             baseNetTotal += itemNetPrice;
             baseVatAmount += itemVat;
         });
@@ -550,9 +550,9 @@ export const FinancialAnalysisPanel: React.FC = () => {
 
     const netTotalCost = baseNetTotal * inflationMultiplier;
     const includedVatAmount = baseVatAmount * inflationMultiplier;
-    
 
-let estimatedSalesVat = 0;
+
+    let estimatedSalesVat = 0;
     let landownerVatBurden = 0; // YENİ: Arsa Sahibi KDV Yükü
 
     if (financialSettings.revenueModel === 'taahhut') {
@@ -573,16 +573,16 @@ let estimatedSalesVat = 0;
         if (buildingStats.constructionModel === 'kat_karsiligi') {
             const contractorShare = buildingStats.contractorShare || 50;
             const landownerShare = 100 - contractorShare;
-            
+
             if (landownerShare > 0) {
                 // Arsa sahibine düşen dairelerin maliyet bedeli
                 // Toplam maliyetin, arsa sahibinin yüzdesine denk gelen kısmı
                 const landownerCost = totals.actualTotalCostWithInflation * (landownerShare / 100);
-                
+
                 // Maliyet bedeli üzerinden KDV hesaplanır (Kentsel dönüşümse %1, değilse alan büyüklüğüne göre genelde %20 veya %10)
                 // Basitleştirilmiş güvenli yaklaşım: Kentsel dönüşümde %1, standartta %20 vergi yükü
                 const vatRateForLandowner = buildingStats.isUrbanTransformation ? 0.01 : 0.20;
-                
+
                 landownerVatBurden = landownerCost * vatRateForLandowner;
             }
         }
@@ -987,6 +987,22 @@ let estimatedSalesVat = 0;
 
                                         {revenueModel === 'yap_sat' && (
                                             <>
+                                                {/* MANUEL EKLEME FORMU - HER ZAMAN GÖRÜNÜR OLACAK BÖLÜM */}
+                                                <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
+                                                    <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
+                                                    <div className="flex gap-2">
+                                                        <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
+                                                        <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none text-right focus:border-emerald-500" placeholder="Tutar ₺" />
+                                                        <select value={newSale.vatRate} onChange={e => setNewSale({ ...newSale, vatRate: parseFloat(e.target.value) })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs text-slate-500 outline-none focus:border-emerald-500">
+                                                            <option value={0.01}>%1 KDV</option>
+                                                            <option value={0.10}>%10 KDV</option>
+                                                            <option value={0.20}>%20 KDV</option>
+                                                        </select>
+                                                    </div>
+                                                    <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Manuel Ekle</button>
+                                                </div>
+
+                                                {/* LİSTE BOŞ/DOLU KONTROLÜ - SADECE LİSTE VE EMPTY STATE İÇİN */}
                                                 {financialSettings.sales.length === 0 ? (
                                                     <div className="text-center py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
                                                         <i className="fas fa-shopping-cart text-3xl text-slate-300 dark:text-slate-600 mb-2"></i>
@@ -996,48 +1012,28 @@ let estimatedSalesVat = 0;
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <>
-                                                        <div className="space-y-2 mb-4 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">
-                                                            <input type="text" placeholder="Satış Adı" value={newSale.name} onChange={e => setNewSale({ ...newSale, name: e.target.value })} className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
-                                                            <div className="flex gap-2">
-                                                                <input type="month" value={newSale.saleDate} onChange={e => setNewSale({ ...newSale, saleDate: e.target.value })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none focus:border-emerald-500" />
-                                                                <NumericInput value={newSale.amount} onChange={val => setNewSale({ ...newSale, amount: val })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs outline-none text-right focus:border-emerald-500" placeholder="Tutar ₺" />
-                                                                <select value={newSale.vatRate} onChange={e => setNewSale({ ...newSale, vatRate: parseFloat(e.target.value) })} className="w-1/3 bg-transparent border-b border-slate-200 dark:border-slate-700 p-1 text-xs text-slate-500 outline-none focus:border-emerald-500">
-                                                                    <option value={0.01}>%1 KDV</option>
-                                                                    <option value={0.10}>%10 KDV</option>
-                                                                    <option value={0.20}>%20 KDV</option>
-                                                                </select>
-                                                            </div>
-                                                            <button onClick={handleAddSale} className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold py-1.5 rounded mt-1 transition">Manuel Ekle</button>
-                                                        </div>
-
-                                                        <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
-                                                            {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
-                                                                <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-200 dark:border-slate-700 text-[10px]">
-                                                                    <span className="truncate max-w-[90px] font-bold dark:text-white" title={s.name}>{s.name}</span>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
-                                                                            {formatMonthDisplay(s.saleDate || '')}
+                                                    <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                                                        {financialSettings.sales.sort((a, b) => (a.saleDate || '').localeCompare(b.saleDate || '')).map(s => (
+                                                            <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-1.5 rounded border border-slate-200 dark:border-slate-700 text-[10px]">
+                                                                <span className="truncate max-w-[90px] font-bold dark:text-white" title={s.name}>{s.name}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-slate-400 ${stressDelayMonths !== 0 ? 'line-through text-[8px] opacity-70' : ''}`}>
+                                                                        {formatMonthDisplay(s.saleDate || '')}
+                                                                    </span>
+                                                                    {stressDelayMonths !== 0 && (
+                                                                        <span className="text-orange-500 font-bold">
+                                                                            {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
                                                                         </span>
-                                                                        {stressDelayMonths !== 0 && (
-                                                                            <span className="text-orange-500 font-bold">
-                                                                                {formatMonthDisplay(formatMonth(addMonths(new Date((s.saleDate || '') + '-01'), stressDelayMonths)))}
-                                                                            </span>
-                                                                        )}
-
-                                                                        {/* --- DEĞİŞEN KISIM BURASI --- */}
-                                                                        <div className="flex flex-col text-right">
-                                                                            <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
-                                                                            <span className="text-[9px] text-slate-400 font-bold">%{(s.vatRate !== undefined ? s.vatRate : 0.20) * 100} KDV</span>
-                                                                        </div>
-                                                                        <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600 ml-1"><i className="fas fa-times"></i></button>
-                                                                        {/* --------------------------- */}
-
+                                                                    )}
+                                                                    <div className="flex flex-col text-right">
+                                                                        <span className="text-emerald-600 font-mono font-bold">{s.amount.toLocaleString()} ₺</span>
+                                                                        <span className="text-[9px] text-slate-400 font-bold">%{(s.vatRate !== undefined ? s.vatRate : 0.20) * 100} KDV</span>
                                                                     </div>
+                                                                    <button onClick={() => removeSale(s.id)} className="text-red-400 hover:text-red-600 ml-1"><i className="fas fa-times"></i></button>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    </>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </>
                                         )}
