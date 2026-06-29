@@ -275,7 +275,7 @@ export const DashboardView: React.FC = () => {
                             </div>
                             <div>
                                 <h3 className="font-bold text-amber-900 dark:text-amber-100 text-sm">Veriler Değişti</h3>
-                                <p className="text-xs text-amber-700 dark:text-amber-300">Yapı bilgilerinde değişiklik yaptınız. Kendi Kirdiğiniz değerleri güncellemek ister misiniz?</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300">Yapı bilgilerinde değişiklik yaptınız. Kendi Girdiğiniz değerleri güncellemek ister misiniz?</p>
                             </div>
                         </div>
 
