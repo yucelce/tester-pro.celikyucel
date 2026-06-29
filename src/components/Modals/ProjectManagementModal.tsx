@@ -74,10 +74,21 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                 <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50 rounded-t-xl">
                     <div>
                         <h3 className="text-white font-bold text-lg"><i className="fas fa-folder-open mr-2 text-blue-500"></i>Proje Yönetimi</h3>
-                        {accountId ?
-                            <p className="text-xs text-green-400">Pro Üye Modu (Bulut Kayıt Aktif)</p> :
-                            <p className="text-xs text-yellow-500">Misafir Modu (Veriler tarayıcıda saklanır)</p>
-                        }
+                        {accountId && accountId !== 'guest' ? (
+                            <p className="text-xs text-green-400">Pro Üye Modu (Bulut Kayıt Aktif)</p>
+                        ) : (
+                            <div className="flex flex-col items-start gap-2 mt-1">
+                                <p className="text-xs text-yellow-500">Misafir Modu (Veriler tarayıcıda saklanır)</p>
+                                <a
+                                    href="https://www.celikyucel.com/cy-pro-insaat-manager"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-[10px] font-bold shadow-sm transition flex items-center gap-1"
+                                >
+                                    <i className="fas fa-sign-in-alt"></i> Pro Sürüme Giriş Yap
+                                </a>
+                            </div>
+                        )}
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-white"><i className="fas fa-times text-lg"></i></button>
                 </div>
@@ -149,8 +160,7 @@ export const ProjectManagementModal: React.FC<ProjectManagementModalProps> = ({ 
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-bold text-white">Kayıtlı Projeler</span>
-                        <span className="text-xs text-slate-500">{projects.length} / {accountId ? '10' : '5'}</span>
-                    </div>
+                        <span className="text-xs text-slate-500">{projects.length} / {accountId && accountId !== 'guest' ? '10' : '5'}</span>                    </div>
 
                     {isLoading && projects.length === 0 ? (
                         <div className="text-center py-8 text-blue-400 text-sm">
